@@ -6,7 +6,9 @@ import BOMAutomatorModal from './BOMAutomatorModal';
 import BOMConfirmModal, { BOMPlan, BOMPlanNode, BOMPlanLine } from './BOMConfirmModal';
 import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import { useToast } from '../shared/Toast';
-import { CodeChip, CODE_FONT, xpFont, CHIP_RADIUS, BUTTON_RADIUS, xpBtn as xpBtnBase, LegendPanel, XP_BTN } from '../shared/xpTheme';
+import { CodeChip, CODE_FONT, xpFont, CHIP_RADIUS, BUTTON_RADIUS, xpBtn as xpBtnBase, XP_BTN } from '../shared/xpTheme';
+import { FormSection } from '@bryanadamg/terras-ui/components/FormSection';
+import { TINT, tintTitle, TintCard } from '../shared/RequestDetailPanel';
 import { field as xpInputBase, BTN_TONES } from '@bryanadamg/terras-ui/styles';
 import { API_BASE } from '../shared/apiBase';
 import { isBeamItemRecord } from '../shared/beamItem';
@@ -98,17 +100,22 @@ const xpLabel: React.CSSProperties = {
     display: 'block', marginBottom: 2,
 };
 
+// Inner well (component list, routing steps): a flat ruled box, not the XP 2px inset.
 const xpInset: React.CSSProperties = {
-    border: '2px inset #aaa', background: 'white',
+    border: '1px solid var(--terras-table-line, #d6d3ce)', background: 'var(--terras-table-bg, #fff)',
     overflowY: 'auto', padding: 2,
 };
 
-const xpBadge = (color = '#316ac5'): React.CSSProperties => ({
-    background: color, color: 'white',
-    fontSize: 9, fontWeight: 'bold',
-    padding: '1px 5px', borderRadius: 1,
-    fontFamily: xpFont, whiteSpace: 'nowrap',
-});
+// Status badge as a theme chip tint. Callers still pass the historical hex as the key;
+// it maps onto a chip family (purple = shared recipe, which has no family of its own).
+const BADGE_FAMILY: Record<string, string> = { '#2a7a2a': 'green', '#a02020': 'red', '#316ac5': 'blue' };
+const xpBadge = (color = '#316ac5'): React.CSSProperties => {
+    const f = BADGE_FAMILY[color];
+    const tone = f
+        ? { background: `var(--terras-chip-${f}-bg)`, border: `1px solid var(--terras-chip-${f}-border)`, color: `var(--terras-chip-${f}-text)` }
+        : { background: '#efe8f8', border: '1px solid #6a4b9a', color: '#3a2a55' };
+    return { ...tone, fontSize: 9, fontWeight: 'bold', padding: '0 4px', borderRadius: CHIP_RADIUS, fontFamily: xpFont, whiteSpace: 'nowrap' };
+};
 
 // --- Tree View Component ---
 // The BOM an item already has, when that BOM is the one shared across combos.
@@ -131,20 +138,19 @@ const TreeView = memo(({
     return (
         <div className="tree-node" data-testid={`tree-node-${node.item_code}`}>
             <div
+                className={isSelected ? undefined : 'bom-tree-hover'}
                 style={{
                     display: 'flex', alignItems: 'center', gap: 4,
-                    padding: '3px 4px',
-                    paddingLeft: `${level * 14 + 4}px`,
+                    padding: '3px 6px',
+                    paddingLeft: `${level * 14 + 6}px`,
                     cursor: 'pointer',
-                    background: isSelected ? '#316ac5' : 'transparent',
-                    color: isSelected ? 'white' : '#000',
-                    borderBottom: '1px solid #e8e4d8',
+                    background: isSelected ? 'var(--terras-row-selected, #316ac5)' : undefined,
+                    color: isSelected ? 'var(--terras-on-solid, #fff)' : 'var(--terras-win-text, #000)',
+                    borderBottom: '1px solid var(--terras-table-line, #e8e4d8)',
                     fontFamily: xpFont, fontSize: 11,
                 }}
                 onClick={() => onSelect(node.id)}
                 data-testid={`tree-node-clickable-${node.item_code}`}
-                onMouseEnter={e => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = '#d0e4f8'; }}
-                onMouseLeave={e => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
             >
                 <span style={{ fontSize: 12 }}><i className={`bi ${level === 0 ? 'bi-box-seam' : 'bi-nut'}`} /></span>
                 <span style={{ flex: 1, fontWeight: level === 0 ? 'bold' : 'normal', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -1261,7 +1267,7 @@ export default function BOMDesigner({
     );
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 'calc(var(--app-vh) * 80 / 100)', fontFamily: xpFont, fontSize: 11, background: '#ece9d8' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 'calc(var(--app-vh) * 80 / 100)', fontFamily: xpFont, fontSize: 11, background: 'var(--terras-table-bg, #fff)' }}>
             <CodeConfigModal
                 isOpen={isConfigOpen}
                 onClose={() => setIsConfigOpen(false)}
@@ -1287,28 +1293,16 @@ export default function BOMDesigner({
                 onClose={() => setIsConfirmOpen(false)}
             />
 
-            <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+            <div style={{ display: 'flex', flex: 1, overflow: 'hidden', background: 'var(--terras-table-bg, #fff)' }}>
 
                 {/* ===== LEFT PANEL: Tree ===== */}
-                <div style={{ width: 220, flexShrink: 0, borderRight: '2px solid #aca899', display: 'flex', flexDirection: 'column', background: '#ddd9c8' }}>
-                    {/* Sub-titlebar */}
-                    <div style={{
-                        background: 'linear-gradient(to bottom, #4a78c8, #2a54a8)',
-                        padding: '3px 8px',
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        flexShrink: 0,
-                    }}>
-                        <span style={{ color: 'white', fontSize: 11, fontWeight: 'bold' }}><i className="bi bi-diagram-3" style={{ marginRight: 4 }} />Structure</span>
-                        <span style={{
-                            background: 'rgba(255,255,255,0.2)', color: 'white',
-                            fontSize: 9, padding: '0 5px', borderRadius: CHIP_RADIUS,
-                        }}>
-                            {nodeCount} nodes
-                        </span>
-                    </div>
-
-                    {/* Tree list */}
-                    <div style={{ ...xpInset, flex: 1, margin: 4, marginBottom: 0 }}>
+                <div style={{ width: 220, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8, padding: '10px 0 10px 10px' }}>
+                    <FormSection
+                        title={tintTitle(<><i className="bi bi-diagram-3" style={{ marginRight: 4 }} />Structure</>)}
+                        right={<span style={{ fontSize: 9, color: 'var(--terras-chip-blue-text, #0d2a6e)' }}>{nodeCount} nodes</span>}
+                        style={{ ...TINT, margin: 0, flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}
+                        bodyStyle={{ padding: 0, flex: 1, minHeight: 0, overflowY: 'auto' }}
+                    >
                         <TreeView
                             node={rootBOM}
                             level={0}
@@ -1318,10 +1312,10 @@ export default function BOMDesigner({
                             hasExistingBOM={hasExistingBOM}
                             sharedBomFor={sharedBomFor}
                         />
-                    </div>
+                    </FormSection>
 
                     {/* Automate button */}
-                    <div style={{ padding: 4 }}>
+                    <div>
                         <button
                             data-testid="automate-levels-btn"
                             className={XP_BTN}
@@ -1339,15 +1333,14 @@ export default function BOMDesigner({
                         <>
                             {/* Node title strip */}
                             <div style={{
-                                background: 'linear-gradient(to bottom, #e8e4d8, #dddad0)',
-                                borderBottom: '1px solid #aca899',
-                                padding: '5px 10px',
+                                borderBottom: '1px solid var(--terras-table-line, #d6d3ce)',
+                                padding: '8px 10px 6px',
                                 display: 'flex', alignItems: 'center', gap: 8,
                                 flexShrink: 0,
                             }}>
-                                <span style={{ fontSize: 16, color: '#000080' }}><i className={`bi ${selectedNodeId === 'root' ? 'bi-box-seam' : 'bi-nut'}`} /></span>
+                                <span style={{ fontSize: 16, color: 'var(--terras-chip-blue-text, #0d2a6e)' }}><i className={`bi ${selectedNodeId === 'root' ? 'bi-box-seam' : 'bi-nut'}`} /></span>
                                 <div style={{ flex: 1 }}>
-                                    <div style={{ fontWeight: 'bold', fontSize: 12, color: '#000080' }}>
+                                    <div style={{ fontWeight: 'bold', fontSize: 12, color: 'var(--terras-chip-blue-text, #0d2a6e)' }}>
                                         {getItemName(selectedNode.item_code) || 'Select an item'}
                                     </div>
                                     <CodeChip code={selectedNode.item_code || '—'} tier={2} style={{ display: 'block' }} />
@@ -1392,7 +1385,7 @@ export default function BOMDesigner({
                             }}>
 
                                 {/* BOM Header groupbox */}
-                                <LegendPanel title="BOM Header">
+                                <TintCard title="BOM Header">
                                     <div style={{ padding: '0 8px 8px' }}>
                                     {/* Row 1: Code + Item + Batch + Tolerance */}
                                     <div style={{ display: 'flex', gap: 6, marginBottom: 6, flexWrap: 'wrap' }}>
@@ -1573,14 +1566,14 @@ export default function BOMDesigner({
                                         </div>
                                     )}
                                     </div>
-                                </LegendPanel>
+                                </TintCard>
 
                                 {/* Sizes + Detail Teknis + Measurements row */}
                                 {(
                                     <div style={{ display: 'flex', gap: 10 }}>
 
                                         {/* Left: Size Measurements */}
-                                        <LegendPanel
+                                        <TintCard
                                             title="Measurements (cm)"
                                             style={{ flexShrink: 0 }}
                                         >
@@ -1759,10 +1752,10 @@ export default function BOMDesigner({
                                                 </div>
                                             )}
                                             </div>
-                                        </LegendPanel>
+                                        </TintCard>
 
                                         {/* Detail Teknis */}
-                                        <LegendPanel title="Detail Teknis" style={{ flexShrink: 0 }}>
+                                        <TintCard title="Detail Teknis" style={{ flexShrink: 0 }}>
                                             <div style={{ padding: '0 8px 8px' }}>
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
 
@@ -1884,10 +1877,10 @@ export default function BOMDesigner({
 
                                             </div>
                                             </div>
-                                        </LegendPanel>
+                                        </TintCard>
 
                                         {/* Bahan Keluar Dari Mesin */}
-                                        <LegendPanel title="Bahan Keluar Dari Mesin" style={{ flex: 1 }}>
+                                        <TintCard title="Bahan Keluar Dari Mesin" style={{ flex: 1 }}>
                                             <div style={{ padding: '0 8px 8px' }}>
                                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px', gap: '4px 6px', alignItems: 'center' }}>
                                                 <label style={{ ...xpLabel, marginBottom: 0 }}>Lebar</label>
@@ -1927,10 +1920,10 @@ export default function BOMDesigner({
                                                 </div>
                                             </div>
                                             </div>
-                                        </LegendPanel>
+                                        </TintCard>
 
                                         {/* Bahan Dari Celup / Setting */}
-                                        <LegendPanel title="Bahan Dari Celup / Setting" style={{ flex: 1 }}>
+                                        <TintCard title="Bahan Dari Celup / Setting" style={{ flex: 1 }}>
                                             <div style={{ padding: '0 8px 8px' }}>
                                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px', gap: '4px 6px', alignItems: 'center' }}>
                                                 <label style={{ ...xpLabel, marginBottom: 0 }}>Lebar</label>
@@ -1970,7 +1963,7 @@ export default function BOMDesigner({
                                                 </div>
                                             </div>
                                             </div>
-                                        </LegendPanel>
+                                        </TintCard>
 
                                     </div>
                                 )}
@@ -1980,7 +1973,7 @@ export default function BOMDesigner({
 
                                     {/* Components */}
                                     <div style={{ flex: 1 }}>
-                                        <LegendPanel title="Components">
+                                        <TintCard title="Components">
                                             <div style={{ padding: '0 8px 8px' }}>
                                             <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                                                 {inheritFields && (
@@ -2091,7 +2084,7 @@ export default function BOMDesigner({
                                             {/* Component list */}
                                             <div style={{ ...xpInset, maxHeight: 260, padding: 0 }}>
                                                 {selectedNode.lines.length > 0 && (
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '2px 6px', background: '#ece9d8', borderBottom: '1px solid #aca899', fontSize: 9, color: '#555', fontWeight: 'bold' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '2px 6px', background: 'var(--terras-toolbar-bg, #f5f4ef)', borderBottom: '1px solid var(--terras-table-line, #d6d3ce)', fontSize: 9, color: 'var(--terras-win-text-2, #555)', fontWeight: 'bold' }}>
                                                         <span style={{ flex: 1 }}>Component</span>
                                                         <span style={{ width: 57, textAlign: 'right' }}>%</span>
                                                         <span style={{ width: 48, textAlign: 'right' }}>{isBeamNode(selectedNode) ? 'Ends' : 'Qty'}</span>
@@ -2244,7 +2237,7 @@ export default function BOMDesigner({
                                                 const hasZero = selectedNode.lines.some(l => (l.percentage || 0) === 0);
                                                 const isValid = !hasZero && Math.abs(nodePct - 100) < 0.01;
                                                 return (
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 6px', borderTop: '1px solid #aca899', background: '#ece9d8' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 6px', borderTop: '1px solid var(--terras-table-line, #d6d3ce)', background: 'var(--terras-toolbar-bg, #f5f4ef)' }}>
                                                         <span style={{ fontSize: 10, color: '#555', flex: 1 }}>Total %:</span>
                                                         <span style={xpBadge(isValid ? '#2a7a2a' : '#a02020')}>{nodePct.toFixed(1)}%</span>
                                                         {!isValid && <span style={{ fontSize: 10, color: '#a02020' }}>{hasZero ? 'set all percentages' : 'must = 100%'}</span>}
@@ -2252,12 +2245,12 @@ export default function BOMDesigner({
                                                 );
                                             })()}
                                             </div>
-                                        </LegendPanel>
+                                        </TintCard>
                                     </div>
 
                                     {/* Routing Steps */}
                                     <div style={{ width: 240, flexShrink: 0 }}>
-                                        <LegendPanel title="Routing Steps">
+                                        <TintCard title="Routing Steps">
                                             <div style={{ padding: '0 8px 8px' }}>
                                             {/* Existing steps list */}
                                             <div style={{ ...xpInset, marginBottom: 6, padding: 0, minHeight: 40 }}>
@@ -2364,7 +2357,7 @@ export default function BOMDesigner({
                                                 >+ Add Step</button>
                                             </div>
                                             </div>
-                                        </LegendPanel>
+                                        </TintCard>
                                     </div>
 
                                 </div>
@@ -2379,31 +2372,32 @@ export default function BOMDesigner({
                         </div>
                     )}
 
-                    {/* Footer */}
-                    <div style={{
-                        borderTop: '1px solid #aca899',
-                        background: '#ece9d8',
-                        padding: '5px 10px',
-                        display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 6,
-                        flexShrink: 0,
-                    }}>
-                        {pctError && (
-                            <span style={{ flex: 1, fontSize: 10, color: '#a02020', fontFamily: xpFont }}>
-                                <i className="bi bi-exclamation-triangle-fill" style={{ marginRight: 4 }} />{pctError}
-                            </span>
-                        )}
-                        <button className={XP_BTN} style={xpBtn} onClick={onCancel}>{t('cancel')}</button>
-                        <button
-                            className={XP_BTN}
-                            data-testid="save-bom-tree-btn"
-                            style={{ ...xpBtnSuccess, opacity: isSaving ? 0.6 : 1 }}
-                            onClick={handleGlobalSave}
-                            disabled={isSaving}
-                        >
-                            {isSaving ? 'Processing...' : <><i className="bi bi-save" style={{ marginRight: 4 }} />Finish &amp; Save Tree</>}
-                        </button>
-                    </div>
                 </div>
+            </div>
+
+            {/* Footer — spans the whole dialog, under the tree too */}
+            <div style={{
+                borderTop: '1px solid var(--terras-modal-footer-border, #d6d3ce)',
+                background: 'var(--terras-modal-footer-bg, #f5f4ef)',
+                padding: '5px 10px',
+                display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 6,
+                flexShrink: 0,
+            }}>
+                {pctError && (
+                    <span style={{ flex: 1, fontSize: 10, color: '#a02020', fontFamily: xpFont }}>
+                        <i className="bi bi-exclamation-triangle-fill" style={{ marginRight: 4 }} />{pctError}
+                    </span>
+                )}
+                <button className={XP_BTN} style={xpBtn} onClick={onCancel}>{t('cancel')}</button>
+                <button
+                    className={XP_BTN}
+                    data-testid="save-bom-tree-btn"
+                    style={{ ...xpBtnSuccess, opacity: isSaving ? 0.6 : 1 }}
+                    onClick={handleGlobalSave}
+                    disabled={isSaving}
+                >
+                    {isSaving ? 'Processing...' : <><i className="bi bi-save" style={{ marginRight: 4 }} />Finish &amp; Save Tree</>}
+                </button>
             </div>
 
             {/* Photo preview overlay */}

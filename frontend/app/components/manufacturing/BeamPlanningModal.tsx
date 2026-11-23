@@ -5,9 +5,17 @@ import ModalWrapper from '../shared/ModalWrapper';
 import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import { xpFont, CHIP_RADIUS, BUTTON_RADIUS, XP_BTN } from '../shared/xpTheme';
 import { field as xpInputBase } from '@bryanadamg/terras-ui/styles';
+import { TintCard } from '../shared/RequestDetailPanel';
 import { API_BASE } from '../shared/apiBase';
 
 const xpInput: React.CSSProperties = xpInputBase({ padding: '0 4px' });
+
+const LINE = 'var(--terras-table-line, #d6d3ce)';
+const MUTED = 'var(--terras-win-text-3, #555)';
+const chip = (f: 'blue' | 'green' | 'red' | 'gray'): React.CSSProperties => ({
+    background: `var(--terras-chip-${f}-bg)`, border: `1px solid var(--terras-chip-${f}-border)`, color: `var(--terras-chip-${f}-text)`,
+    borderRadius: CHIP_RADIUS,
+});
 
 interface BeamRow {
     localId: string;
@@ -115,7 +123,7 @@ export default function BeamPlanningModal({ mo, machines, groupId, groupName, co
 
     const footer = (
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-            <span style={{ fontSize: 10, color: '#555', fontFamily: xpFont }}>
+            <span style={{ fontSize: 10, color: MUTED, fontFamily: xpFont }}>
                 Will create <strong>{totalWoCount}</strong> Work Order{totalWoCount !== 1 ? 's' : ''} under <strong>{mo.code}</strong>
             </span>
             <div style={{ display: 'flex', gap: 6 }}>
@@ -164,7 +172,7 @@ export default function BeamPlanningModal({ mo, machines, groupId, groupName, co
         >
             {/* MO info strip */}
             <div style={{
-                background: '#f5f3ee', border: '1px solid #c0bdb5',
+                background: 'var(--terras-toolbar-bg, #f5f4ef)', border: `1px solid ${LINE}`,
                 padding: '5px 8px', marginBottom: 8,
                 display: 'flex', gap: 16, alignItems: 'center',
             }}>
@@ -175,10 +183,10 @@ export default function BeamPlanningModal({ mo, machines, groupId, groupName, co
                     ...(mo.ends != null ? [{ label: 'Beam Ends', value: String(mo.ends) }] : []),
                 ].map(({ label, value }, i) => (
                     <React.Fragment key={label}>
-                        {i > 0 && <div style={{ width: 1, background: '#c0bdb5', height: 26 }} />}
+                        {i > 0 && <div style={{ width: 1, background: LINE, height: 26 }} />}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                            <span style={{ fontSize: 9, color: '#666', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</span>
-                            <span style={{ fontSize: 11, fontWeight: 'bold', color: '#222' }}>{value}</span>
+                            <span style={{ fontSize: 9, color: 'var(--terras-win-text-3, #666)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</span>
+                            <span style={{ fontSize: 11, fontWeight: 'bold', color: 'var(--terras-win-text, #222)' }}>{value}</span>
                         </div>
                     </React.Fragment>
                 ))}
@@ -186,31 +194,28 @@ export default function BeamPlanningModal({ mo, machines, groupId, groupName, co
 
             {/* Yarn components */}
             {components.length > 0 && (
-                <div style={{ background: '#f5f3ee', border: '1px solid #c0bdb5', padding: '5px 8px', marginBottom: 8 }}>
-                    <div style={{ fontSize: 9, color: '#666', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 4 }}>
-                        Yarn Components — Ends per Yarn
-                    </div>
+                <TintCard title="Yarn Components — Ends per Yarn" style={{ marginBottom: 8 }} bodyStyle={{ padding: 8 }}>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                         {components.map((c, i) => (
-                            <span key={i} style={{ borderRadius: CHIP_RADIUS, display: 'inline-flex', alignItems: 'center', gap: 4, background: 'white', border: '1px solid #c0bdb5', padding: '1px 6px', fontSize: 10 }}>
-                                <span style={{ color: '#222', fontWeight: 'bold' }}>{c.name}</span>
-                                <span style={{ background: '#e6f4ea', border: '1px solid #4caf50', color: '#1a6e2e', fontWeight: 'bold', padding: '0 4px' }}>
+                            <span key={i} style={{ borderRadius: CHIP_RADIUS, display: 'inline-flex', alignItems: 'center', gap: 4, background: 'var(--terras-table-bg, #fff)', border: `1px solid ${LINE}`, padding: '1px 6px', fontSize: 10 }}>
+                                <span style={{ color: 'var(--terras-win-text, #222)', fontWeight: 'bold' }}>{c.name}</span>
+                                <span style={{ ...chip('green'), fontWeight: 'bold', padding: '0 4px' }}>
                                     {c.ends != null && c.ends > 0 ? `${Math.round(c.ends)} ends` : '— ends'}
                                 </span>
                             </span>
                         ))}
                     </div>
-                </div>
+                </TintCard>
             )}
 
             {/* Section label */}
-            <div style={{ fontSize: 10, fontWeight: 'bold', color: '#444', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            <div style={{ fontSize: 10, fontWeight: 'bold', color: 'var(--terras-chip-blue-text, #0d2a6e)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Beam Assignment
             </div>
 
             {/* Rows table */}
-            <div style={{ overflowX: 'auto', border: '1px solid #c0bdb5' }}>
-            <table style={{ width: '100%', minWidth: 1060, tableLayout: 'fixed', borderCollapse: 'collapse', background: 'white', marginBottom: 0 }}>
+            <div style={{ overflowX: 'auto', border: `1px solid ${LINE}` }}>
+            <table style={{ width: '100%', minWidth: 1060, tableLayout: 'fixed', borderCollapse: 'collapse', background: 'var(--terras-table-bg, #fff)', marginBottom: 0 }}>
                 <thead>
                     <tr>
                         <th style={{ ...thStyle('#'), width: 26 }}>{'#'}</th>
@@ -222,7 +227,7 @@ export default function BeamPlanningModal({ mo, machines, groupId, groupName, co
                                     <span style={{ borderRadius: CHIP_RADIUS,
                                         fontFamily: xpFont, fontSize: 9, padding: '0 5px',
                                         display: 'inline-flex', alignItems: 'center',
-                                        background: '#dce8ff', border: '1px solid #7f9db9', color: '#002080',
+                                        ...chip('blue'),
                                         fontWeight: 'bold', whiteSpace: 'nowrap',
                                     }}>
                                         {groupName}
@@ -243,8 +248,8 @@ export default function BeamPlanningModal({ mo, machines, groupId, groupName, co
                 </thead>
                 <tbody>
                     {rows.map((row, idx) => (
-                        <tr key={row.localId} style={{ background: idx % 2 === 1 ? '#f8f7f2' : 'white' }}>
-                            <td style={tdStyle({ width: 28, textAlign: 'center', color: '#666', fontWeight: 'bold' })}>{idx + 1}</td>
+                        <tr key={row.localId} style={{ background: idx % 2 === 1 ? 'var(--terras-row-stripe-sub, #fbfaf7)' : 'var(--terras-table-bg, #fff)' }}>
+                            <td style={tdStyle({ width: 28, textAlign: 'center', color: 'var(--terras-win-text-3, #666)', fontWeight: 'bold' })}>{idx + 1}</td>
                             <td style={tdStyle({})}>
                                 <SearchableSelect
                                     options={machineOptions}
@@ -330,12 +335,12 @@ export default function BeamPlanningModal({ mo, machines, groupId, groupName, co
                                             </select>
                                         )}
                                     </div>
-                                ) : <span style={{ color: '#aaa', fontSize: 9 }}>—</span>}
+                                ) : <span style={{ color: 'var(--terras-win-text-3, #aaa)', fontSize: 9 }}>—</span>}
                             </td>
                             <td style={tdStyle({ textAlign: 'center' })}>
                                 <button
                                     onClick={() => removeRow(row.localId)}
-                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#aa0000', fontSize: 13, fontWeight: 'bold', padding: '0 2px' }}
+                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--terras-status-red, #aa0000)', fontSize: 13, fontWeight: 'bold', padding: '0 2px' }}
                                     title="Remove"
                                 >x</button>
                             </td>
@@ -347,27 +352,27 @@ export default function BeamPlanningModal({ mo, machines, groupId, groupName, co
 
             {/* Summary bar */}
             <div style={{
-                background: '#f0efe6', border: '1px solid #c0bdb5', borderTop: 'none',
+                background: 'var(--terras-toolbar-bg, #f5f4ef)', border: `1px solid ${LINE}`, borderTop: 'none',
                 padding: '3px 8px', display: 'flex', alignItems: 'center', gap: 10,
                 fontSize: 10, marginBottom: 6,
             }}>
                 <span style={{
                     width: 8, height: 8, borderRadius: '50%', display: 'inline-block', flexShrink: 0,
-                    background: isOver ? '#ff6600' : isUnder ? '#cc8800' : '#4caf50',
+                    background: isOver ? 'var(--terras-status-red, #ff6600)' : isUnder ? 'var(--terras-status-amber, #cc8800)' : 'var(--terras-status-green, #4caf50)',
                 }} />
-                <span style={{ color: '#555' }}>Total assigned:</span>
-                <span style={{ fontWeight: 'bold', color: isOver ? '#c85000' : isUnder ? '#886600' : '#2e7d32' }}>
+                <span style={{ color: MUTED }}>Total assigned:</span>
+                <span style={{ fontWeight: 'bold', color: isOver ? 'var(--terras-status-red, #c85000)' : isUnder ? 'var(--terras-status-amber, #886600)' : 'var(--terras-status-green, #2e7d32)' }}>
                     {totalAssigned.toFixed(2)}
                 </span>
-                <span style={{ color: '#c0bdb5' }}>|</span>
-                <span style={{ color: '#555' }}>MO qty:</span>
+                <span style={{ color: LINE }}>|</span>
+                <span style={{ color: MUTED }}>MO qty:</span>
                 <span style={{ fontWeight: 'bold' }}>{moQty > 0 ? moQty : '—'}</span>
-                <span style={{ color: '#c0bdb5' }}>|</span>
-                <span style={{ color: '#555' }}>Beams:</span>
+                <span style={{ color: LINE }}>|</span>
+                <span style={{ color: MUTED }}>Beams:</span>
                 <span style={{ fontWeight: 'bold' }}>{totalWoCount}</span>
-                {isOver && <span style={{ color: '#c85000', marginLeft: 'auto', fontStyle: 'italic' }}>Over-assigned</span>}
-                {isUnder && <span style={{ color: '#886600', marginLeft: 'auto', fontStyle: 'italic' }}>Partial — unassigned qty remains on MO</span>}
-                {!isOver && !isUnder && moQty > 0 && <span style={{ color: '#2e7d32', marginLeft: 'auto' }}>Fully assigned</span>}
+                {isOver && <span style={{ color: 'var(--terras-status-red, #c85000)', marginLeft: 'auto', fontStyle: 'italic' }}>Over-assigned</span>}
+                {isUnder && <span style={{ color: 'var(--terras-status-amber, #886600)', marginLeft: 'auto', fontStyle: 'italic' }}>Partial — unassigned qty remains on MO</span>}
+                {!isOver && !isUnder && moQty > 0 && <span style={{ color: 'var(--terras-status-green, #2e7d32)', marginLeft: 'auto' }}>Fully assigned</span>}
             </div>
 
             <button
@@ -386,8 +391,8 @@ export default function BeamPlanningModal({ mo, machines, groupId, groupName, co
 
             {error && (
                 <div style={{
-                    marginTop: 6, background: '#fff0f0', border: '1px solid #f0b8b8',
-                    padding: '3px 8px', fontSize: 10, color: '#cc0000',
+                    marginTop: 6, ...chip('red'),
+                    padding: '3px 8px', fontSize: 10,
                 }}>
                     {error}
                 </div>
@@ -398,15 +403,15 @@ export default function BeamPlanningModal({ mo, machines, groupId, groupName, co
 
 function thStyle(label: string): React.CSSProperties {
     return {
-        background: 'linear-gradient(to bottom, #f0efe6, #e0dfd8)',
-        borderBottom: '1px solid #c0bdb5', borderRight: '1px solid #c0bdb5',
-        padding: '3px 6px', fontSize: 10, fontWeight: 'bold', color: '#333', textAlign: 'left',
+        background: 'var(--terras-toolbar-bg, #f5f4ef)',
+        borderBottom: `1px solid ${LINE}`, borderRight: `1px solid ${LINE}`,
+        padding: '3px 6px', fontSize: 10, fontWeight: 'bold', color: 'var(--terras-win-text-2, #333)', textAlign: 'left',
     };
 }
 
 function tdStyle(extra: React.CSSProperties): React.CSSProperties {
     return {
-        borderBottom: '1px solid #e8e5de', borderRight: '1px solid #e8e5de',
+        borderBottom: `1px solid ${LINE}`, borderRight: `1px solid ${LINE}`,
         padding: '2px 4px', verticalAlign: 'middle',
         ...extra,
     };

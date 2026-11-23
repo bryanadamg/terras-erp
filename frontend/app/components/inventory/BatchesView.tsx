@@ -344,6 +344,43 @@ export default function BatchesView({ items, locations, categories, workCenters,
     setSplitReason('');
   };
 
+  // Change size — re-label a lot's size in place (same item, same stock), e.g. a
+  // dyed lot that came out of its size range.
+  const [sizeBatch, setSizeBatch] = useState<Batch | null>(null);
+  const [sizeId, setSizeId] = useState('');
+  const [sizeReason, setSizeReason] = useState('');
+  const [sizeSaving, setSizeSaving] = useState(false);
+
+  const openSizeChange = (b: Batch) => {
+    const cur = b.bom_size_snapshot?.size_name;
+    setSizeBatch(b);
+    setSizeId(String((sizes || []).find((s: any) => s.name === cur)?.id || ''));
+    setSizeReason('');
+  };
+
+  const handleSizeChange = async () => {
+    if (!sizeBatch) return;
+    setSizeSaving(true);
+    try {
+      const res = await authFetch(`${apiBase}/batches/${sizeBatch.id}/size`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ size_id: sizeId || null, reason: sizeReason.trim() || null }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || 'Failed to change size');
+      }
+      showToast(`Lot ${sizeBatch.batch_number} size updated`, 'success');
+      setSizeBatch(null);
+      fetchBatches();
+    } catch (e: any) {
+      showToast(e.message, 'danger');
+    } finally {
+      setSizeSaving(false);
+    }
+  };
+
   // Disposition panel for a rejected lot: write off, or recycle into another item.
   const [disposeBatch, setDisposeBatch] = useState<Batch | null>(null);
   const [disposeMode, setDisposeMode] = useState<'writeoff' | 'reassign'>('writeoff');
@@ -1500,6 +1537,56 @@ export default function BatchesView({ items, locations, categories, workCenters,
         );
       })()}
 
+      {/* ── Change Size Modal ── */}
+      {sizeBatch && (
+        <ModalWrapper
+          isOpen={!!sizeBatch}
+          onClose={() => setSizeBatch(null)}
+          title={`Change Size — ${sizeBatch.batch_number}`}
+          size="sm"
+          modeless
+          footer={<>
+            <button style={xpBtn()} className={XP_BTN} onClick={() => setSizeBatch(null)}>Cancel</button>
+            <button
+              style={xpBtn({ background: 'linear-gradient(to bottom, #ffffff, #d4d0c8)', fontWeight: 'bold' })}
+              className={XP_BTN}
+              onClick={handleSizeChange}
+              disabled={sizeSaving}
+            >
+              {sizeSaving ? 'Saving...' : 'Change Size'}
+            </button>
+          </>}
+        >
+          <div className="mb-2" style={{ fontFamily: xpFont, fontSize: 11 }}>
+            <strong>{batchItemCode(sizeBatch)}</strong> — current size: {sizeBatch.bom_size_snapshot?.size_name || sizeBatch.bom_size_snapshot?.label || '—'}
+          </div>
+          <div className="mb-3">
+            <label style={{ fontFamily: xpFont, fontSize: 11 }}>New size</label>
+            <select
+              style={{ ...xpInput, width: '100%', height: 22 }}
+              value={sizeId}
+              onChange={e => setSizeId(e.target.value)}
+            >
+              <option value="">— (no size)</option>
+              {[...sizes].sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+                .map((sz: any) => <option key={sz.id} value={sz.id}>{sz.name}</option>)}
+            </select>
+            <div style={{ fontFamily: xpFont, fontSize: 10, color: '#555', marginTop: 2 }}>
+              Item and stock stay the same; only the lot's size changes.
+            </div>
+          </div>
+          <div className="mb-3">
+            <label style={{ fontFamily: xpFont, fontSize: 11 }}>Reason (optional)</label>
+            <textarea
+              style={{ ...xpInput, width: '100%', height: 50, resize: 'vertical' }}
+              value={sizeReason}
+              onChange={e => setSizeReason(e.target.value)}
+              placeholder="Out of size range after dyeing..."
+            />
+          </div>
+        </ModalWrapper>
+      )}
+
       {/* ── Dispose / Reassign Modal (rejected lots) ── */}
       {disposeBatch && (() => {
         const rem = Number(disposeBatch.remaining ?? 0);
@@ -1634,7 +1721,7 @@ export default function BatchesView({ items, locations, categories, workCenters,
         );
       })()}
 
-      {/* ── Row ⋯ menu: Print Label + Delete ── */}
+      {/* ── Row ⋯ menu: Print Label, Change Size, Delete ── */}
       {openId && (() => {
         const b = batches.find(x => x.id === openId);
         if (!b) return null;
@@ -1652,6 +1739,7 @@ export default function BatchesView({ items, locations, categories, workCenters,
             pos={pos}
             items={[
               { key: 'label', label: 'Print Label', icon: 'bi-printer', title: labelTitle, onClick: () => { close(); openBatchLabel(b); } },
+              { key: 'size', label: 'Change Size', icon: 'bi-arrows-angle-expand', hidden: !canQcReject || b.quality_status === 'DISPOSED', onClick: () => { close(); openSizeChange(b); } },
               { key: 'delete', label: 'Delete', icon: 'bi-trash', danger: true, hidden: !canDelete, onClick: () => { close(); handleDelete(b); } },
             ]}
           />

@@ -11,6 +11,7 @@ import { SearchField } from '../shared/shellTheme';
 import { getChipStyle } from '../manufacturing/WorkOrderPanel';
 import VariantChips from '../shared/VariantChips';
 import ModalWrapper from '../shared/ModalWrapper';
+import { TintCard } from '../shared/RequestDetailPanel';
 import Pager from '../shared/Pager';
 import { useData } from '../../context/DataContext';
 import { usePaginatedFetch } from '../../context/usePaginatedList';
@@ -1247,7 +1248,7 @@ export default function DyeingOrdersTab({ items, authFetch }: DyeingOrdersTabPro
                 >
                     <div>
                         {errorMsg && (
-                            <div style={{ background: '#fff3cd', border: '1px solid #ffc107', padding: '3px 8px', fontSize: 11, color: '#664d03', marginBottom: 6 }}>
+                            <div style={{ background: 'var(--terras-chip-amber-bg, #fff3cd)', border: '1px solid var(--terras-chip-amber-border, #ffc107)', borderRadius: CHIP_RADIUS, padding: '3px 8px', fontSize: 11, color: 'var(--terras-chip-amber-text, #664d03)', marginBottom: 6 }}>
                                 {errorMsg}
                             </div>
                         )}
@@ -1255,25 +1256,26 @@ export default function DyeingOrdersTab({ items, authFetch }: DyeingOrdersTabPro
                             planner about to commit 900 L to four orders should see
                             which four, and how much cloth that is in total. */}
                         {bulkWos && (
-                            <div style={{ border: '1px solid #aca899', background: '#f5f4ee', padding: '4px 6px', marginBottom: 6, fontSize: 10 }}>
-                                <div style={{ fontWeight: 'bold', color: '#444', marginBottom: 2 }}>
-                                    In this bath — {bulkWos.length} orders,{' '}
-                                    {fmtDose(bulkWos.reduce((t, w) => t + (Number(w.qty) || 0), 0), 2)} total
-                                </div>
+                            <TintCard
+                                title={<>In this bath — {bulkWos.length} orders,{' '}
+                                    {fmtDose(bulkWos.reduce((t, w) => t + (Number(w.qty) || 0), 0), 2)} total</>}
+                                style={{ marginBottom: 6, fontSize: 10 }}
+                                bodyStyle={{ padding: '6px 8px' }}
+                            >
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                                     {bulkWos.map(w => (
                                         <CodeChip key={String(w.id)} code={`${w.code || w.name} · ${fmtDose(w.qty, 2)}`} tone="accent" />
                                     ))}
                                 </div>
-                                <div style={{ color: '#888', marginTop: 2 }}>
+                                <div style={{ color: 'var(--terras-win-text-3, #888)', marginTop: 4 }}>
                                     The bath below is the vessel's, and is recorded whole on every run —
                                     not split between them. Each run keeps its own load, kg and clock.
                                 </div>
-                            </div>
+                            </TintCard>
                         )}
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '4px 12px' }}>
                             <label style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                                <span style={{ fontSize: 10, color: '#444' }}>Recipe</span>
+                                <span style={{ fontSize: 10, color: 'var(--terras-win-text-2, #444)' }}>Recipe</span>
                                 <SearchableSelect
                                     size="sm"
                                     options={recipeOptions}
@@ -1287,7 +1289,7 @@ export default function DyeingOrdersTab({ items, authFetch }: DyeingOrdersTabPro
                                 for either: each run takes its own work order's qty. */}
                             {!bulkWos && (
                                 <label style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                                    <span style={{ fontSize: 10, color: '#444' }}>Substrate Qty</span>
+                                    <span style={{ fontSize: 10, color: 'var(--terras-win-text-2, #444)' }}>Substrate Qty</span>
                                     <input type="number" style={xpInput} value={createForm.substrate_qty}
                                         onChange={e => handleCreateFormChange('substrate_qty', e.target.value)}
                                         placeholder={createWo.qty != null ? `WO qty ${createWo.qty}` : 'e.g. 100'} />
@@ -1295,14 +1297,14 @@ export default function DyeingOrdersTab({ items, authFetch }: DyeingOrdersTabPro
                             )}
                             {!bulkWos && (
                                 <label style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                                    <span style={{ fontSize: 10, color: '#444' }}>Input Lot</span>
+                                    <span style={{ fontSize: 10, color: 'var(--terras-win-text-2, #444)' }}>Input Lot</span>
                                     <input type="text" style={xpInput} value={createForm.input_batch_id}
                                         onChange={e => handleCreateFormChange('input_batch_id', e.target.value)} placeholder="lot number" />
                                 </label>
                             )}
                             <label style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                                 <span
-                                    style={{ fontSize: 10, color: '#444' }}
+                                    style={{ fontSize: 10, color: 'var(--terras-win-text-2, #444)' }}
                                     title="Litres of water per kg of substrate. Used to derive the bath volume when Volume Air is left blank; an entered Volume Air always wins."
                                 >Liquor Ratio (1:x)</span>
                                 <input type="number" style={xpInput} value={createForm.liquor_ratio}
@@ -1310,7 +1312,7 @@ export default function DyeingOrdersTab({ items, authFetch }: DyeingOrdersTabPro
                             </label>
                             <label style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                                 <span
-                                    style={{ fontSize: 10, color: '#444' }}
+                                    style={{ fontSize: 10, color: 'var(--terras-win-text-2, #444)' }}
                                     title="Water volume of the bath, in litres. Every g/L chemical is weighed out against this. Leave blank to have it derived from the liquor ratio."
                                 >Volume Air (L)</span>
                                 <input type="number" step="0.1" style={xpInput} value={createForm.volume_air_liters}
@@ -1318,7 +1320,7 @@ export default function DyeingOrdersTab({ items, authFetch }: DyeingOrdersTabPro
                             </label>
                             <label style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                                 <span
-                                    style={{ fontSize: 10, color: '#444' }}
+                                    style={{ fontSize: 10, color: 'var(--terras-win-text-2, #444)' }}
                                     title="How many ropes the vessel runs this load on. The dyeing monitor's rate is yd/min per rope x this."
                                 >Line (ropes)</span>
                                 <input type="number" min="1" step="1" style={xpInput} value={createForm.lines}
@@ -1326,7 +1328,7 @@ export default function DyeingOrdersTab({ items, authFetch }: DyeingOrdersTabPro
                             </label>
                             <label style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                                 <span
-                                    style={{ fontSize: 10, color: '#444' }}
+                                    style={{ fontSize: 10, color: 'var(--terras-win-text-2, #444)' }}
                                     title="Rope speed for this bath, picked by shade depth off the Dyeing Speed attribute. Times the rope count, this is the vessel's rate on the dyeing monitor."
                                 >Speed (yd/min per rope)</span>
                                 <select
@@ -1347,44 +1349,44 @@ export default function DyeingOrdersTab({ items, authFetch }: DyeingOrdersTabPro
                                 {/* The escape hatch, under the picker and narrower than it: a vessel run
                                     at a speed nobody has added to the list must still be recordable, but
                                     the list is the path. Same shape as the monitor's rate modal. */}
-                                <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 9, color: '#777' }}>
+                                <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 9, color: 'var(--terras-win-text-3, #777)' }}>
                                     or type
                                     <input type="number" min="0" step="any"
                                         style={{ ...xpInput, width: 58 }}
                                         value={createForm.yards_per_min}
                                         onChange={e => handleCreateFormChange('yards_per_min', e.target.value)} />
                                     {speedOptions.length === 0 && (
-                                        <span style={{ color: '#a06000' }}>none curated yet</span>
+                                        <span style={{ color: 'var(--terras-status-amber, #a06000)' }}>none curated yet</span>
                                     )}
                                 </span>
                             </label>
                             <label style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                                <span style={{ fontSize: 10, color: '#444' }}>Speed</span>
+                                <span style={{ fontSize: 10, color: 'var(--terras-win-text-2, #444)' }}>Speed</span>
                                 <input type="number" step="0.1" style={xpInput} value={createForm.machine_speed}
                                     onChange={e => handleCreateFormChange('machine_speed', e.target.value)} placeholder="e.g. 7" />
                             </label>
                             <label style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                                <span style={{ fontSize: 10, color: '#444' }}>Tekanan (Pressure)</span>
+                                <span style={{ fontSize: 10, color: 'var(--terras-win-text-2, #444)' }}>Tekanan (Pressure)</span>
                                 <input type="text" style={xpInput} value={createForm.machine_pressure}
                                     onChange={e => handleCreateFormChange('machine_pressure', e.target.value)} placeholder="pressure" />
                             </label>
                             <label style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                                <span style={{ fontSize: 10, color: '#444' }}>Temperature (C)</span>
+                                <span style={{ fontSize: 10, color: 'var(--terras-win-text-2, #444)' }}>Temperature (C)</span>
                                 <input type="number" style={xpInput} value={createForm.temperature_c}
                                     onChange={e => handleCreateFormChange('temperature_c', e.target.value)} placeholder="e.g. 60" />
                             </label>
                             <label style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                                <span style={{ fontSize: 10, color: '#444' }}>Duration (min)</span>
+                                <span style={{ fontSize: 10, color: 'var(--terras-win-text-2, #444)' }}>Duration (min)</span>
                                 <input type="number" style={xpInput} value={createForm.duration_min}
                                     onChange={e => handleCreateFormChange('duration_min', e.target.value)} placeholder="e.g. 45" />
                             </label>
                             <label style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                                <span style={{ fontSize: 10, color: '#444' }}>Operator Name</span>
+                                <span style={{ fontSize: 10, color: 'var(--terras-win-text-2, #444)' }}>Operator Name</span>
                                 <input type="text" style={xpInput} value={createForm.operator_name}
                                     onChange={e => handleCreateFormChange('operator_name', e.target.value)} placeholder="operator" />
                             </label>
                             <label style={{ display: 'flex', flexDirection: 'column', gap: 1, gridColumn: 'span 2' }}>
-                                <span style={{ fontSize: 10, color: '#444' }}>Notes</span>
+                                <span style={{ fontSize: 10, color: 'var(--terras-win-text-2, #444)' }}>Notes</span>
                                 <input type="text" style={xpInput} value={createForm.notes}
                                     onChange={e => handleCreateFormChange('notes', e.target.value)} placeholder="optional" />
                             </label>
@@ -1405,16 +1407,16 @@ export default function DyeingOrdersTab({ items, authFetch }: DyeingOrdersTabPro
                             variance the system has. */}
                         {editRun && chemRows.length > 0 && (
                             <div style={{ marginTop: 8 }}>
-                                <div style={{ fontSize: 10, fontWeight: 'bold', color: '#444', marginBottom: 2 }}>
+                                <div style={{ fontSize: 10, fontWeight: 'bold', color: 'var(--terras-win-text-2, #444)', marginBottom: 2 }}>
                                     Chemicals Used
                                 </div>
                                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10 }}>
                                     <thead>
-                                        <tr style={{ background: '#dddbd0' }}>
-                                            <th style={{ padding: '2px 6px', textAlign: 'left', borderBottom: '1px solid #aca899' }}>Chemical</th>
-                                            <th style={{ padding: '2px 6px', textAlign: 'right', borderBottom: '1px solid #aca899', width: 90 }}>Weigh Out</th>
-                                            <th style={{ padding: '2px 6px', textAlign: 'right', borderBottom: '1px solid #aca899', width: 90 }}>Actual</th>
-                                            <th style={{ padding: '2px 6px', textAlign: 'right', borderBottom: '1px solid #aca899', width: 70 }}>Variance</th>
+                                        <tr style={{ background: 'var(--terras-toolbar-bg, #f5f4ef)' }}>
+                                            <th style={{ padding: '2px 6px', textAlign: 'left', borderBottom: '1px solid var(--terras-table-line, #d6d3ce)' }}>Chemical</th>
+                                            <th style={{ padding: '2px 6px', textAlign: 'right', borderBottom: '1px solid var(--terras-table-line, #d6d3ce)', width: 90 }}>Weigh Out</th>
+                                            <th style={{ padding: '2px 6px', textAlign: 'right', borderBottom: '1px solid var(--terras-table-line, #d6d3ce)', width: 90 }}>Actual</th>
+                                            <th style={{ padding: '2px 6px', textAlign: 'right', borderBottom: '1px solid var(--terras-table-line, #d6d3ce)', width: 70 }}>Variance</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -1423,9 +1425,9 @@ export default function DyeingOrdersTab({ items, authFetch }: DyeingOrdersTabPro
                                             const actual = parseFloat(row.actual_qty);
                                             const variance = (isNaN(actual) ? 0 : actual) - (isNaN(planned) ? 0 : planned);
                                             return (
-                                                <tr key={row.item_id || idx} style={{ background: idx % 2 === 0 ? '#fff' : '#f5f4ee' }}>
+                                                <tr key={row.item_id || idx} style={{ background: idx % 2 === 0 ? 'var(--terras-table-bg, #fff)' : 'var(--terras-row-stripe-sub, #fbfaf7)' }}>
                                                     <td style={{ padding: '2px 6px' }}>{row.item_name}</td>
-                                                    <td style={{ padding: '2px 6px', textAlign: 'right', color: '#555', whiteSpace: 'nowrap' }}>
+                                                    <td style={{ padding: '2px 6px', textAlign: 'right', color: 'var(--terras-win-text-3, #555)', whiteSpace: 'nowrap' }}>
                                                         {isNaN(planned) ? '—' : `${fmtDose(planned, 3)}${row.dose_unit ? ` ${row.dose_unit}` : ''}`}
                                                     </td>
                                                     <td style={{ padding: '2px 4px' }}>
@@ -1438,7 +1440,7 @@ export default function DyeingOrdersTab({ items, authFetch }: DyeingOrdersTabPro
                                                             disabled={!canManage}
                                                         />
                                                     </td>
-                                                    <td style={{ padding: '2px 6px', textAlign: 'right', whiteSpace: 'nowrap', color: Math.abs(variance) < 1e-9 ? '#555' : variance > 0 ? '#900' : '#1a5e1a' }}>
+                                                    <td style={{ padding: '2px 6px', textAlign: 'right', whiteSpace: 'nowrap', color: Math.abs(variance) < 1e-9 ? 'var(--terras-win-text-3, #555)' : variance > 0 ? 'var(--terras-status-red, #900)' : 'var(--terras-status-green, #1a5e1a)' }}>
                                                         {isNaN(actual) ? '—' : `${variance > 0 ? '+' : ''}${fmtDose(variance, 3)}`}
                                                     </td>
                                                 </tr>
@@ -1446,7 +1448,7 @@ export default function DyeingOrdersTab({ items, authFetch }: DyeingOrdersTabPro
                                         })}
                                     </tbody>
                                 </table>
-                                <div style={{ fontSize: 9, color: '#888', marginTop: 2 }}>
+                                <div style={{ fontSize: 9, color: 'var(--terras-win-text-3, #888)', marginTop: 2 }}>
                                     Chemicals are still deducted from stock by BOM percentage, not from these
                                     figures — this records what the vessel actually took.
                                 </div>

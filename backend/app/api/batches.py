@@ -19,7 +19,7 @@ from app.models.production_run import ProductionRun
 from app.models.sales import SalesOrder
 from app.models.goods_receipt import GoodsReceipt, GoodsReceiptLine
 from app.models.purchase import PurchaseOrder
-from app.schemas import BatchCreate, BatchReject, BatchSplit, BatchDispose, BatchReassign, BatchResponse, BatchTraceResponse, BatchConsumptionResponse, BatchTraceBackNode, PaginatedBatchResponse
+from app.schemas import BatchCreate, BatchReject, BatchSplit, BatchDispose, BatchReassign, BatchSizeChange, BatchResponse, BatchTraceResponse, BatchConsumptionResponse, BatchTraceBackNode, PaginatedBatchResponse
 from app.api.auth import get_current_user, require_permission, require_any_permission
 from app.models.auth import User
 from app.services import audit_service, kpi_service, stock_service, reject_service, numbering_service, quarantine_service, staging_service, work_center_service
@@ -1254,6 +1254,72 @@ async def dispose_batch(
     batch.item_code = batch.item.code if batch.item else None
     batch.item_name = batch.item.name if batch.item else None
     return batch
+
+
+@router.post("/{batch_id}/size", response_model=BatchResponse)
+async def change_batch_size(
+    batch_id: uuid.UUID,
+    payload: BatchSizeChange,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(require_permission('lot.qc_reject')),
+):
+    """Change a lot's size; the item and its stock stay as they are.
+
+    A lot's size lives only on the lot (bom_size_id + bom_size_snapshot), never in
+    the stock keys, so this is a re-label, not a stock move. The new snapshot comes
+    from the item's own BOM size row when it has one (keeping its label and
+    measurement range), else just the size name — as a manually created lot gets.
+    """
+    from app.models.bom import BOM, BOMSize
+    from app.services.mrp_service import bom_size_snapshot
+    batch = (await db.execute(
+        select(Batch).options(joinedload(Batch.item)).filter(Batch.id == batch_id)
+    )).scalars().first()
+    if not batch:
+        raise HTTPException(status_code=404, detail="Lot not found")
+    await _require_lot_scope(db, current_user, batch.id)
+
+    old_name = ((batch.bom_size_snapshot or {}).get("size_name")
+                or (batch.bom_size_snapshot or {}).get("label") or "—")
+    bom_size_id, snapshot, new_name = None, None, "—"
+    if payload.size_id:
+        size = (await db.execute(select(Size).filter(Size.id == payload.size_id))).scalars().first()
+        if not size:
+            raise HTTPException(status_code=404, detail="Size not found")
+        # Prefer the BOM the lot's current size came from — an item can have
+        # several BOMs, and packing matches a lot to a sales order line by this id.
+        cur_bom = (await db.execute(
+            select(BOMSize.bom_id).filter(BOMSize.id == batch.bom_size_id)
+        )).scalar() if batch.bom_size_id else None
+        bom_size_id = (await db.execute(
+            select(BOMSize.id).join(BOM, BOM.id == BOMSize.bom_id)
+            .filter(BOM.item_id == batch.item_id, BOMSize.size_id == size.id)
+            .order_by((BOMSize.bom_id == cur_bom).desc().nulls_last() if cur_bom else BOMSize.id)
+            .limit(1)
+        )).scalar()
+        snapshot = (await bom_size_snapshot(db, bom_size_id) if bom_size_id else None) \
+            or {"size_name": size.name, "label": None}
+        new_name = size.name
+    if old_name == new_name and batch.bom_size_id == bom_size_id:
+        raise HTTPException(status_code=400, detail=f"Lot is already size {new_name}")
+
+    batch.bom_size_id = bom_size_id
+    batch.bom_size_snapshot = snapshot
+    await db.commit()
+    reason = (payload.reason or "").strip() or None
+    await audit_service.log_activity(
+        db, current_user.id, "UPDATE", "Batch", str(batch.id),
+        details=f"Changed size of lot {batch.batch_number}: {old_name} → {new_name}"
+        + (f": {reason}" if reason else ""),
+        changes={"size": [old_name, new_name]},
+    )
+    # Size buckets stock in netting/booking, so size-aware screens must refetch.
+    await manager.broadcast({"type": "STOCK_UPDATE"})
+
+    reloaded = (await db.execute(
+        select(Batch).options(joinedload(Batch.item)).filter(Batch.id == batch.id)
+    )).scalars().first()
+    return (await _enrich_batches(db, [reloaded]))[0]
 
 
 @router.post("/{batch_id}/reassign", response_model=BatchResponse)

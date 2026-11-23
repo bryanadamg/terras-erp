@@ -1,14 +1,15 @@
 'use client';
 import React from 'react';
-import { xpFont, FORM_SECTION_BLUE } from './xpTheme';
+import { FormSection } from '@bryanadamg/terras-ui/components/FormSection';
+import { Table, EmptyRow } from '@bryanadamg/terras-ui/components/Table';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Shared expanded-row detail panel for request-style pages (Sample Requests,
-// Lab Dip Requests). Renders the classic-XP / modern two-pane layout:
-//   LEFT  — a fixed-column table of the request's variants/colors
-//   RIGHT — an optional header control + grouped label/value sections
-// Each page supplies its own column cells and section fields; this component owns
-// the layout and both light themes so the two pages stay visually identical.
+// Lab Dip Requests). Two cards side by side on the panel's own ground:
+//   LEFT  — the request's variants/colors as a terras-ui Table
+//   RIGHT — grouped label/value sections
+// Built only from terras-ui parts and tokens, so it follows the active theme.
+// Cards size to their content — a one-variant request no longer leaves a void.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface DetailColumn {
@@ -19,8 +20,8 @@ export interface DetailColumn {
 
 export interface DetailRow {
     key: string;
-    stripeColor?: string;                   // classic: colored left border on the first cell
-    background?: string;                    // row background tint (per status)
+    stripeColor?: string;                   // status rail on the first cell
+    background?: string;                    // optional row tint
     cells: React.ReactNode[];               // one entry per column
 }
 
@@ -35,18 +36,17 @@ export interface DetailSection {
     fields: DetailField[];
 }
 
-// Status → left-border + row-background tint. Superset covering both pages.
-export const getStatusStripe = (status: string): { borderLeftColor: string; background: string } => {
-    const map: Record<string, { borderLeftColor: string; background: string }> = {
-        PENDING:       { borderLeftColor: '#9e9e9e', background: '#fdfdfd' },
-        IN_PROGRESS:   { borderLeftColor: '#c77800', background: '#fffdf8' },
-        IN_PRODUCTION: { borderLeftColor: '#c77800', background: '#fffdf8' },
-        SENT:          { borderLeftColor: '#3a5faa', background: '#f8faff' },
-        APPROVED:      { borderLeftColor: '#27713a', background: '#f8fff8' },
-        REJECTED:      { borderLeftColor: '#a01a1a', background: '#fff8f8' },
-    };
-    return map[status] || map.PENDING;
+// Status → rail colour (theme status tokens). Superset covering both pages.
+const STATUS_RAIL: Record<string, string> = {
+    PENDING:       'var(--terras-status-gray, #9e9e9e)',
+    IN_PROGRESS:   'var(--terras-status-amber, #c77800)',
+    IN_PRODUCTION: 'var(--terras-status-amber, #c77800)',
+    SENT:          'var(--terras-status-blue, #3a5faa)',
+    APPROVED:      'var(--terras-status-green, #27713a)',
+    REJECTED:      'var(--terras-status-red, #a01a1a)',
 };
+export const getStatusStripe = (status: string): { borderLeftColor: string; background?: string } =>
+    ({ borderLeftColor: STATUS_RAIL[status] || STATUS_RAIL.PENDING });
 
 interface Props {
     leftTitle: React.ReactNode;
@@ -55,110 +55,127 @@ interface Props {
     rows: DetailRow[];
     emptyText?: string;
     sections: DetailSection[];
-    rightHeader?: React.ReactNode;          // optional control strip above the sections
     minHeight?: number;                     // default 160 (ignored when `height` is set)
     height?: number;                        // fixed panel height; panes scroll internally past it
 }
 
+// Cards nested in a list row take a tinted header instead of the solid form blue:
+// solid bars stacked under the list's own chrome read too heavy. The header reads its
+// ground from this var, so overriding it on the card restyles just that bar.
+// The default section edge is near-white and vanishes on a white ground, so the card
+// takes a blue-grey edge derived from the same chip family as its header.
+export const TINT = {
+    '--terras-form-section-blue': 'var(--terras-chip-blue-bg, #dce4f5)',
+    '--terras-form-section-border': 'color-mix(in srgb, var(--terras-chip-blue-border, #3a5faa) 40%, var(--terras-table-bg, #fff))',
+    // FormSection's XP bevel (inset white highlight + 1px drop) shows as a white frame
+    // inside the tinted header's corners — a flat card doesn't want it.
+    boxShadow: 'none',
+} as React.CSSProperties;
+const CARD: React.CSSProperties = { ...TINT, margin: 0, minWidth: 0, display: 'flex', flexDirection: 'column' };
+// Label beside value, two pairs per line — scans faster than label-over-value here.
+const FIELD_LABEL: React.CSSProperties = { width: 110, flexShrink: 0, fontSize: 'var(--terras-fs-sm, 10px)', fontWeight: 'bold', color: 'var(--terras-win-text-2, #333)' };
+const FIELD_VALUE: React.CSSProperties = { margin: 0, minWidth: 0, fontSize: 'var(--terras-fs-base, 11px)', color: 'var(--terras-win-text, #000)', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' };
+export const tintTitle = (t: React.ReactNode) => <span style={{ color: 'var(--terras-chip-blue-text, #0d2a6e)' }}>{t}</span>;
+
+/**
+ * Tinted FormSection card — the modern section box for nested panels and dialogs
+ * (BOM designer/automator). `tone` picks the chip family for header, edge and title;
+ * `bodyStyle` defaults to a top inset only, for children that pad themselves.
+ */
+export function TintCard({ title, right, tone = 'blue', style, bodyStyle, children }: {
+    title: React.ReactNode; right?: React.ReactNode; tone?: 'blue' | 'amber' | 'green' | 'red' | 'gray';
+    style?: React.CSSProperties; bodyStyle?: React.CSSProperties; children: React.ReactNode;
+}) {
+    const toneVars = tone === 'blue' ? TINT : {
+        ...TINT,
+        '--terras-form-section-blue': `var(--terras-chip-${tone}-bg)`,
+        '--terras-form-section-border': `color-mix(in srgb, var(--terras-chip-${tone}-border) 40%, var(--terras-table-bg, #fff))`,
+    } as React.CSSProperties;
+    return (
+        <FormSection
+            title={<span style={{ color: `var(--terras-chip-${tone}-text)` }}>{title}</span>}
+            right={right}
+            style={{ ...toneVars, margin: 0, display: 'flex', flexDirection: 'column', ...style }}
+            bodyStyle={{ padding: '8px 0 0', flex: 1, ...bodyStyle }}
+        >
+            {children}
+        </FormSection>
+    );
+}
+
+/** Label beside value, `columns` pairs per line; '—' / empty renders as a muted dash. */
+export function FieldList({ fields, columns = 2, labelWidth = 110 }: { fields: DetailField[]; columns?: number; labelWidth?: number }) {
+    return (
+        <dl style={{ margin: 0, display: 'grid', gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`, gap: '4px 20px', fontFamily: 'var(--terras-font-classic)' }}>
+            {fields.map((f, fi) => {
+                const empty = f.value == null || f.value === '' || f.value === '—';
+                return (
+                    <div key={fi} style={{ display: 'flex', gap: 8, alignItems: 'baseline', minWidth: 0, ...(f.full ? { gridColumn: '1 / -1' } : {}) }}>
+                        <dt style={{ ...FIELD_LABEL, width: labelWidth }}>{f.label}</dt>
+                        <dd style={{ ...FIELD_VALUE, ...(empty ? { color: 'var(--terras-win-text-3, #666)' } : {}) }}>{empty ? '—' : f.value}</dd>
+                    </div>
+                );
+            })}
+        </dl>
+    );
+}
+
 export default function RequestDetailPanel({
-    leftTitle, leftWidth = '56%', columns, rows, emptyText = 'No rows.', sections, rightHeader, minHeight = 160, height,
+    leftTitle, leftWidth = '56%', columns, rows, emptyText = 'No rows.', sections, minHeight = 160, height,
 }: Props) {
-
-    // A fixed height clamps the panel and lets each pane scroll its own overflow;
-    // otherwise it grows with content (minHeight floor). `overflow: hidden` keeps
-    // the inner scroll areas — not the page — owning the overflow.
-    const sizing: React.CSSProperties = height != null ? { height, overflow: 'hidden', boxSizing: 'border-box' } : { minHeight };
-    const outer: React.CSSProperties = { background: '#ece9d8', borderTop: '2px solid #0058e6', display: 'flex', ...sizing };
-
-    // min-width: 0 stops each pane's intrinsic content width from propagating up into
-    // the outer (auto-layout) list table and resizing its flexible columns on expand.
-    // min-height: 0 lets the panes scroll within a fixed-height panel.
-    const leftPane: React.CSSProperties = {
-        width: leftWidth, borderRight: '1px solid #a0988c',
-        display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0,
+    // A fixed height clamps the panel and lets each card scroll its own overflow —
+    // cards still size to their content (max 100%), so a short table leaves no void;
+    // otherwise it grows with content (minHeight floor). min-width: 0 on the cards
+    // stops their content width feeding back into the outer list table's layout.
+    const fixed = height != null;
+    const outer: React.CSSProperties = {
+        display: 'flex', gap: 8, padding: 8, alignItems: 'flex-start',
+        boxSizing: 'border-box', ...(fixed ? { height, overflow: 'hidden' } : { minHeight }),
     };
-
-    const leftHeader: React.CSSProperties = { background: 'linear-gradient(to bottom, #e4e1d8, #d5d2c8)', borderBottom: '1px solid #9a9690', padding: '2px 8px', fontSize: 10, fontWeight: 'bold', color: '#111', letterSpacing: '0.3px', display: 'flex', alignItems: 'center', gap: 6, fontFamily: xpFont, flexShrink: 0 };
-
-    const thCell: React.CSSProperties = { background: 'linear-gradient(to bottom, #f0ede8, #e4e1da)', borderBottom: '1px solid #b0a898', borderRight: '1px solid #ccc', fontSize: 9, fontWeight: 'bold', color: '#111', padding: '2px 6px', textAlign: 'left', whiteSpace: 'nowrap', textTransform: 'uppercase', letterSpacing: '0.3px', fontFamily: xpFont };
-
-    const tdBase: React.CSSProperties = { padding: '3px 6px', borderBottom: '1px solid #e8e5e0', borderRight: '1px solid #e0ddd8', fontSize: 11, verticalAlign: 'middle', fontFamily: xpFont };
-
-    const rightPane: React.CSSProperties = { flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0 };
-
-    const grpHdr: React.CSSProperties = { background: FORM_SECTION_BLUE, color: '#fff', fontSize: 10, fontWeight: 'bold', padding: '2px 8px', letterSpacing: '0.4px', textTransform: 'uppercase', fontFamily: xpFont };
-
-    const grpBody: React.CSSProperties = {
-        background: '#fff', padding: '6px 10px', borderBottom: '1px solid #d0cdc8',
-        display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 20px',
-    };
-
-    const lbl: React.CSSProperties = { fontFamily: xpFont, fontSize: 10, color: '#333', fontWeight: 'bold', minWidth: 90, flexShrink: 0 };
-    const val: React.CSSProperties = { fontFamily: xpFont, fontSize: 11, color: '#000' };
+    const scroll: React.CSSProperties = fixed ? { overflowY: 'auto', flex: '0 1 auto', minHeight: 0 } : {};
+    const last = columns.length - 1;
 
     return (
         <div style={outer}>
-            {/* LEFT — variant/color table */}
-            <div style={leftPane}>
-                <div style={leftHeader}>{leftTitle}</div>
-                {rows.length > 0 ? (
-                    <div style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-                            <colgroup>
-                                {columns.map((col, i) => <col key={i} style={col.width ? { width: col.width } : undefined} />)}
-                            </colgroup>
-                            <thead>
-                                <tr>
-                                    {columns.map((col, i) => (
-                                        <th key={i} style={{ ...thCell, textAlign: col.align || 'left', ...(i === columns.length - 1 ? { borderRight: 'none' } : {}) }}>
-                                            {col.header}
-                                        </th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {rows.map((row, ri) => {
-                                    const isLast = ri === rows.length - 1;
-                                    return (
-                                        <tr key={row.key} style={{ background: row.background }}>
-                                            {row.cells.map((cell, ci) => {
-                                                const col = columns[ci];
-                                                const style: React.CSSProperties = {
-                                                    ...tdBase,
-                                                    background: row.background,
-                                                    textAlign: col?.align || 'left',
-                                                    ...(isLast ? { borderBottom: 'none' } : {}),
-                                                    ...(ci === columns.length - 1 ? { borderRight: 'none' } : {}),
-                                                    ...(ci === 0 && row.stripeColor ? { borderLeft: `4px solid ${row.stripeColor}` } : {}),
-                                                };
-                                                return <td key={ci} style={style}>{cell}</td>;
-                                            })}
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
-                ) : (
-                    <div style={{ padding: '12px 10px', color: '#555', fontStyle: 'italic', fontSize: 10, fontFamily: xpFont}}>{emptyText}</div>
-                )}
-            </div>
-
-            {/* RIGHT — optional control strip + grouped sections */}
-            <div style={rightPane}>
-                {rightHeader}
-                {sections.map((sec, si) => (
-                    <div key={si}>
-                        <div style={grpHdr}>{sec.title}</div>
-                        <div style={grpBody}>
-                            {sec.fields.map((f, fi) => (
-                                <div key={fi} style={{ display: 'flex', gap: 6, alignItems: 'flex-start', ...(f.full ? { gridColumn: '1 / -1' } : {}) }}>
-                                    <span style={lbl}>{f.label}</span>
-                                    <span style={{ ...val, ...(f.full ? { whiteSpace: 'pre-wrap' as const } : {}) }}>{f.value}</span>
-                                </div>
+            <FormSection title={tintTitle(leftTitle)} style={{ ...CARD, width: leftWidth, flexShrink: 0, ...(fixed ? { maxHeight: '100%' } : {}) }} bodyStyle={{ padding: 0, ...scroll }}>
+                <Table style={{ tableLayout: 'fixed', borderLeft: 'none', borderTop: 'none' }}>
+                    <colgroup>
+                        {columns.map((col, i) => <col key={i} style={col.width ? { width: col.width } : undefined} />)}
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            {columns.map((col, i) => (
+                                <th key={i} style={{ textAlign: col.align || 'left', ...(i === last ? { borderRight: 'none' } : {}) }}>{col.header}</th>
                             ))}
-                        </div>
-                    </div>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {rows.length === 0 && <EmptyRow colSpan={columns.length}>{emptyText}</EmptyRow>}
+                        {rows.map((row, ri) => (
+                            <tr key={row.key}>
+                                {row.cells.map((cell, ci) => (
+                                    // Wrap, don't spill: a long name grows the row instead of painting over the next cell.
+                                    <td key={ci} className="terras-cell-wrap" style={{
+                                        overflowWrap: 'anywhere',
+                                        textAlign: columns[ci]?.align || 'left',
+                                        background: row.background,
+                                        ...(ci === last ? { borderRight: 'none' } : {}),
+                                        ...(ri === rows.length - 1 ? { borderBottom: 'none' } : {}),
+                                        // Inset shadow, not border: zero width, so the rail can't shift the columns.
+                                        ...(ci === 0 && row.stripeColor ? { boxShadow: `inset 3px 0 0 ${row.stripeColor}`, paddingLeft: 11 } : {}),
+                                    }}>{cell}</td>
+                                ))}
+                            </tr>
+                        ))}
+                    </tbody>
+                </Table>
+            </FormSection>
+
+            <div style={{ flex: 1, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 8, ...(fixed ? { overflowY: 'auto', maxHeight: '100%' } : {}) }}>
+                {sections.map((sec, si) => (
+                    <FormSection key={si} title={tintTitle(sec.title)} style={{ ...TINT, margin: 0, flexShrink: 0 }} bodyStyle={{ padding: '6px 10px' }}>
+                        <FieldList fields={sec.fields} />
+                    </FormSection>
                 ))}
             </div>
         </div>

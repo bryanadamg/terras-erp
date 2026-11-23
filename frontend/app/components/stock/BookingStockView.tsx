@@ -24,8 +24,8 @@ import { saveResponse } from '../shared/download';
 
 // Booking Stock: per-item material availability across all ongoing MOs.
 //   net_free = on_hand + incoming - required
-// Incoming = outstanding output of in-flight production MOs (production-only;
-// purchase orders are not yet counted). Self-fetches /stock/availability.
+// Incoming = outstanding output of in-flight production MOs plus the unreceived
+// qty of open purchase order lines. Self-fetches /stock/availability.
 
 const fmtQty = qtyFmt(3);
 
@@ -48,6 +48,7 @@ type Row = {
     qty_net_free: number;
     demand_mos: { mo_id: string; mo_code: string; mo_qty: number; required_qty: number }[];
     supply_mos: { mo_id: string; mo_code: string; mo_qty: number; incoming_qty: number }[];
+    supply_pos?: { po_id: string; po_number: string; incoming_qty: number }[];
     reserved_sos: { sales_order_id: string; so_number: string; reserved_qty: number }[];
 };
 
@@ -210,6 +211,11 @@ export default function BookingStockView() {
                 t('incoming_from_mos') || 'Incoming from', TERM.incoming, '#e2f3e2',
                 r.supply_mos.map(m => ({ mo_id: m.mo_id, mo_code: m.mo_code, qty: m.incoming_qty })),
                 '+', r.uom,
+            )}
+            {(r.supply_pos || []).length > 0 && detailSide(
+                t('incoming_from_pos') || 'Incoming from purchase', TERM.incoming, '#e2f3e2',
+                (r.supply_pos || []).map(p => ({ mo_id: p.po_id, mo_code: p.po_number, qty: p.incoming_qty })),
+                '+', r.uom, 'PO',
             )}
             {/* Only when something is held: an empty third pane on every row would
                 cost the two real ones their width for nothing. */}

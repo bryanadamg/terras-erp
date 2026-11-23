@@ -99,7 +99,9 @@ const DOCS: Record<Lang, Doc> = {
                     ] },
                     { k: 'p', body: <>Child and shared-component orders always stay in supply (their output is already balanced by the
                         consuming order's component demand), and an uncommitted root is a deliberate stock-build, so its output is
-                        deliberately free. <b>Purchase orders are not counted</b> — incoming is production only.</> },
+                        deliberately free.</> },
+                    { k: 'p', body: <>Open <b>purchase orders</b> count too: every PO not yet Received or Cancelled adds each line's
+                        ordered qty minus what has already been received.</> },
                 ],
             },
             {
@@ -168,7 +170,6 @@ const DOCS: Record<Lang, Doc> = {
                             advisory — they say who <i>wants</i> what. <T c={TERM.reserved}>Reserved</T> is the one column that
                             records a real claim, and even it holds a <i>quantity</i> of an item, never a particular lot: which
                             roll or carton ships is decided later, at packing.</>,
-                        <><b>Not a purchasing forecast.</b> Open purchase orders never appear as incoming.</>,
                         <><b>Not per-location.</b> A positive net free does not promise the stock sits at the work centre that
                             needs it.</>,
                         <><b>Not a dispatch decision.</b> The Work Queue answers "what can I start next?", walking on-hand stock in
@@ -237,8 +238,9 @@ const DOCS: Record<Lang, Doc> = {
                     ] },
                     { k: 'p', body: <>Order anak dan order komponen bersama selalu tetap menjadi pasokan (hasilnya sudah diimbangi oleh
                         kebutuhan komponen order yang mengonsumsinya), sedangkan order induk yang tidak terikat adalah produksi untuk
-                        stok yang memang disengaja, jadi hasilnya sengaja dibiarkan bebas. <b>Purchase order tidak
-                        dihitung</b> — Masuk hanya berasal dari produksi.</> },
+                        stok yang memang disengaja, jadi hasilnya sengaja dibiarkan bebas.</> },
+                    { k: 'p', body: <><b>Purchase order</b> yang masih terbuka juga dihitung: setiap PO yang belum Received atau
+                        Cancelled menambahkan qty pesanan tiap baris dikurangi yang sudah diterima.</> },
                 ],
             },
             {
@@ -313,7 +315,6 @@ const DOCS: Record<Lang, Doc> = {
                             <T c={TERM.reserved}> Dipesan</T> adalah satu-satunya kolom yang mencatat klaim nyata, dan itu pun
                             menahan <i>kuantitas</i> sebuah item, bukan lot tertentu: roll atau karton mana yang dikirim baru
                             ditentukan kemudian, saat packing.</>,
-                        <><b>Bukan ramalan pembelian.</b> Purchase order yang masih terbuka tidak pernah muncul sebagai Masuk.</>,
                         <><b>Bukan per lokasi.</b> Sisa bebas yang positif tidak menjamin stoknya berada di work center yang
                             membutuhkannya.</>,
                         <><b>Bukan keputusan dispatch.</b> Work Queue menjawab "apa yang bisa saya mulai berikutnya?", dengan

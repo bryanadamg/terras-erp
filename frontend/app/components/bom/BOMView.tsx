@@ -8,10 +8,12 @@ import { useToast } from '../shared/Toast';
 import { useLanguage } from '../../context/LanguageContext';
 import { useData } from '../../context/DataContext';
 import { workCenterChipStyle, xpFont, colorHexFor, CodeChip, CODE_FONT, TableSkeleton, useTableSkeletonMetrics, CHIP_RADIUS, VariantChip, BUTTON_RADIUS, XP_BTN, XPActionButton, useFloatingMenu, MenuTriggerButton, FloatingMenu } from '../shared/xpTheme';
-import { expandedRowFrame, rowStateBg } from '@bryanadamg/terras-ui/components/Table';
+import { expandedRowFrame, rowStateBg, Table } from '@bryanadamg/terras-ui/components/Table';
+import { FormSection } from '@bryanadamg/terras-ui/components/FormSection';
+import { TINT, tintTitle, FieldList, type DetailField } from '../shared/RequestDetailPanel';
 import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
 import Pager from '../shared/Pager';
-import { lvThead, LV_STICKY_THEAD, ExpanderCell, lvZebra, TableEmpty, Dash, lvSubTable, lvSubTd, lvSubRow, lvThBanded, ResizableTable } from '../shared/listViewTheme';
+import { lvThead, LV_STICKY_THEAD, ExpanderCell, lvZebra, TableEmpty, Dash, ResizableTable } from '../shared/listViewTheme';
 import { useRowSelection, RowCheckbox, SelectAllCheckbox, CHECK_COL_W as LV_CHECK_COL_W, EXPANDER_COL_W as LV_EXPANDER_COL_W } from '@bryanadamg/terras-ui/components/Table';
 import { ToolbarButton, SearchField, viewShellStyle } from '../shared/shellTheme';
 import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
@@ -43,6 +45,31 @@ function hasTeknisFor(b: any): boolean {
         || b.berat_bahan_mateng != null || b.berat_bahan_mentah_pelesan != null
         || b.mesin_lebar != null || b.celup_lebar != null;
 }
+
+// ── Expanded-row workspace styles ────────────────────────────────────────────
+// A fixed-height workspace: all three cards run to the bottom of the row (it reads as
+// one framed tool, not three floating boxes) and each scrolls its own overflow.
+const PANE_H = 420;
+const PANE: React.CSSProperties = { ...TINT, margin: 0, minWidth: 0, display: 'flex', flexDirection: 'column' };
+const PANE_BODY: React.CSSProperties = { padding: 0, overflowY: 'auto', minHeight: 0, flex: 1 };
+type Tone = 'blue' | 'green' | 'amber' | 'red' | 'gray';
+const toneChip = (f: Tone): React.CSSProperties => ({
+    background: `var(--terras-chip-${f}-bg)`, border: `1px solid var(--terras-chip-${f}-border)`, color: `var(--terras-chip-${f}-text)`,
+    borderRadius: CHIP_RADIUS, fontSize: 9, fontWeight: 'bold', padding: '0 4px', flexShrink: 0, whiteSpace: 'nowrap', display: 'inline-block',
+});
+// A chip on the solid selection blue: a translucent wash so it doesn't fight the row.
+const onSolidChip: React.CSSProperties = { borderRadius: CHIP_RADIUS, background: 'rgba(255,255,255,0.25)', border: '1px solid rgba(255,255,255,0.5)', color: 'inherit', fontSize: 9, fontWeight: 'bold', padding: '0 4px', flexShrink: 0 };
+const treeRow = (selected: boolean): React.CSSProperties => ({
+    display: 'flex', alignItems: 'center', gap: 5, padding: '3px 6px', userSelect: 'none', fontSize: 11,
+    borderBottom: '1px solid var(--terras-table-line, #e8e4d8)',
+    background: selected ? 'var(--terras-row-selected, #316ac5)' : undefined,
+    color: selected ? 'var(--terras-on-solid, #fff)' : 'var(--terras-win-text, #000)',
+});
+const subCaption: React.CSSProperties = {
+    fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.4px',
+    color: 'var(--terras-chip-blue-text, #0d2a6e)', margin: '10px 0 4px', paddingTop: 8,
+    borderTop: '1px solid var(--terras-table-line, #d6d3ce)',
+};
 
 export default function BOMView({
     items, boms, locations, attributes, sizes, workCenters, operations, partners,
@@ -363,32 +390,15 @@ export default function BOMView({
 
             nodes.push(
                 <div key={line.id}
+                    className={isSelectable && !isSelected ? 'bom-tree-hover' : undefined}
                     onClick={isSelectable && sub ? () => selectDetailNode(rootBomId, sub.id) : undefined}
-                    style={{
-                        display: 'flex', alignItems: 'center', gap: 5,
-                        padding: `3px 5px 3px ${indentPx}px`,
-                        cursor: isSelectable ? 'pointer' : 'default',
-                        background: isSelected ? '#316ac5' : 'transparent',
-                        color: isSelected ? '#fff' : '#000',
-                        borderBottom: '1px solid #e8e4d8',
-                        fontFamily: xpFont, fontSize: 11,
-                        userSelect: 'none',
-                    }}
-                    onMouseEnter={e => { if (!isSelected && isSelectable) (e.currentTarget as HTMLElement).style.background = '#d0e4f8'; }}
-                    onMouseLeave={e => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                    style={{ ...treeRow(isSelected), padding: `3px 6px 3px ${indentPx}px`, cursor: isSelectable ? 'pointer' : 'default' }}
                 >
-                    <i className={`bi ${isSelectable ? 'bi-layers' : 'bi-box'}`} style={{ fontSize: 11, flexShrink: 0, color: isSelected ? 'inherit' : (isSelectable ? '#316ac5' : '#6b4e00') }} />
+                    <i className={`bi ${isSelectable ? 'bi-layers' : 'bi-box'}`} style={{ fontSize: 11, flexShrink: 0, color: isSelected ? 'inherit' : (isSelectable ? 'var(--terras-win-blue, #316ac5)' : 'var(--terras-win-text-3, #666)') }} />
                     <span title={line.item_name || line.item_code} style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {line.item_name || line.item_code}
                     </span>
-                    {isSelectable && (
-                        <span style={{ borderRadius: CHIP_RADIUS,
-                            background: isSelected ? 'rgba(255,255,255,0.25)' : '#fff3cd',
-                            border: `1px solid ${isSelected ? 'rgba(255,255,255,0.5)' : '#b8860b'}`,
-                            color: isSelected ? '#fff' : '#6b4e00',
-                            fontSize: 8, padding: '0 3px', fontWeight: 'bold', flexShrink: 0,
-                        }}>Sub</span>
-                    )}
+                    {isSelectable && <span style={isSelected ? onSolidChip : toneChip('amber')}>Sub</span>}
                 </div>
             );
 
@@ -412,345 +422,209 @@ export default function BOMView({
         const nodeCount = countTreeNodes(bom);
         const parentName = isRootSelected ? '' : findParentName(bom, selectedBomId);
 
+        // Measurement / size grids in the details card: a compact terras Table.
+        const miniTd: React.CSSProperties = { padding: '2px 6px', fontSize: 10 };
+        const miniTh: React.CSSProperties = { ...miniTd, fontWeight: 'bold' };
+        const num = (v: any) => v != null ? v : <span style={{ color: 'var(--terras-win-text-3, #999)' }}>—</span>;
+        const mRow = (label: string, mesinVal: any, celupVal: any, unit: string) => (
+            <tr key={label}>
+                <td style={miniTd}>{label}</td>
+                <td style={{ ...miniTd, textAlign: 'right', fontWeight: 'bold' }}>{num(mesinVal)}</td>
+                <td style={{ ...miniTd, textAlign: 'right', fontWeight: 'bold' }}>{num(celupVal)}</td>
+                <td style={{ ...miniTd, color: 'var(--terras-win-text-3, #777)', borderRight: 'none' }}>{unit}</td>
+            </tr>
+        );
+        const hasMesin = [displayBOM.mesin_lebar, displayBOM.mesin_panjang_tulisan, displayBOM.mesin_panjang_tarikan, displayBOM.mesin_panjang_tarikan_bandul_1kg, displayBOM.mesin_panjang_tarikan_bandul_9kg].some(v => v != null);
+        const hasCelup = [displayBOM.celup_lebar, displayBOM.celup_panjang_tulisan, displayBOM.celup_panjang_tarikan, displayBOM.celup_panjang_tarikan_bandul_1kg, displayBOM.celup_panjang_tarikan_bandul_9kg].some(v => v != null);
+        const warpEnds = getItemEnds(displayBOM.item_id) != null;
+        const unitOf = (u: string) => <span style={{ fontWeight: 'normal', fontSize: 9, color: 'var(--terras-win-text-3, #666)' }}> {u}</span>;
+
+        const detailFields: DetailField[] = [
+            { label: 'BOM Code', value: <CodeChip code={displayBOM.code} tone="accent" style={{ display: 'inline-block', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', verticalAlign: 'bottom' }} /> },
+            { label: 'Item', value: <><b>{displayBOM.item_name || displayBOM.item_code}</b>{displayBOM.item_name && displayBOM.item_name !== displayBOM.item_code && <div><CodeChip code={displayBOM.item_code} tier={2} /></div>}</> },
+            ...((displayBOM.attribute_value_ids || []).length > 0 ? [{ label: 'Variant', value: renderVariantChips(displayBOM.attribute_value_ids) }] : []),
+            ...(displayBOM.customer_name ? [{ label: 'Customer', value: displayBOM.customer_name }] : []),
+            ...(displayBOM.work_center_name ? [{ label: 'Machine', value: displayBOM.work_center_name }] : []),
+            warpEnds
+                ? { label: 'Warp Ends', value: <span style={toneChip('green')}>{Math.round(Number(displayBOM.qty))} ends</span> }
+                : { label: 'Batch Output', value: <b>{Number(displayBOM.qty).toFixed(2)}{unitOf('pcs')}</b> },
+            { label: <span title="Process wastage — inflates component requirements">Wastage</span>, value: <b>+{Number(displayBOM.tolerance_percentage || 0).toFixed(2)}%</b> },
+            { label: <span title="Overdelivery — how far past an order's qty may be logged">Overdelivery</span>, value: <b>+{Number(displayBOM.overdelivery_tolerance_percentage ?? 10).toFixed(2)}%</b> },
+            { label: 'Status', value: <span style={toneChip(displayBOM.active ? 'green' : 'red')}>{displayBOM.active ? 'Active' : 'Inactive'}</span> },
+            { label: 'Components', value: <b>{lines.length}{unitOf(`mat${lines.length !== 1 ? 's' : ''}`)}</b> },
+        ];
+        const teknisFields: DetailField[] = [
+            ...(displayBOM.kerapatan_picks != null ? [{ label: 'Kerapatan', value: `${displayBOM.kerapatan_picks} ${displayBOM.kerapatan_unit || '/cm'}` }] : []),
+            ...(displayBOM.sisir_no != null ? [{ label: 'Sisir No.', value: displayBOM.sisir_no }] : []),
+            ...(displayBOM.pemakaian_obat ? [{ label: 'Obat Setting', value: displayBOM.pemakaian_obat }] : []),
+            ...(displayBOM.pembuatan_sample_oleh ? [{ label: 'Sample oleh', value: displayBOM.pembuatan_sample_oleh }] : []),
+            ...(displayBOM.berat_bahan_mateng != null ? [{ label: 'B. Mateng', value: <>{displayBOM.berat_bahan_mateng}{unitOf('gr/yd')}</> }] : []),
+            ...(displayBOM.berat_bahan_mentah_pelesan != null ? [{ label: 'B. Mentah', value: <>{displayBOM.berat_bahan_mentah_pelesan}{unitOf('gr/yd')}</> }] : []),
+        ];
+
         return (
             <tr key={`${bom.id}-detail`}>
-                {/* Frame on a wrapper, inner grounds untouched: this expansion is a two-pane
-                    BOM workspace, not a detail readout, so it keeps its own beige panes and
-                    takes only the standard rail + edge rules. The frame's box-shadow and its
-                    reveal padding must live on the same box (padding:0 on the td would let the
-                    two-pane div's opaque background paint straight over the shadow), so the
-                    frame sits on this wrapper instead of the td. */}
+                {/* Frame on a wrapper so its inset shadow isn't painted over. Three tinted cards
+                    on the panel's own ground, stretched to PANE_H — the same card language as
+                    the request detail panels. */}
                 <td colSpan={9} style={{ padding: 0 }}>
-                    <div style={{ ...expandedRowFrame(), padding: '2px 0 2px 4px' }}>
-                    <div style={{ display: 'flex', height: 420, background: '#ece9d8', fontFamily: xpFont, fontSize: 11 }}>
+                    <div style={{ ...expandedRowFrame(), padding: '8px 8px 8px 12px', background: 'var(--terras-table-bg, #fff)' }}>
+                    <div style={{ display: 'flex', gap: 8, height: PANE_H, fontFamily: xpFont, fontSize: 11 }}>
 
                         {/* LEFT: Tree */}
-                        <div style={{ width: 320, flexShrink: 0, borderRight: '2px solid #aca899', display: 'flex', flexDirection: 'column', background: '#ddd9c8' }}>
-                            <div style={{ background: 'linear-gradient(to bottom, #4a78c8, #2a54a8)', color: '#fff', fontSize: 11, fontWeight: 'bold', padding: '3px 8px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <span><i className="bi bi-diagram-3-fill" style={{ marginRight: 4 }} />BOM Structure</span>
-                                <span style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: 9, padding: '0 5px', borderRadius: CHIP_RADIUS }}>{nodeCount} nodes</span>
+                        <FormSection
+                            title={tintTitle(<><i className="bi bi-diagram-3-fill" style={{ marginRight: 4 }} />BOM Structure</>)}
+                            right={<span style={{ fontSize: 9, color: 'var(--terras-chip-blue-text, #0d2a6e)' }}>{nodeCount} nodes</span>}
+                            style={{ ...PANE, width: 320, flexShrink: 0 }} bodyStyle={PANE_BODY}
+                        >
+                            <div className={isRootSelected ? undefined : 'bom-tree-hover'} onClick={() => selectDetailNode(bomId, bom.id)} style={{ ...treeRow(isRootSelected), cursor: 'pointer' }}>
+                                <i className="bi bi-box-seam" style={{ fontSize: 13, flexShrink: 0 }} />
+                                <span title={bom.item_name || bom.item_code} style={{ flex: 1, fontWeight: 'bold', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {bom.item_name || bom.item_code}
+                                </span>
+                                <span style={isRootSelected ? onSolidChip : toneChip('green')}>ROOT</span>
                             </div>
-                            <div style={{ border: '2px inset #aaa', background: 'white', flex: 1, margin: 4, overflowY: 'auto', padding: 0 }}>
-                                {/* Root node */}
-                                <div
-                                    onClick={() => selectDetailNode(bomId, bom.id)}
-                                    style={{
-                                        display: 'flex', alignItems: 'center', gap: 5,
-                                        padding: '3px 5px',
-                                        cursor: 'pointer',
-                                        background: isRootSelected ? '#316ac5' : 'transparent',
-                                        color: isRootSelected ? '#fff' : '#000',
-                                        borderBottom: '1px solid #e8e4d8',
-                                        userSelect: 'none',
-                                        fontFamily: xpFont, fontSize: 11,
-                                    }}
-                                    onMouseEnter={e => { if (!isRootSelected) (e.currentTarget as HTMLElement).style.background = '#d0e4f8'; }}
-                                    onMouseLeave={e => { if (!isRootSelected) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
-                                >
-                                    <i className="bi bi-box-seam" style={{ fontSize: 13, flexShrink: 0 }} />
-                                    <span title={bom.item_name || bom.item_code} style={{ flex: 1, fontWeight: 'bold', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                        {bom.item_name || bom.item_code}
-                                    </span>
-                                    <span style={{ borderRadius: CHIP_RADIUS, background: isRootSelected ? 'rgba(255,255,255,0.25)' : '#2d7a2d', color: '#fff', fontSize: 8, padding: '0 3px', fontWeight: 'bold', flexShrink: 0, border: isRootSelected ? '1px solid rgba(255,255,255,0.4)' : 'none' }}>ROOT</span>
-                                </div>
-                                {buildTreeNodes(bom, 1, new Set(), bomId, selectedBomId)}
-                            </div>
-                        </div>
+                            {buildTreeNodes(bom, 1, new Set(), bomId, selectedBomId)}
+                        </FormSection>
 
-                        {/* CENTER: Components + Routing */}
-                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                            {/* Node header strip */}
-                            <div style={{ background: 'linear-gradient(to bottom, #e8e4d8, #dddad0)', borderBottom: '1px solid #aca899', padding: '4px 10px', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <i className={`bi ${isRootSelected ? 'bi-box-seam' : 'bi-layers'}`} style={{ fontSize: 16, flexShrink: 0 }} />
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-                                        <span style={{ fontWeight: 'bold', fontSize: 12, color: '#000080', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                            {displayBOM.item_name || displayBOM.item_code}
-                                        </span>
-                                        {(displayBOM.attribute_value_ids || []).length > 0 && renderVariantChips(displayBOM.attribute_value_ids)}
-                                    </div>
-                                    <div style={{ fontSize: 9, color: '#666', fontFamily: CODE_FONT }}>
-                                        {displayBOM.item_code} · BOM: {displayBOM.code}
-                                    </div>
+                        {/* CENTER: Components of the selected node */}
+                        <FormSection
+                            title={tintTitle(
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                                    <i className={`bi ${isRootSelected ? 'bi-box-seam' : 'bi-layers'}`} />
+                                    {displayBOM.item_name || displayBOM.item_code}
+                                    {(displayBOM.attribute_value_ids || []).length > 0 && <span style={{ textTransform: 'none', letterSpacing: 0 }}>{renderVariantChips(displayBOM.attribute_value_ids)}</span>}
+                                </span>
+                            )}
+                            right={!isRootSelected && parentName ? <span style={{ fontSize: 9, color: 'var(--terras-chip-blue-text, #0d2a6e)' }}>Sub-assembly of <b>{parentName}</b></span> : undefined}
+                            style={{ ...PANE, flex: 1, minWidth: 0 }} bodyStyle={{ ...PANE_BODY, overflowY: 'hidden', display: 'flex', flexDirection: 'column' }}
+                        >
+                            {lines.length === 0 ? (
+                                <div style={{ fontSize: 10, color: 'var(--terras-win-text-3, #555)', fontStyle: 'italic', padding: '8px 10px' }}>No components defined.</div>
+                            ) : (
+                            <>
+                                <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+                                <Table style={{ borderLeft: 'none', borderTop: 'none' }}>
+                                    <thead>
+                                        <tr>
+                                            <th>Item</th>
+                                            <th style={{ textAlign: 'right', width: 1 }}>Required</th>
+                                            {beamBom && <th style={{ textAlign: 'right', width: 1 }}>Ends</th>}
+                                            <th style={{ borderRight: 'none' }}>Attributes</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {lines.map((line: any) => (
+                                            <tr key={line.id}>
+                                                <td className="terras-cell-wrap">
+                                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+                                                        <CodeChip code={line.item_code} tone="accent" />
+                                                        {/* Name only when it adds something — many items carry the code as their name. */}
+                                                        {line.item_name && line.item_name !== line.item_code && <span>{line.item_name}</span>}
+                                                        {!!findSubBOM(line) && <span style={toneChip('blue')}>Sub</span>}
+                                                    </span>
+                                                </td>
+                                                <td style={{ textAlign: 'right' }}>
+                                                    {(line.percentage || 0) > 0 ? (
+                                                        <span style={toneChip('amber')}>{line.percentage}%</span>
+                                                    ) : (line.qty || 0) > 0 ? (
+                                                        <span style={{ fontFamily: CODE_FONT, fontWeight: 'bold' }}>{Number(line.qty)}</span>
+                                                    ) : <span style={{ color: 'var(--terras-win-text-3, #888)' }}>—</span>}
+                                                    {getItemUom(line.item_id) && <span style={{ ...toneChip('gray'), fontWeight: 'normal', marginLeft: 4 }}>{getItemUom(line.item_id)}</span>}
+                                                </td>
+                                                {beamBom && (
+                                                    <td style={{ textAlign: 'right' }}>
+                                                        {(Number(line.qty) || 0) > 0
+                                                            ? <span style={toneChip('green')}>{Math.round(Number(line.qty))} ends</span>
+                                                            : <span style={{ color: 'var(--terras-win-text-3, #888)' }}>—</span>}
+                                                    </td>
+                                                )}
+                                                <td className="terras-cell-wrap" style={{ borderRight: 'none' }}>
+                                                    {(line.attribute_value_ids || []).length > 0 ? renderVariantChips(line.attribute_value_ids) : <span style={{ color: 'var(--terras-win-text-3, #888)' }}>—</span>}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </Table>
                                 </div>
-                                {!isRootSelected && parentName && (
-                                    <span style={{ borderRadius: CHIP_RADIUS, fontSize: 9, color: '#333', background: '#f0efe6', border: '1px solid #c0bdb5', padding: '1px 6px', flexShrink: 0, whiteSpace: 'nowrap' }}>
-                                        Sub-assembly of: {parentName}
-                                    </span>
+                                <div style={{ flexShrink: 0, padding: '4px 10px', background: 'var(--terras-toolbar-bg, #f5f4ef)', borderTop: '1px solid var(--terras-table-line, #d6d3ce)', fontSize: 10, color: 'var(--terras-win-text-2, #444)', textAlign: 'right' }}>
+                                    {lines.length} component{lines.length !== 1 ? 's' : ''}
+                                    {hasPct && (
+                                        <> · Total %: <span style={{ fontWeight: 'bold', color: Math.abs(totalPct - 100) < 0.01 ? 'var(--terras-status-green, #004400)' : 'var(--terras-status-red, #880000)' }}>{totalPct.toFixed(1)}%</span></>
+                                    )}
+                                    {beamBom && totalLineEnds > 0 && (
+                                        <> · Total yarn ends: <span style={{ fontWeight: 'bold', color: 'var(--terras-status-green, #1a6e2e)' }}>{Math.round(totalLineEnds)}</span></>
+                                    )}
+                                </div>
+                            </>
+                            )}
+                        </FormSection>
+
+                        {/* RIGHT: BOM details */}
+                        <FormSection
+                            title={tintTitle(<><i className="bi bi-clipboard" style={{ marginRight: 4 }} />BOM Details</>)}
+                            right={<XPActionButton icon="bi-printer" title="Print BOM" onClick={() => setPrintBOM(displayBOM)} />}
+                            style={{ ...PANE, width: 290, flexShrink: 0 }} bodyStyle={{ ...PANE_BODY, padding: '6px 10px' }}
+                        >
+                            <FieldList fields={detailFields} columns={1} labelWidth={84} />
+
+                            {teknisFields.length > 0 && (<>
+                                <div style={subCaption}>Detail Teknis</div>
+                                <FieldList fields={teknisFields} columns={1} labelWidth={84} />
+                            </>)}
+
+                            {(hasMesin || hasCelup) && (<>
+                                <div style={subCaption}>Measurements</div>
+                                <Table>
+                                    <thead><tr><th style={miniTh} /><th style={{ ...miniTh, textAlign: 'right' }}>Mesin</th><th style={{ ...miniTh, textAlign: 'right' }}>Celup</th><th style={{ ...miniTh, borderRight: 'none' }} /></tr></thead>
+                                    <tbody>
+                                        {mRow('Lebar', displayBOM.mesin_lebar, displayBOM.celup_lebar, 'mm')}
+                                        {mRow('P. Tulisan', displayBOM.mesin_panjang_tulisan, displayBOM.celup_panjang_tulisan, 'cm')}
+                                        {mRow('P. Tarikan', displayBOM.mesin_panjang_tarikan, displayBOM.celup_panjang_tarikan, 'cm')}
+                                        {mRow('Bandul 1kg', displayBOM.mesin_panjang_tarikan_bandul_1kg, displayBOM.celup_panjang_tarikan_bandul_1kg, 'cm')}
+                                        {mRow('Bandul 9kg', displayBOM.mesin_panjang_tarikan_bandul_9kg, displayBOM.celup_panjang_tarikan_bandul_9kg, 'cm')}
+                                    </tbody>
+                                </Table>
+                            </>)}
+
+                            {(displayBOM.sizes || []).length > 0 && (<>
+                                <div style={subCaption}>Size Measurements</div>
+                                <Table>
+                                    <thead><tr>
+                                        <th style={miniTh}>{displayBOM.size_mode === 'free' ? 'Label' : 'Size'}</th>
+                                        <th style={{ ...miniTh, textAlign: 'right' }}>Target</th>
+                                        <th style={{ ...miniTh, textAlign: 'right' }}>Min</th>
+                                        <th style={{ ...miniTh, textAlign: 'right', borderRight: 'none' }}>Max</th>
+                                    </tr></thead>
+                                    <tbody>
+                                        {(displayBOM.sizes || []).map((sz: any, i: number) => (
+                                            <tr key={i}>
+                                                <td style={{ ...miniTd, fontWeight: 'bold' }}>{sz.size_name || sz.label || `Row ${i + 1}`}</td>
+                                                <td style={{ ...miniTd, textAlign: 'right' }}>{num(sz.target_measurement)}</td>
+                                                <td style={{ ...miniTd, textAlign: 'right' }}>{num(sz.measurement_min)}</td>
+                                                <td style={{ ...miniTd, textAlign: 'right', borderRight: 'none' }}>{num(sz.measurement_max)}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </Table>
+                            </>)}
+
+                            {displayBOM.design_file_url && (<>
+                                <div style={subCaption}>Design / Susunan Rumusan</div>
+                                {/\.(jpg|jpeg|png|gif|webp)$/i.test(displayBOM.design_file_url) ? (
+                                    <a href={`${STATIC_BASE}${displayBOM.design_file_url}`} target="_blank" rel="noreferrer">
+                                        <img src={`${STATIC_BASE}${displayBOM.design_file_url}`} alt="Design"
+                                            style={{ maxWidth: '100%', maxHeight: 80, border: '1px solid var(--terras-table-line, #c0bdb5)', display: 'block', objectFit: 'cover', cursor: 'pointer' }} />
+                                    </a>
+                                ) : (
+                                    <a href={`${STATIC_BASE}${displayBOM.design_file_url}`} target="_blank" rel="noreferrer"
+                                        style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, color: 'var(--terras-win-blue, #0000cc)', textDecoration: 'underline' }}>
+                                        <i className="bi bi-file-earmark-pdf" style={{ color: 'var(--terras-status-red, #c00)', fontSize: 12 }} />
+                                        Open design file
+                                    </a>
                                 )}
-                            </div>
-
-                            {/* Scrollable body — bordered white panel matching the tree pane's inset framing and margin, so the table fills the pane instead of floating at the top with leftover space below. */}
-                            <div style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
-                                <div style={{ border: '2px inset #aaa', background: 'white', flex: 1, margin: 4, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                                    {lines.length === 0 ? (
-                                        <div style={{ fontSize: 10, color: '#555', fontStyle: 'italic', padding: '4px 6px' }}>No components defined.</div>
-                                    ) : (
-                                    <>
-                                    <div style={{ flex: 1, overflowY: 'auto' }}>
-                                        <table style={{ ...lvSubTable(), border: 'none' }}>
-                                            <thead>
-                                                <tr>
-                                                    <th style={lvThBanded()}>Item</th>
-                                                    <th style={{ ...lvThBanded(), textAlign: 'right' }}>Required</th>
-                                                    {beamBom && <th style={{ ...lvThBanded(), textAlign: 'right' }}>Ends</th>}
-                                                    <th style={lvThBanded()}>Attributes</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {lines.map((line: any, i: number) => {
-                                                    const isSubBOM = !!findSubBOM(line);
-                                                    return (
-                                                        <tr key={line.id} style={lvSubRow(i, { zebra: true })}>
-                                                            <td style={lvSubTd()}>
-                                                                <CodeChip code={line.item_code} tone="accent" />
-                                                                <span style={{ marginLeft: 5, color: '#000' }}>{line.item_name}</span>
-                                                                {isSubBOM && (
-                                                                    <span style={{ borderRadius: CHIP_RADIUS, marginLeft: 5, background: '#e6eeff', border: '1px solid #0058e6', color: '#003080', fontSize: 9, padding: '0 3px', fontWeight: 'bold' }}>Sub</span>
-                                                                )}
-                                                            </td>
-                                                            <td style={{ ...lvSubTd(), textAlign: 'right', whiteSpace: 'nowrap' }}>
-                                                                {(line.percentage || 0) > 0 ? (
-                                                                    <span style={{ background: '#b46a00', color: '#fff', fontSize: 9, padding: '1px 5px', fontWeight: 'bold' }}>{line.percentage}%</span>
-                                                                ) : (line.qty || 0) > 0 ? (
-                                                                    <span style={{ fontFamily: CODE_FONT, fontWeight: 'bold' }}>{Number(line.qty)}</span>
-                                                                ) : <span style={{ color: '#888' }}>—</span>}
-                                                                {getItemUom(line.item_id) && (
-                                                                    <span style={{ ...uomBadge, marginLeft: 4 }}>{getItemUom(line.item_id)}</span>
-                                                                )}
-                                                            </td>
-                                                            {beamBom && (
-                                                                <td style={{ ...lvSubTd(), textAlign: 'right', whiteSpace: 'nowrap' }}>
-                                                                    {(Number(line.qty) || 0) > 0
-                                                                        ? <span style={{ borderRadius: CHIP_RADIUS, background: '#e6f4ea', border: '1px solid #4caf50', color: '#1a6e2e', fontWeight: 'bold', fontSize: 10, padding: '0 5px' }}>{Math.round(Number(line.qty))} ends</span>
-                                                                        : <span style={{ color: '#888' }}>—</span>}
-                                                                </td>
-                                                            )}
-                                                            <td style={lvSubTd()}>
-                                                                {(line.attribute_value_ids || []).length > 0 ? renderVariantChips(line.attribute_value_ids) : <span style={{ color: '#888' }}>—</span>}
-                                                            </td>
-                                                        </tr>
-                                                    );
-                                                })}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                    <div style={{ ...lvSubTd(), flexShrink: 0, background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)', borderTop: '1px solid #808080', fontSize: 10, color: '#444', textAlign: 'right' }}>
-                                        {lines.length} component{lines.length !== 1 ? 's' : ''}
-                                        {hasPct && (
-                                            <> · Total %: <span style={{ fontWeight: 'bold', color: Math.abs(totalPct - 100) < 0.01 ? '#004400' : '#880000' }}>{totalPct.toFixed(1)}%</span></>
-                                        )}
-                                        {beamBom && totalLineEnds > 0 && (
-                                            <> · Total yarn ends: <span style={{ fontWeight: 'bold', color: '#1a6e2e' }}>{Math.round(totalLineEnds)}</span></>
-                                        )}
-                                    </div>
-                                    </>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* RIGHT: BOM info card */}
-                        {(() => {
-                            const hasMesin = [displayBOM.mesin_lebar, displayBOM.mesin_panjang_tulisan, displayBOM.mesin_panjang_tarikan, displayBOM.mesin_panjang_tarikan_bandul_1kg, displayBOM.mesin_panjang_tarikan_bandul_9kg].some(v => v != null);
-                            const hasCelup = [displayBOM.celup_lebar, displayBOM.celup_panjang_tulisan, displayBOM.celup_panjang_tarikan, displayBOM.celup_panjang_tarikan_bandul_1kg, displayBOM.celup_panjang_tarikan_bandul_9kg].some(v => v != null);
-                            const hasMeasurements = hasMesin || hasCelup;
-                            const hasTeknis = displayBOM.kerapatan_picks != null || displayBOM.sisir_no != null || displayBOM.pemakaian_obat || displayBOM.pembuatan_sample_oleh;
-                            const lbl: React.CSSProperties = { fontSize: 9, color: '#666', textTransform: 'uppercase', letterSpacing: '0.3px', marginBottom: 1 };
-                            const val: React.CSSProperties = { fontSize: 11, color: '#000', fontWeight: 'bold', wordBreak: 'break-word' };
-                            const sep: React.CSSProperties = { borderTop: '1px solid #c0bdb5', marginTop: 4, paddingTop: 6 };
-                            const secHdr: React.CSSProperties = { fontSize: 9, fontWeight: 'bold', color: '#000080', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 4 };
-                            const mRow = (label: string, mesinVal: any, celupVal: any, unit: string) => (
-                                <tr key={label}>
-                                    <td style={{ padding: '1px 4px 1px 0', fontSize: 10, color: '#444', whiteSpace: 'nowrap' }}>{label}</td>
-                                    <td style={{ padding: '1px 4px', textAlign: 'right', fontWeight: 'bold', fontSize: 10, color: mesinVal != null ? '#000' : '#bbb', background: '#f8f7f2', border: '1px solid #e0ddd4' }}>{mesinVal != null ? mesinVal : '—'}</td>
-                                    <td style={{ padding: '1px 4px', textAlign: 'right', fontWeight: 'bold', fontSize: 10, color: celupVal != null ? '#000' : '#bbb', background: '#f8f7f2', border: '1px solid #e0ddd4', borderLeft: 'none' }}>{celupVal != null ? celupVal : '—'}</td>
-                                    <td style={{ padding: '1px 0 1px 3px', fontSize: 9, color: '#777' }}>{unit}</td>
-                                </tr>
-                            );
-                            return (
-                                <div style={{ width: 260, flexShrink: 0, borderLeft: '1px solid #aca899', padding: '6px 8px', display: 'flex', flexDirection: 'column', gap: 0, overflowY: 'auto', background: '#f5f4ee' }}>
-
-                                    {/* Header */}
-                                    <div style={{ fontSize: 10, fontWeight: 'bold', color: '#000080', borderBottom: '1px solid #c0bdb5', paddingBottom: 3, marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                        <span><i className="bi bi-clipboard" style={{ marginRight: 4 }} />BOM Details</span>
-                                        <XPActionButton
-                                            icon="bi-printer"
-                                            title="Print BOM"
-                                            onClick={() => setPrintBOM(displayBOM)}
-                                        />
-                                    </div>
-
-                                    {/* Identity */}
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 8px', marginBottom: 6 }}>
-                                        <div style={{ gridColumn: '1/-1', minWidth: 0 }}>
-                                            <div style={lbl}>BOM Code</div>
-                                            <CodeChip code={displayBOM.code} tone="accent" style={{ display: 'block', minWidth: 0, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis' }} />
-                                        </div>
-                                        <div style={{ gridColumn: '1/-1' }}>
-                                            <div style={lbl}>Item</div>
-                                            <div style={{ ...val, fontSize: 11 }}>{displayBOM.item_name || displayBOM.item_code}</div>
-                                            <CodeChip code={displayBOM.item_code} tier={2} />
-                                        </div>
-                                        {(displayBOM.attribute_value_ids || []).length > 0 && (
-                                            <div style={{ gridColumn: '1/-1' }}>
-                                                <div style={lbl}>Variant</div>
-                                                {renderVariantChips(displayBOM.attribute_value_ids)}
-                                            </div>
-                                        )}
-                                        {displayBOM.customer_name && (
-                                            <div style={{ gridColumn: '1/-1' }}>
-                                                <div style={lbl}>Customer</div>
-                                                <div style={{ fontSize: 11, color: '#000' }}>{displayBOM.customer_name}</div>
-                                            </div>
-                                        )}
-                                        {displayBOM.work_center_name && (
-                                            <div style={{ gridColumn: '1/-1' }}>
-                                                <div style={lbl}>Machine</div>
-                                                <div style={{ fontSize: 11, color: '#000' }}>{displayBOM.work_center_name}</div>
-                                            </div>
-                                        )}
-                                        <div>
-                                            <div style={lbl}>{getItemEnds(displayBOM.item_id) != null ? 'Warp Ends (Utas)' : 'Batch Output'}</div>
-                                            {getItemEnds(displayBOM.item_id) != null ? (
-                                                <div><span style={{ display: 'inline-block', background: '#e6f4ea', border: '1px solid #4caf50', color: '#1a6e2e', fontWeight: 'bold', fontSize: 11, padding: '1px 8px', borderRadius: CHIP_RADIUS }}>{Math.round(Number(displayBOM.qty))} ends</span></div>
-                                            ) : (
-                                                <div style={val}>{Number(displayBOM.qty).toFixed(2)} <span style={{ fontWeight: 'normal', color: '#555', fontSize: 9 }}>pcs</span></div>
-                                            )}
-                                        </div>
-                                        <div>
-                                            <div style={lbl} title="Process wastage — inflates component requirements">Wastage</div>
-                                            <div style={val}>+{Number(displayBOM.tolerance_percentage || 0).toFixed(2)}%</div>
-                                        </div>
-                                        <div>
-                                            <div style={lbl} title="Overdelivery — how far past an order's qty may be logged">Overdelivery</div>
-                                            <div style={val}>+{Number(displayBOM.overdelivery_tolerance_percentage ?? 10).toFixed(2)}%</div>
-                                        </div>
-                                        <div>
-                                            <div style={lbl}>Status</div>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 'bold', color: displayBOM.active ? '#004400' : '#880000' }}>
-                                                <span style={{ display: 'inline-block', width: 8, height: 8, background: displayBOM.active ? '#00aa00' : '#cc0000', border: `1px solid ${displayBOM.active ? '#005500' : '#660000'}`, flexShrink: 0 }} />
-                                                {displayBOM.active ? 'Active' : 'Inactive'}
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <div style={lbl}>Components</div>
-                                            <div style={val}>{lines.length} <span style={{ fontWeight: 'normal', fontSize: 9, color: '#555' }}>mat{lines.length !== 1 ? 's' : ''}</span></div>
-                                        </div>
-                                    </div>
-
-                                    {/* Detail Teknis */}
-                                    {hasTeknis && (
-                                        <div style={sep}>
-                                            <div style={secHdr}>Detail Teknis</div>
-                                            <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '2px 8px', alignItems: 'baseline' }}>
-                                                {displayBOM.kerapatan_picks != null && (<>
-                                                    <span style={lbl}>Kerapatan</span>
-                                                    <span style={{ fontSize: 11 }}>{displayBOM.kerapatan_picks} {displayBOM.kerapatan_unit || '/cm'}</span>
-                                                </>)}
-                                                {displayBOM.sisir_no != null && (<>
-                                                    <span style={lbl}>Sisir No.</span>
-                                                    <span style={{ fontSize: 11 }}>{displayBOM.sisir_no}</span>
-                                                </>)}
-                                                {displayBOM.pemakaian_obat && (<>
-                                                    <span style={lbl}>Obat Setting</span>
-                                                    <span style={{ fontSize: 10, wordBreak: 'break-word' }}>{displayBOM.pemakaian_obat}</span>
-                                                </>)}
-                                                {displayBOM.pembuatan_sample_oleh && (<>
-                                                    <span style={lbl}>Sample oleh</span>
-                                                    <span style={{ fontSize: 10, wordBreak: 'break-word' }}>{displayBOM.pembuatan_sample_oleh}</span>
-                                                </>)}
-                                                {displayBOM.berat_bahan_mateng != null && (<>
-                                                    <span style={lbl}>B. Mateng</span>
-                                                    <span style={{ fontSize: 11 }}>{displayBOM.berat_bahan_mateng} <span style={{ fontSize: 9, color: '#666' }}>gr/yd</span></span>
-                                                </>)}
-                                                {displayBOM.berat_bahan_mentah_pelesan != null && (<>
-                                                    <span style={lbl}>B. Mentah</span>
-                                                    <span style={{ fontSize: 11 }}>{displayBOM.berat_bahan_mentah_pelesan} <span style={{ fontSize: 9, color: '#666' }}>gr/yd</span></span>
-                                                </>)}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Measurements */}
-                                    {hasMeasurements && (
-                                        <div style={sep}>
-                                            <div style={secHdr}>Measurements</div>
-                                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10 }}>
-                                                <thead>
-                                                    <tr>
-                                                        <th style={{ fontSize: 9, color: '#555', fontWeight: 'normal', textAlign: 'left', paddingBottom: 2 }}></th>
-                                                        <th style={{ fontSize: 9, color: '#555', fontWeight: 'bold', textAlign: 'center', paddingBottom: 2, paddingRight: 4 }}>Mesin</th>
-                                                        <th style={{ fontSize: 9, color: '#555', fontWeight: 'bold', textAlign: 'center', paddingBottom: 2 }}>Celup</th>
-                                                        <th></th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {mRow('Lebar', displayBOM.mesin_lebar, displayBOM.celup_lebar, 'mm')}
-                                                    {mRow('P. Tulisan', displayBOM.mesin_panjang_tulisan, displayBOM.celup_panjang_tulisan, 'cm')}
-                                                    {mRow('P. Tarikan', displayBOM.mesin_panjang_tarikan, displayBOM.celup_panjang_tarikan, 'cm')}
-                                                    {mRow('Bandul 1kg', displayBOM.mesin_panjang_tarikan_bandul_1kg, displayBOM.celup_panjang_tarikan_bandul_1kg, 'cm')}
-                                                    {mRow('Bandul 9kg', displayBOM.mesin_panjang_tarikan_bandul_9kg, displayBOM.celup_panjang_tarikan_bandul_9kg, 'cm')}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    )}
-
-                                    {/* Size Measurements */}
-                                    {(displayBOM.sizes || []).length > 0 && (
-                                        <div style={sep}>
-                                            <div style={secHdr}>Size Measurements</div>
-                                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10 }}>
-                                                <thead>
-                                                    <tr>
-                                                        <th style={{ fontSize: 9, color: '#555', fontWeight: 'bold', textAlign: 'left', paddingBottom: 2 }}>{displayBOM.size_mode === 'free' ? 'Label' : 'Size'}</th>
-                                                        <th style={{ fontSize: 9, color: '#555', fontWeight: 'normal', textAlign: 'right', paddingBottom: 2 }}>Target</th>
-                                                        <th style={{ fontSize: 9, color: '#555', fontWeight: 'normal', textAlign: 'right', paddingBottom: 2 }}>Min</th>
-                                                        <th style={{ fontSize: 9, color: '#555', fontWeight: 'normal', textAlign: 'right', paddingBottom: 2 }}>Max</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {(displayBOM.sizes || []).map((s: any, i: number) => (
-                                                        <tr key={i} style={{ background: lvZebra(i) }}>
-                                                            <td style={{ padding: '1px 4px 1px 0', fontWeight: 'bold', fontSize: 10 }}>{s.size_name || s.label || `Row ${i + 1}`}</td>
-                                                            <td style={{ padding: '1px 4px', textAlign: 'right', fontSize: 10, background: '#f8f7f2', border: '1px solid #e0ddd4' }}>{s.target_measurement != null ? s.target_measurement : '—'}</td>
-                                                            <td style={{ padding: '1px 4px', textAlign: 'right', fontSize: 10, background: '#f8f7f2', border: '1px solid #e0ddd4', borderLeft: 'none' }}>{s.measurement_min != null ? s.measurement_min : '—'}</td>
-                                                            <td style={{ padding: '1px 4px', textAlign: 'right', fontSize: 10, background: '#f8f7f2', border: '1px solid #e0ddd4', borderLeft: 'none' }}>{s.measurement_max != null ? s.measurement_max : '—'}</td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    )}
-
-                                    {/* Design file */}
-                                    {displayBOM.design_file_url && (
-                                        <div style={sep}>
-                                            <div style={secHdr}>Design / Susunan Rumusan</div>
-                                            {/\.(jpg|jpeg|png|gif|webp)$/i.test(displayBOM.design_file_url) ? (
-                                                <a href={`${STATIC_BASE}${displayBOM.design_file_url}`} target="_blank" rel="noreferrer">
-                                                    <img
-                                                        src={`${STATIC_BASE}${displayBOM.design_file_url}`}
-                                                        alt="Design"
-                                                        style={{ maxWidth: '100%', maxHeight: 80, border: '1px solid #c0bdb5', display: 'block', objectFit: 'cover', cursor: 'pointer' }}
-                                                    />
-                                                </a>
-                                            ) : (
-                                                <a
-                                                    href={`${STATIC_BASE}${displayBOM.design_file_url}`}
-                                                    target="_blank" rel="noreferrer"
-                                                    style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, color: '#0000cc', textDecoration: 'underline' }}
-                                                >
-                                                    <i className="bi bi-file-earmark-pdf" style={{ color: '#c00', fontSize: 12 }} />
-                                                    Open design file
-                                                </a>
-                                            )}
-                                        </div>
-                                    )}
-
-                                </div>
-                            );
-                        })()}
+                            </>)}
+                        </FormSection>
 
                     </div>
                     </div>
@@ -773,7 +647,9 @@ export default function BOMView({
                 modeless
                 bodyScroll={false}
             >
-                <div style={{ width: '100%', height: 'min(calc(var(--app-vh) * 82 / 100), 860px)', overflow: 'hidden' }}>
+                {/* Full-bleed: cancel the modal body's 12/14px padding so the designer's own
+                    ground and footer meet the window frame, not a tinted band around them. */}
+                <div style={{ margin: '-12px -14px', width: 'calc(100% + 28px)', height: 'min(calc(var(--app-vh) * 82 / 100), 860px)', overflow: 'hidden' }}>
                     <BOMDesigner
                         rootItemCode={editingBOM ? editingBOM.item_code : (initialItemCode || '')}
                         initialAttributeValueIds={editingBOM ? (editingBOM.attribute_value_ids || []) : initialAttributeIds}

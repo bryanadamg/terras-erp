@@ -306,7 +306,7 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
  * only React state leaves the cache serving its stale copy on the next page load,
  * which is exactly how saved print templates stopped reaching the floor.
  */
-const MASTER_CACHE_KEY = 'terras_master_cache_v6';
+const MASTER_CACHE_KEY = 'terras_master_cache_v7';
 
 /** Merge a slice into the cached master data, keeping the existing timestamp. */
 function patchMasterCache(patch: Record<string, any>) {
@@ -567,7 +567,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         try {
             const token = localStorage.getItem('access_token');
             const headers = { 'Authorization': `Bearer ${token}` };
-            // v6: adds printTemplates to the master set. v5 added itemIndex
+            // v7: itemIndex keeps category_id/category_path (goods receipt Cones/Drums
+            // for off-page PO items). v6 added printTemplates to the master set. v5 added itemIndex
             // attribute_ids + variant_type (BOM designer variant dropdowns for items
             // off the paginated /items page) on top of v4's ends and v3's
             // uom/lot_tracked — bump so a stale cache doesn't serve a thin index.
@@ -824,7 +825,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                     case 'company-profile': setCompanyProfile(data); newMasterData.companyProfile = data; break;
                     case 'print-templates': setPrintTemplates(data || []); newMasterData.printTemplates = data || []; break;
                     case 'items': setItems(data.items); setItemTotal(data.total); break;
-                    case 'item-lookup': { const idx: Record<string, ItemIndexEntry> = {}; for (const it of (data || [])) idx[String(it.id)] = { name: it.name, code: it.code, uom: it.uom, lot_tracked: it.lot_tracked, ends: it.ends, variant_type: it.variant_type, attribute_ids: it.attribute_ids }; setItemIndex(idx); newMasterData.itemIndex = idx; break; }
+                    case 'item-lookup': { const idx: Record<string, ItemIndexEntry> = {}; for (const it of (data || [])) idx[String(it.id)] = { name: it.name, code: it.code, uom: it.uom, lot_tracked: it.lot_tracked, ends: it.ends, variant_type: it.variant_type, attribute_ids: it.attribute_ids, category_id: it.category_id, category_path: it.category_path }; setItemIndex(idx); newMasterData.itemIndex = idx; break; }
                     case 'kpis': setDashboardKPIs(data); break;
                     case 'dashboard-summary': setDashboardSummary(data); break;
                     case 'dashboard-outlook': setDashboardOutlook(data); break;

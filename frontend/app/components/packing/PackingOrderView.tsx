@@ -9,7 +9,7 @@ import { useUser } from '../../context/UserContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useToast } from '../shared/Toast';
 import { useConfirm } from '../../context/ConfirmContext';
-import { XPStatusBar, XPEmptyState, TableSkeleton, useTableSkeletonMetrics, StatusChip, useFloatingMenu, MenuTriggerButton, FloatingMenu, SectionTitle, XPActionButton, LegendPanel, ProgressBar, CodeChip, Chip, CODE_FONT, CHIP_RADIUS, XP_BTN } from '../shared/xpTheme';
+import { XPStatusBar, XPEmptyState, TableSkeleton, useTableSkeletonMetrics, StatusChip, useFloatingMenu, MenuTriggerButton, FloatingMenu, SectionTitle, XPActionButton, LegendPanel, ProgressBar, CodeChip, Chip, ToggleChip, CODE_FONT, CHIP_RADIUS, XP_BTN } from '../shared/xpTheme';
 import { FormSection } from '@bryanadamg/terras-ui/components/FormSection';
 import { FieldLabel } from '@bryanadamg/terras-ui/components/Field';
 import { ExpandedRowPanel, rowStateBg } from '@bryanadamg/terras-ui/components/Table';
@@ -64,7 +64,7 @@ const td: React.CSSProperties = lvTd();
 // Form rows use fixed grid columns rather than flex-wrap so fields land in the
 // same column on every row instead of reflowing to a ragged edge.
 const fieldGrid: React.CSSProperties = { display: 'grid', gap: '8px 14px', alignItems: 'start' };
-const hintText: React.CSSProperties = { fontFamily: xpFont, fontSize: 10, color: '#938c76', fontStyle: 'italic', marginTop: 6 };
+const hintText: React.CSSProperties = { fontFamily: xpFont, fontSize: 10, color: 'var(--terras-win-text-3, #938c76)', fontStyle: 'italic', marginTop: 6 };
 // Operator-log-modal field label + UOM pill — copied from WOCompletionModal so the
 // pack modal and the WO completion modal read as the same screen.
 const xpFormLabel: React.CSSProperties = { fontFamily: xpFont, fontSize: 11, display: 'block', marginBottom: 2 };
@@ -1519,17 +1519,17 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
                                 with no reason reads as a bug. Only when the gate is
                                 actually holding something back. */}
                             {lotAllowedLineIds && soLines.some((l: any) => !lotAllowedLineIds.has(String(l.id))) ? (
-                                <div style={{ fontSize: 10, color: '#777', marginBottom: 3 }}>
+                                <div style={{ fontSize: 10, color: 'var(--terras-win-text-3, #777)', marginBottom: 3 }}>
                                     <i className="bi bi-lock-fill me-1" />
                                     Only lines matching the stock being packed{lotHintText ? ` (${lotHintText})` : ''} can be picked
                                 </div>
                             ) : null}
                             <div style={{
-                                border: '1px solid #7f9db9', background: 'white',
+                                border: '1px solid var(--terras-table-line, #d6d3ce)', background: 'var(--terras-table-bg, #fff)',
                                 maxHeight: 220, overflowY: 'auto',
                             }}>
                                 {soLines.length === 0 ? (
-                                    <div style={{ color: '#aaa', padding: '4px 6px', fontSize: 11 }}>— this order has no lines —</div>
+                                    <div style={{ color: 'var(--terras-win-text-3, #aaa)', padding: '4px 6px', fontSize: 11 }}>— this order has no lines —</div>
                                 ) : soLines.map((l: any) => {
                                     const checked = String(l.id) === String(soLineId);
                                     const locked = !!lotAllowedLineIds && !lotAllowedLineIds.has(String(l.id));
@@ -1606,7 +1606,7 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
                                     : undefined}
                                 style={{
                                     ...xpInput, width: '100%', textAlign: 'right',
-                                    ...(altDrivesTarget ? { background: '#efeee9', color: '#555' } : null),
+                                    ...(altDrivesTarget ? { background: 'var(--terras-toolbar-bg, #f5f4ef)', color: 'var(--terras-win-text-3, #555)' } : null),
                                 }}
                                 value={qtyTarget} onChange={e => setQtyTarget(e.target.value)} />
                         </div>
@@ -1625,7 +1625,7 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
                                     : undefined}
                                 style={{
                                     ...xpInput, width: '100%', textAlign: 'right',
-                                    ...(altDrivesPackSize ? { background: '#efeee9', color: '#555' } : null),
+                                    ...(altDrivesPackSize ? { background: 'var(--terras-toolbar-bg, #f5f4ef)', color: 'var(--terras-win-text-3, #555)' } : null),
                                 }}
                                 value={packSize} onChange={e => setPackSize(e.target.value)} />
                         </div>
@@ -1660,10 +1660,11 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
                                             <button key={f.id} type="button"
                                                 style={{
                                                     fontFamily: xpFont, fontSize: 10, padding: '1px 6px', cursor: 'pointer',
-                                                    borderRadius: 0,
-                                                    border: active ? '1px solid #1a3a8a' : '1px solid #7f9db9',
-                                                    background: active ? 'linear-gradient(to bottom,#4a9ae8,#1a5ec8)' : 'linear-gradient(to bottom,#fff,#e8e4d8)',
-                                                    color: active ? '#fff' : '#000',
+                                                    borderRadius: CHIP_RADIUS,
+                                                    border: '1px solid var(--terras-chip-blue-border)',
+                                                    background: active ? 'var(--terras-chip-blue-bg)' : 'var(--terras-table-bg, #fff)',
+                                                    color: 'var(--terras-chip-blue-text)',
+                                                    fontWeight: active ? 'bold' : 'normal',
                                                 }}
                                                 onClick={() => onFactorPick(fVal, toUom)}
                                             >
@@ -1682,7 +1683,7 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
                         <div>
                             <FieldLabel>{uom2 || 'Alt'} per carton</FieldLabel>
                             <input type="number" min={0} disabled={!uom2}
-                                style={{ ...xpInput, width: '100%', textAlign: 'right', background: uom2 ? undefined : '#efeee9' }}
+                                style={{ ...xpInput, width: '100%', textAlign: 'right', background: uom2 ? undefined : 'var(--terras-toolbar-bg, #f5f4ef)' }}
                                 value={altPerCarton} onChange={e => onAltPerCartonChange(e.target.value)} />
                         </div>
                     </div>
@@ -1728,32 +1729,23 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
                             <FieldLabel
                                 title="Whether the floor measures the goods out per box or weighs to it — it decides which figure the pack screen asks for and which one it derives"
                             >Pack basis</FieldLabel>
-                            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                            <div style={{ display: 'flex', flexWrap: 'wrap' }}>
                                 {([
                                     ['COUNTED', `Count ${uom2}`, `The packer counts ${uom2} into each ${(packageLabel || 'carton').toLowerCase()} and weighs it`],
                                     ['WEIGHED', 'Weigh only', `The packer weighs each ${(packageLabel || 'carton').toLowerCase()}; the ${uom2} count is derived from the sampled weight`],
-                                ] as const).map(([val, label, hint]) => {
-                                    const active = packBasis === val;
-                                    return (
-                                        <button key={val} type="button" title={hint}
-                                            style={{
-                                                fontFamily: xpFont, fontSize: 10, padding: '2px 8px', cursor: 'pointer',
-                                                borderRadius: 0,
-                                                border: active ? '1px solid #1a3a8a' : '1px solid #7f9db9',
-                                                background: active ? 'linear-gradient(to bottom,#4a9ae8,#1a5ec8)' : 'linear-gradient(to bottom,#fff,#e8e4d8)',
-                                                color: active ? '#fff' : '#000',
-                                            }}
-                                            onClick={() => setPackBasis(val)}
-                                        >
-                                            {label}
-                                        </button>
-                                    );
-                                })}
+                                ] as const).map(([val, label, hint], i) => (
+                                    <ToggleChip key={val} title={hint} on={packBasis === val}
+                                        seg={i === 0 ? 'first' : 'last'}
+                                        onClick={() => setPackBasis(val)}
+                                    >
+                                        {label}
+                                    </ToggleChip>
+                                ))}
                             </div>
                         </div>
                     )}
                     {uom2 && uom2Factor && !altBaseFactor && (
-                        <div style={{ ...hintText, color: '#a00000', fontStyle: 'normal' }}>
+                        <div style={{ ...hintText, color: 'var(--terras-status-red, #a00000)', fontStyle: 'normal' }}>
                             {uom2} can&apos;t be converted into {selectedItem?.uom || 'the stock unit'}: a kg-stocked item
                             needs a g/y or g/m weight — enter the sampled one above, or set one on the item
                             (gsm needs the fabric width). Type the target in{' '}
@@ -1797,21 +1789,21 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
                 </FormSection>
 
                 <FormSection title={<SectionTitle icon="bi-lock">Held Lots</SectionTitle>}>
-                    <div style={{ fontSize: 10, color: '#555', marginBottom: 4 }}>
+                    <div style={{ fontSize: 10, color: 'var(--terras-win-text-3, #555)', marginBottom: 4 }}>
                         A ticked lot is held for this order alone — no other packing order can draw
                         it, and this one cannot be closed until the lot is packed out of the pack-from
                         location, whatever the target says. Leave every box clear to draw from
                         whatever is free at pack time.
                     </div>
                     {(!itemId || !sourceLoc) ? (
-                        <div style={{ fontSize: 10, color: '#888' }}>
+                        <div style={{ fontSize: 10, color: 'var(--terras-win-text-3, #888)' }}>
                             Pick an item and a pack-from location to choose lots.
                         </div>
                     ) : (
                         <>
                             <div style={{ ...xpFormLabel, fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <span>Lots at the pack-from location</span>
-                                <span style={{ fontWeight: 'normal', color: '#555' }}>
+                                <span style={{ fontWeight: 'normal', color: 'var(--terras-win-text-3, #555)' }}>
                                     {lockedIds.length} held · {lockedTotal.toFixed(2)} {selectedItem?.uom || ''}
                                     {lockedIds.length > 0 && (
                                         <button
@@ -1824,10 +1816,10 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
                                     )}
                                 </span>
                             </div>
-                            <div style={{ border: '1px solid #7f9db9', background: '#fff', maxHeight: 150, overflowY: 'auto' }}>
-                                {lotsLoading && <div style={{ fontSize: 10, color: '#888', padding: '3px 5px' }}>Loading lots...</div>}
+                            <div style={{ border: '1px solid var(--terras-table-line, #d6d3ce)', background: 'var(--terras-table-bg, #fff)', maxHeight: 150, overflowY: 'auto' }}>
+                                {lotsLoading && <div style={{ fontSize: 10, color: 'var(--terras-win-text-3, #888)', padding: '3px 5px' }}>Loading lots...</div>}
                                 {!lotsLoading && lots.length === 0 && (
-                                    <div style={{ fontSize: 10, color: '#888', padding: '3px 5px' }}>
+                                    <div style={{ fontSize: 10, color: 'var(--terras-win-text-3, #888)', padding: '3px 5px' }}>
                                         {heldLotCount > 0
                                             ? `${heldLotCount} lot${heldLotCount === 1 ? '' : 's'} here ${heldLotCount === 1 ? 'is' : 'are'} held in quarantine — release on the Quarantine Packing page first.`
                                             : 'No free lots of this item at the pack-from location.'}
@@ -1843,8 +1835,8 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, flex: 1 }}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
                                                     <span style={{ fontFamily: CODE_FONT, fontWeight: 'bold' }}>{b.batch_number}</span>
-                                                    <span style={{ color: '#555' }}>{Number(b.remaining ?? 0).toFixed(2)} {selectedItem?.uom || ''}</span>
-                                                    {b.location_name && <span style={{ color: '#0058e6' }}>@ {b.location_name}</span>}
+                                                    <span style={{ color: 'var(--terras-win-text-3, #555)' }}>{Number(b.remaining ?? 0).toFixed(2)} {selectedItem?.uom || ''}</span>
+                                                    {b.location_name && <span style={{ color: 'var(--terras-win-blue, #0054e3)' }}>@ {b.location_name}</span>}
                                                 </div>
                                                 <LotChips batch={b} showOrder />
                                             </div>
@@ -1853,7 +1845,7 @@ function PackingOrderForm({ locPickerTreeOptions, machineOptions, defaultSourceL
                                 })}
                             </div>
                             {heldLotCount > 0 && lots.length > 0 && (
-                                <div style={{ fontSize: 9, color: '#7a4a00', marginTop: 2 }}>
+                                <div style={{ fontSize: 9, color: 'var(--terras-status-amber, #7a4a00)', marginTop: 2 }}>
                                     {heldLotCount} more lot{heldLotCount === 1 ? '' : 's'} held in quarantine, not shown.
                                 </div>
                             )}
@@ -2623,7 +2615,7 @@ function PackingOrderDetail({ po: initialPo, colourText, itemById, locationById,
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
 
                     {/* Order info + progress */}
-                    <div style={{ border: '1px solid #aca899', padding: '8px 10px', background: '#f5f4ee', display: 'flex', flexDirection: 'column', gap: 5 }}>
+                    <div style={{ border: '1px solid var(--terras-table-line, #d6d3ce)', padding: '8px 10px', background: 'var(--terras-toolbar-bg, #f5f4ef)', display: 'flex', flexDirection: 'column', gap: 5 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                             <span style={{ fontSize: 11, fontWeight: 'bold', color: '#000080' }}>{po.item_name || po.item_code}</span>
                             <span style={{ fontSize: 10, color: '#555' }}>{po.code}</span>
@@ -2693,7 +2685,7 @@ function PackingOrderDetail({ po: initialPo, colourText, itemById, locationById,
                     )}
 
                     {readOnly && (outputLocName || sourceLocName) && (
-                        <div style={{ background: '#f5f4ee', border: '1px solid #aca899', padding: '4px 8px', fontSize: 10, color: '#555' }}>
+                        <div style={{ background: 'var(--terras-toolbar-bg, #f5f4ef)', border: '1px solid var(--terras-table-line, #d6d3ce)', padding: '4px 8px', fontSize: 10, color: '#555' }}>
                             {sourceLocName && <span>Packed from <strong>{sourceLocName}</strong></span>}
                             {outputLocName && <span style={{ marginLeft: sourceLocName ? 8 : 0 }}>{po.package_label}s stored at <strong>{outputLocName}</strong></span>}
                         </div>
@@ -2957,7 +2949,7 @@ function PackingOrderDetail({ po: initialPo, colourText, itemById, locationById,
                                 </div>
                                 <div style={{
                                     display: 'flex', alignItems: 'center', gap: 6, rowGap: 2, flexWrap: 'wrap', fontSize: 10,
-                                    padding: '3px 5px', background: '#f0efe6', border: '1px solid #c0bdb5', borderTop: 'none',
+                                    padding: '3px 5px', background: 'var(--terras-toolbar-bg, #f5f4ef)', border: '1px solid #c0bdb5', borderTop: 'none',
                                 }}>
                                     <span style={{
                                         width: 7, height: 7, borderRadius: '50%', display: 'inline-block', flexShrink: 0,
@@ -3226,7 +3218,7 @@ function PackingOrderDetail({ po: initialPo, colourText, itemById, locationById,
                                                                     <span style={{ borderRadius: CHIP_RADIUS,
                                                                         fontSize: 9, fontWeight: 'bold', color: takeByBatch[id] ? '#0a3e0a' : '#777',
                                                                         background: takeByBatch[id] ? '#d0f0d0' : '#eceae2',
-                                                                        border: '1px solid #aca899', padding: '0 4px',
+                                                                        border: '1px solid var(--terras-table-line, #d6d3ce)', padding: '0 4px',
                                                                     }}>
                                                                         pack {(takeByBatch[id] || 0).toFixed(2)}
                                                                     </span>
@@ -3303,15 +3295,15 @@ function PackingOrderDetail({ po: initialPo, colourText, itemById, locationById,
                             <div style={{ padding: '4px 8px 8px' }}>
                                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10 }}>
                                     <thead>
-                                        <tr style={{ background: '#dddbd0' }}>
-                                            <th style={{ padding: '2px 6px', textAlign: 'left', borderBottom: '1px solid #aca899' }}>Material</th>
-                                            <th style={{ padding: '2px 6px', textAlign: 'right', borderBottom: '1px solid #aca899', width: 90 }}>Planned</th>
-                                            <th style={{ padding: '2px 6px', textAlign: 'right', borderBottom: '1px solid #aca899', width: 90 }}>Consumed</th>
+                                        <tr style={{ background: 'var(--terras-toolbar-bg, #f5f4ef)' }}>
+                                            <th style={{ padding: '2px 6px', textAlign: 'left', borderBottom: '1px solid var(--terras-table-line, #d6d3ce)' }}>Material</th>
+                                            <th style={{ padding: '2px 6px', textAlign: 'right', borderBottom: '1px solid var(--terras-table-line, #d6d3ce)', width: 90 }}>Planned</th>
+                                            <th style={{ padding: '2px 6px', textAlign: 'right', borderBottom: '1px solid var(--terras-table-line, #d6d3ce)', width: 90 }}>Consumed</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {(po.materials || []).map((m: any, idx: number) => (
-                                            <tr key={m.id} style={{ background: idx % 2 === 0 ? '#fff' : '#f5f4ee' }}>
+                                            <tr key={m.id} style={{ background: idx % 2 === 0 ? 'var(--terras-table-bg, #fff)' : 'var(--terras-row-stripe-sub, #fbfaf7)' }}>
                                                 <td style={{ padding: '2px 6px' }}>
                                                     <span style={{ fontWeight: 500 }}>{m.item_code || m.item_id}</span>
                                                     {m.item_name && <span style={{ color: '#666', marginLeft: 4 }}>{m.item_name}</span>}
@@ -3337,17 +3329,17 @@ function PackingOrderDetail({ po: initialPo, colourText, itemById, locationById,
                             <div style={{ maxHeight: 140, overflowY: 'auto' }}>
                                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10 }}>
                                     <thead>
-                                        <tr style={{ background: '#dddbd0' }}>
-                                            <th style={{ padding: '2px 6px', textAlign: 'left', borderBottom: '1px solid #aca899', width: 34 }}>#</th>
-                                            <th style={{ padding: '2px 6px', textAlign: 'left', borderBottom: '1px solid #aca899' }}>Lot</th>
-                                            <th style={{ padding: '2px 6px', textAlign: 'left', borderBottom: '1px solid #aca899' }}>Identity</th>
-                                            <th style={{ padding: '2px 6px', textAlign: 'right', borderBottom: '1px solid #aca899', width: 90 }}>In stock</th>
-                                            <th style={{ padding: '2px 6px', textAlign: 'left', borderBottom: '1px solid #aca899', width: 90 }}>Status</th>
+                                        <tr style={{ background: 'var(--terras-toolbar-bg, #f5f4ef)' }}>
+                                            <th style={{ padding: '2px 6px', textAlign: 'left', borderBottom: '1px solid var(--terras-table-line, #d6d3ce)', width: 34 }}>#</th>
+                                            <th style={{ padding: '2px 6px', textAlign: 'left', borderBottom: '1px solid var(--terras-table-line, #d6d3ce)' }}>Lot</th>
+                                            <th style={{ padding: '2px 6px', textAlign: 'left', borderBottom: '1px solid var(--terras-table-line, #d6d3ce)' }}>Identity</th>
+                                            <th style={{ padding: '2px 6px', textAlign: 'right', borderBottom: '1px solid var(--terras-table-line, #d6d3ce)', width: 90 }}>In stock</th>
+                                            <th style={{ padding: '2px 6px', textAlign: 'left', borderBottom: '1px solid var(--terras-table-line, #d6d3ce)', width: 90 }}>Status</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {units.map((u: any, idx: number) => (
-                                            <tr key={u.id} style={{ background: idx % 2 === 0 ? '#fff' : '#f5f4ee' }}>
+                                            <tr key={u.id} style={{ background: idx % 2 === 0 ? 'var(--terras-table-bg, #fff)' : 'var(--terras-row-stripe-sub, #fbfaf7)' }}>
                                                 <td style={{ padding: '2px 6px' }}>{u.package_no}</td>
                                                 <td style={{ padding: '2px 6px', fontFamily: CODE_FONT, color: '#00309c' }}>{u.batch_number}</td>
                                                 {/* Size / shade / combo of THIS carton — the sized cartons of one
@@ -3373,27 +3365,27 @@ function PackingOrderDetail({ po: initialPo, colourText, itemById, locationById,
                             <div style={{ maxHeight: 140, overflowY: 'auto' }}>
                                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10 }}>
                                     <thead>
-                                        <tr style={{ background: '#dddbd0' }}>
+                                        <tr style={{ background: 'var(--terras-toolbar-bg, #f5f4ef)' }}>
                                             {/* Both measurements of the same log: what the scale
                                                 read, and the pieces that weight works out to
                                                 through this order's sampled unit weight. */}
-                                            <th style={{ padding: '2px 6px', textAlign: 'right', borderBottom: '1px solid #aca899' }}>{uom || 'Qty'}</th>
+                                            <th style={{ padding: '2px 6px', textAlign: 'right', borderBottom: '1px solid var(--terras-table-line, #d6d3ce)' }}>{uom || 'Qty'}</th>
                                             {hasAlt && (
-                                                <th style={{ padding: '2px 6px', textAlign: 'right', borderBottom: '1px solid #aca899' }}>{altUom}</th>
+                                                <th style={{ padding: '2px 6px', textAlign: 'right', borderBottom: '1px solid var(--terras-table-line, #d6d3ce)' }}>{altUom}</th>
                                             )}
-                                            <th style={{ padding: '2px 6px', textAlign: 'right', borderBottom: '1px solid #aca899' }}>{po.package_label}s</th>
-                                            <th style={{ padding: '2px 6px', textAlign: 'right', borderBottom: '1px solid #aca899' }}>QC Reject</th>
-                                            <th style={{ padding: '2px 6px', textAlign: 'left', borderBottom: '1px solid #aca899' }}>Source lot</th>
-                                            <th style={{ padding: '2px 6px', textAlign: 'left', borderBottom: '1px solid #aca899' }}>Machine</th>
-                                            <th style={{ padding: '2px 6px', textAlign: 'left', borderBottom: '1px solid #aca899' }}>Operator</th>
-                                            <th style={{ padding: '2px 6px', textAlign: 'left', borderBottom: '1px solid #aca899' }}>Notes</th>
-                                            <th style={{ padding: '2px 6px', textAlign: 'left', borderBottom: '1px solid #aca899' }}>Time</th>
-                                            {!readOnly && <th style={{ padding: '2px 6px', borderBottom: '1px solid #aca899', width: 26 }} />}
+                                            <th style={{ padding: '2px 6px', textAlign: 'right', borderBottom: '1px solid var(--terras-table-line, #d6d3ce)' }}>{po.package_label}s</th>
+                                            <th style={{ padding: '2px 6px', textAlign: 'right', borderBottom: '1px solid var(--terras-table-line, #d6d3ce)' }}>QC Reject</th>
+                                            <th style={{ padding: '2px 6px', textAlign: 'left', borderBottom: '1px solid var(--terras-table-line, #d6d3ce)' }}>Source lot</th>
+                                            <th style={{ padding: '2px 6px', textAlign: 'left', borderBottom: '1px solid var(--terras-table-line, #d6d3ce)' }}>Machine</th>
+                                            <th style={{ padding: '2px 6px', textAlign: 'left', borderBottom: '1px solid var(--terras-table-line, #d6d3ce)' }}>Operator</th>
+                                            <th style={{ padding: '2px 6px', textAlign: 'left', borderBottom: '1px solid var(--terras-table-line, #d6d3ce)' }}>Notes</th>
+                                            <th style={{ padding: '2px 6px', textAlign: 'left', borderBottom: '1px solid var(--terras-table-line, #d6d3ce)' }}>Time</th>
+                                            {!readOnly && <th style={{ padding: '2px 6px', borderBottom: '1px solid var(--terras-table-line, #d6d3ce)', width: 26 }} />}
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {completions.map((c: any, i: number) => (
-                                            <tr key={c.id} style={{ background: c.rejected ? '#fbeaea' : i % 2 === 0 ? '#fff' : '#f5f4ee', opacity: c.rejected ? 0.75 : 1 }}>
+                                            <tr key={c.id} style={{ background: c.rejected ? '#fbeaea' : i % 2 === 0 ? 'var(--terras-table-bg, #fff)' : 'var(--terras-row-stripe-sub, #fbfaf7)', opacity: c.rejected ? 0.75 : 1 }}>
                                                 <td style={{ padding: '2px 6px', textAlign: 'right', fontWeight: 'bold', textDecoration: c.rejected ? 'line-through' : undefined }}>
                                                     {num(c.qty).toFixed(2)}
                                                 </td>
@@ -3443,8 +3435,8 @@ function PackingOrderDetail({ po: initialPo, colourText, itemById, locationById,
                         const partial = rejectUnitIds.length > 0 && rejectUnitIds.length < candidates.length;
                         const rejectingCount = rejectUnitIds.length || candidates.length;
                         return (
-                            <LegendPanel title={`QC Reject — ${num(rejectComp.qty).toFixed(2)} packed ${rejectComp.completed_at ? `on ${tzDateTime(rejectComp.completed_at)}` : ''}`}>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 10 }}>
+                            <LegendPanel tone="red" title={`QC Reject — ${num(rejectComp.qty).toFixed(2)} packed ${rejectComp.completed_at ? `on ${tzDateTime(rejectComp.completed_at)}` : ''}`}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 10, padding: '0 8px 8px' }}>
                                     <div style={{ color: '#555' }}>
                                         Rejecting <strong>{rejectingCount}</strong> of {candidates.length} {po.package_label.toLowerCase()}(s).
                                         {partial
@@ -3452,7 +3444,7 @@ function PackingOrderDetail({ po: initialPo, colourText, itemById, locationById,
                                             : ' The whole pack event drops out of packed qty.'}
                                         {' '}Cartons move to the defect store routed from this item&apos;s default reject location.
                                     </div>
-                                    <div style={{ maxHeight: 96, overflowY: 'auto', border: '1px solid #aca899', background: '#fff', padding: 4 }}>
+                                    <div style={{ maxHeight: 96, overflowY: 'auto', border: '1px solid var(--terras-table-line, #d6d3ce)', background: '#fff', padding: 4 }}>
                                         {candidates.length === 0 ? (
                                             <div style={{ color: '#888' }}>No good cartons left on this event.</div>
                                         ) : candidates.map((u: any) => (

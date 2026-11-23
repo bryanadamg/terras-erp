@@ -1341,10 +1341,10 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                {expandedIds.has(s.id) && (() => {
                                    const colors = s.colors || [];
                                    const columns = [
-                                       { header: 'Color Name', width: 104 },
+                                       { header: 'Color Name' },
                                        { header: 'Type', width: 56 },
                                        { header: 'Status', width: 100 },
-                                       { header: 'Update Status', align: 'center' as const },
+                                       { header: 'Update Status', width: 250, align: 'center' as const },
                                        // Proof photo of whichever side the variant landed on (approval or rejection).
                                        { header: 'Photo', width: 72, align: 'center' as const },
                                        { header: 'Item', width: 116, align: 'center' as const },
@@ -1361,7 +1361,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                            stripeColor: stripe.borderLeftColor,
                                            background: stripe.background,
                                            cells: [
-                                               <span key="c0" style={{ fontWeight: 'bold', color: '#111', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                               <span key="c0" style={{ fontWeight: 'bold', color: 'var(--terras-win-text, #111)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                                                    {colorHexByName.has(String(c.name).toLowerCase()) && (
                                                        <span style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, display: 'inline-block',
                                                            background: colorHexByName.get(String(c.name).toLowerCase()),
@@ -1369,7 +1369,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                                    )}
                                                    {c.name}
                                                </span>,
-                                               <span key="c1" style={{ borderRadius: CHIP_RADIUS, background: c.is_repeat ? '#dce4f5' : '#d4edda', border: `1px solid ${c.is_repeat ? '#6878c8' : '#5aaa68'}`, color: c.is_repeat ? '#0d2a6e' : '#0c3a1a', padding: '0 4px', fontSize: 9, fontFamily: xpFont, fontWeight: 'bold' }}>{c.is_repeat ? 'Repeat' : 'New'}</span>,
+                                               (() => { const f = c.is_repeat ? 'blue' : 'green'; return <Chip key="c1" bold tone={{ background: `var(--terras-chip-${f}-bg)`, borderColor: `var(--terras-chip-${f}-border)`, color: `var(--terras-chip-${f}-text)` }}>{c.is_repeat ? 'Repeat' : 'New'}</Chip>; })(),
                                                <span key="c2" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
                                                    <StatusChip status={status} tint style={undefined} />
                                                    {/* Attempt tallies — a rejected variant can be reopened and rejected again,
@@ -1416,7 +1416,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                                                statusPhotoThumb(
                                                    isApproved ? c.approval_image_url : isRejected ? c.rejection_image_url : null,
                                                    isApproved ? 'Approval photo' : 'Rejection photo',
-                                               ) || <span style={{ fontSize: 10, color: '#888', fontFamily: xpFont}}>—</span>,
+                                               ) || <span style={{ color: 'var(--terras-win-text-3, #888)' }}>—</span>,
                                                isApproved ? (
                                                    c.item_id ? (
                                                        <span style={{ fontSize: 10, color: '#1b5e20', fontWeight: 'bold', fontFamily: xpFont }}>Item: {c.item_code}</span>) : canManage ? (

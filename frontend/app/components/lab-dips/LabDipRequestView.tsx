@@ -18,6 +18,7 @@ import { SearchField, ToolbarButton, viewShellStyle } from '../shared/shellTheme
 import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
 import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 import RequestDetailPanel, { getStatusStripe } from '../shared/RequestDetailPanel';
+import OverflowRow from '../shared/OverflowRow';
 import { lvThead, ExpanderCell, lvTh, lvTdRuled, lvZebra, TableEmpty, lvBtn, lvInput, ResizableTable } from '../shared/listViewTheme';
 import { EXPANDER_COL_W as LV_EXPANDER_COL_W, SortableTh } from '@bryanadamg/terras-ui/components/Table';
 import { API_BASE, STATIC_BASE } from '../shared/apiBase';
@@ -475,7 +476,7 @@ export default function LabDipRequestView({
         <div style={viewShellStyle('page', { fontFamily: xpFont})}>
             {/* Toolbar */}
             <div style={{ background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)', borderBottom: '1px solid #b0a898', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const, flexShrink: 0 }}>
-                <SearchField value={searchTerm} onChange={setSearchTerm} placeholder="Search code, color standard, article…" width={220} />
+                <SearchField value={searchTerm} onChange={setSearchTerm} placeholder="Search code, colour, item, variant…" width={220} />
                 <span style={{ width: 1, height: 20, background: '#a0988c', margin: '0 2px' }} />
                 <FilterChipBar options={STATUS_FILTERS} value={statusFilter} onChange={setStatusFilter} />
                 <span style={{ width: 1, height: 20, background: '#a0988c', margin: '0 2px' }} />
@@ -563,18 +564,31 @@ export default function LabDipRequestView({
                                             {(() => {
                                                 const its = r.items || [];
                                                 if (!its.length) return <span style={{ fontSize: 9, color: '#888', fontStyle: 'italic' }}>—</span>;
-                                                const first = its[0];
-                                                const firstCode = first.variant_code || `${seqPart(r.code)}-${variantLetter(first.variant_seq ?? 0)}`;
-                                                const firstParts = splitVariantCode(firstCode);
+                                                // All variants on one line, as many as the column fits; the rest collapse to
+                                                // "+n more" (hover lists them, click opens the row). Each shows its full
+                                                // variant code as one joined chip — it need not match the request's number.
                                                 return (
-                                                    <>
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                                            <span style={{ ...seqBadge(), fontSize: 9, padding: '0 5px' }}>{firstParts.seq}</span>
-                                                            <span style={{ ...variantBadge(), fontSize: 9, padding: '0 5px' }}>{firstParts.variant}</span>
-                                                            <span style={{ fontWeight: 'bold', fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{first.item_name || first.item_code || '—'}</span>
-                                                        </div>
-                                                        {its.length > 1 && <div style={{ fontSize: 9, color: '#555'}}>+{its.length - 1} more</div>}
-                                                    </>
+                                                    <OverflowRow
+                                                        onMore={() => { if (!expandedIds.has(r.id)) toggleExpand(r.id); }}
+                                                        items={its.map((it: any) => {
+                                                            const code = it.variant_code || `${seqPart(r.code)}-${variantLetter(it.variant_seq ?? 0)}`;
+                                                            const name = it.item_name || it.item_code || '—';
+                                                            const parts = splitVariantCode(code);
+                                                            return {
+                                                                key: it.id,
+                                                                label: `${code}  ${name}`,
+                                                                node: (
+                                                                    <span title={code} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                                                        <span style={{ display: 'inline-flex' }}>
+                                                                            <span style={{ ...seqBadge(), fontSize: 9, padding: '0 5px', borderTopRightRadius: 0, borderBottomRightRadius: 0, borderRight: 'none' }}>{parts.seq}</span>
+                                                                            <span style={{ ...variantBadge(), fontSize: 9, padding: '0 5px', borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }}>{parts.variant}</span>
+                                                                        </span>
+                                                                        <span style={{ fontWeight: 'bold', fontSize: 11 }}>{name}</span>
+                                                                    </span>
+                                                                ),
+                                                            };
+                                                        })}
+                                                    />
                                                 );
                                             })()}
                                         </td>
@@ -712,17 +726,22 @@ export default function LabDipRequestView({
                                                         >
                                                             <i className="bi bi-arrow-repeat" style={{ fontSize: 10}} />
                                                         </button>
-                                                    ) : <span style={{ color: '#bbb' }}>—</span>,
+                                                    ) : null,
                                                 ],
                                             };
                                         });
 
                                         const sections = [
                                             { title: 'Identity', fields: [
+                                                { label: 'Request Status', value: canUpdateStatus ? (
+                                                    <select style={{ ...xpInput(), width: 140 }} value={r.status} onChange={e => doUpdateStatus(r.id, e.target.value)}>
+                                                        {REQUEST_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                                                    </select>
+                                                ) : <StatusChip status={r.status} /> },
+                                                { label: 'Request Date', value: fmt(r.request_date) },
                                                 { label: 'Customer', value: r.customer_id ? getCustomerName(r.customer_id) : 'Internal' },
                                                 { label: 'Season / Project', value: r.season || '—' },
                                                 { label: 'Request Type', value: r.request_type || '—' },
-                                                { label: 'Request Date', value: fmt(r.request_date) },
                                             ]},
                                             { title: colorsAttrName, fields: [
                                                 { label: colorsAttrName, value: (() => {
@@ -741,15 +760,6 @@ export default function LabDipRequestView({
                                             ]},
                                         ];
 
-                                        const rightHeader = (
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', flexWrap: 'wrap' as const, borderBottom: '1px solid #d0cdc8', background: '#fff' }}>
-                                                <span style={{ fontSize: 10, fontWeight: 'bold', color: '#111'}}>Request Status:</span>
-                                                <select style={{ ...xpInput(), width: 140 }} value={r.status} disabled={!canUpdateStatus} onChange={e => doUpdateStatus(r.id, e.target.value)}>
-                                                    {REQUEST_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-                                                </select>
-                                            </div>
-                                        );
-
                                         return (
                                         <tr>
                                             <td colSpan={10} style={{ padding: 0 }}>
@@ -761,7 +771,6 @@ export default function LabDipRequestView({
                                                         rows={rows}
                                                         emptyText="No items on this request."
                                                         sections={sections}
-                                                        rightHeader={rightHeader}
                                                         minHeight={170}
                                                     />
                                                 </ExpandedRowPanel>

@@ -17,12 +17,19 @@ import QtyFormulaModal from '../shared/QtyFormulaModal';
 import { joinSize, sizeMeasurement } from '../shared/LotChips';
 import { useUser } from '../../context/UserContext';
 import { API_BASE } from '../shared/apiBase';
+import { TintCard } from '../shared/RequestDetailPanel';
 
 
 const fi = (extra: React.CSSProperties = {}): React.CSSProperties =>
     _xpInput({ width: '100%', height: '22px', borderRadius: 0, boxSizing: 'border-box', padding: '0 4px', ...extra });
 const xpInput = fi;
 const xpLabel = (extra: React.CSSProperties = {}): React.CSSProperties => _xpLabel(extra);
+const blueChip: React.CSSProperties = {
+    borderRadius: CHIP_RADIUS, background: 'var(--terras-chip-blue-bg)', border: '1px solid var(--terras-chip-blue-border)', color: 'var(--terras-chip-blue-text)',
+};
+const redNote: React.CSSProperties = {
+    fontSize: 10, background: 'var(--terras-chip-red-bg)', border: '1px solid var(--terras-chip-red-border)', color: 'var(--terras-chip-red-text)', padding: '4px 8px',
+};
 
 interface BomEntryState {
     bomId: string;
@@ -148,19 +155,19 @@ function BomEntryRow({
     };
 
     return (
-        <div style={{ border: '1px solid #aca899', borderRadius: 3, padding: '10px 8px 8px', background: '#f5f4ee', position: 'relative' }}>
-            <span style={{ position: 'absolute', top: -8, left: 8, background: '#f5f4ee', padding: '0 4px', fontSize: 10, fontWeight: 'bold', color: '#000080' }}>
-                BOM Entry {index + 1}
-            </span>
-            {canRemove && (
+        <TintCard
+            title={`BOM Entry ${index + 1}`}
+            bodyStyle={{ padding: 8 }}
+            right={canRemove ? (
                 <button
                     onClick={onRemove}
                     className={XP_BTN}
-                    style={{ position: 'absolute', top: -8, right: 6, background: '#c84040', border: '1px solid #800', color: '#fff', fontSize: 9, padding: '1px 5px', cursor: 'pointer', fontFamily: xpFont, borderRadius: BUTTON_RADIUS }}
+                    style={{ background: '#c84040', border: '1px solid #800', color: '#fff', fontSize: 9, padding: '1px 5px', cursor: 'pointer', fontFamily: xpFont, borderRadius: BUTTON_RADIUS }}
                 >
                     Remove
                 </button>
-            )}
+            ) : undefined}
+        >
             <div style={{ marginBottom: 6 }}>
                 <label style={xpLabel()}>Product Recipe (BOM)</label>
                 <SearchableSelect
@@ -176,12 +183,12 @@ function BomEntryRow({
                     placeholder="-- Select a BOM --"
                 />
                 {!entry.bomId && entry.sizeTokens && (
-                    <div style={{ fontSize: 10, color: '#7a5c00', marginTop: 2 }}>
+                    <div style={{ fontSize: 10, color: 'var(--terras-status-amber, #7a5c00)', marginTop: 2 }}>
                         Ordered: {Object.entries(entry.sizeTokens).map(([tok, q]) => `${tok.toUpperCase()} ${q}`).join(', ')} — pick the recipe to plan it.
                     </div>
                 )}
                 {entry.bomId && unmatchedTokens.length > 0 && (
-                    <div style={{ fontSize: 10, color: '#a33', marginTop: 2 }}>
+                    <div style={{ fontSize: 10, color: 'var(--terras-status-red, #a33)', marginTop: 2 }}>
                         This BOM has no size for {unmatchedTokens.map(t => t.toUpperCase()).join(', ')} — that qty is not planned.
                     </div>
                 )}
@@ -218,7 +225,7 @@ function BomEntryRow({
                     return (
                         <div key={attr.id} style={{ marginBottom: 6 }}>
                             <label style={xpLabel()}>{attr.name}</label>
-                            <div style={xpInput({ height: '22px', lineHeight: '20px', background: '#e8e8e0', color: '#555' })}>
+                            <div style={xpInput({ height: '22px', lineHeight: '20px', background: 'var(--terras-toolbar-bg, #f5f4ef)', color: 'var(--terras-win-text-3, #555)' })}>
                                 {entry.colorLabel || entry.labdipVariantCode || entry.colorId}
                             </div>
                         </div>
@@ -247,7 +254,7 @@ function BomEntryRow({
             {selectedBom && sizes.length > 0 && (
                 <div>
                     <label style={xpLabel({ fontWeight: 'bold', marginBottom: 4 })}>
-                        Qty per Size{itemUom ? <span style={{ borderRadius: CHIP_RADIUS, fontWeight: 'normal', marginLeft: 4, fontSize: 10, background: '#dde8f5', border: '1px solid #7f9db9', padding: '0 4px', color: '#336' }}>{itemUom}</span> : null}
+                        Qty per Size{itemUom ? <span style={{ ...blueChip, fontWeight: 'normal', marginLeft: 4, fontSize: 10, padding: '0 4px' }}>{itemUom}</span> : null}
                     </label>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: 4 }}>
                         {sizes.map((s: any) => (
@@ -276,13 +283,13 @@ function BomEntryRow({
                         onChange={e => onChange({ ...entry, totalQty: e.target.value })}
                     />
                     {itemUom && (
-                        <span style={{ borderRadius: CHIP_RADIUS, fontSize: 10, fontFamily: xpFont, background: '#dde8f5', border: '1px solid #7f9db9', padding: '1px 5px', color: '#336' }}>{itemUom}</span>
+                        <span style={{ ...blueChip, fontSize: 10, fontFamily: xpFont, padding: '1px 5px' }}>{itemUom}</span>
                     )}
                 </div>
             )}
 
             {selectedBom && (
-                <label style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 6, fontSize: 10, fontFamily: xpFont, color: '#663c00', cursor: 'pointer' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 6, fontSize: 10, fontFamily: xpFont, color: 'var(--terras-status-amber, #663c00)', cursor: 'pointer' }}>
                     <input
                         type="checkbox"
                         checked={!!entry.forceCreate}
@@ -291,7 +298,7 @@ function BomEntryRow({
                     Force create even if in stock
                 </label>
             )}
-        </div>
+        </TintCard>
     );
 }
 
@@ -588,7 +595,7 @@ export default function ProductionRunModal({
             <div style={{ display: 'flex', gap: 0, alignItems: 'flex-start', fontFamily: xpFont }}>
 
                 {/* ── LEFT: form ── */}
-                <div style={{ width: 420, minWidth: 420, flexShrink: 0, paddingRight: 18, borderRight: '1px solid #aca899' }}>
+                <div style={{ width: 420, minWidth: 420, flexShrink: 0, paddingRight: 18, borderRight: '1px solid var(--terras-table-line, #d6d3ce)' }}>
                     <div style={{ marginBottom: 8 }}>
                         <label style={xpLabel()}>Run Code</label>
                         <input
@@ -631,10 +638,7 @@ export default function ProductionRunModal({
                     </div>
 
                     {showFormulaSection && (
-                        <div style={{ border: '1px solid #b0a890', borderRadius: 3, padding: '6px 8px', background: '#faf9f0', marginTop: 8 }}>
-                            <div style={{ fontSize: 10, fontWeight: 'bold', color: '#5a4a00', marginBottom: 4 }}>
-                                Quantity Tolerance
-                            </div>
+                        <TintCard title="Quantity Tolerance" tone="amber" style={{ marginTop: 8 }} bodyStyle={{ padding: 8 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                                 <label style={xpLabel({ marginBottom: 0, whiteSpace: 'nowrap' })}>Tolerance %</label>
                                 <input
@@ -668,11 +672,11 @@ export default function ProductionRunModal({
                                 </button>
                                 {/* The active formula comes from the stored rules;
                                     this line must not restate a rule this file owns. */}
-                                <span style={{ fontSize: 9, color: '#666', lineHeight: 1.2 }}>
+                                <span style={{ fontSize: 9, color: 'var(--terras-win-text-3, #666)', lineHeight: 1.2 }}>
                                     {formulaSummary(formulaRules)}{'  '}|{'  '}then × (1 + %), rounded up.
                                 </span>
                             </div>
-                        </div>
+                        </TintCard>
                     )}
 
                     <button
@@ -683,12 +687,12 @@ export default function ProductionRunModal({
                         + Add BOM
                     </button>
 
-                    {error && <div style={{ marginTop: 8, fontSize: 10, color: '#a00', background: '#fff0f0', border: '1px solid #f0a0a0', padding: '4px 8px' }}>{error}</div>}
+                    {error && <div style={{ ...redNote, marginTop: 8 }}>{error}</div>}
                 </div>
 
                 {/* ── RIGHT: live netting preview ── */}
                 <div style={{ flex: 1, paddingLeft: 18, minWidth: 360 }}>
-                    <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#888', marginBottom: 8 }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--terras-win-text-3, #888)', marginBottom: 8 }}>
                         Net requirement preview
                     </div>
                     {previewEnabled ? (
@@ -696,7 +700,7 @@ export default function ProductionRunModal({
                     ) : (
                         <div style={{
                             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                            minHeight: 240, gap: 10, color: '#94a3b8', textAlign: 'center',
+                            minHeight: 240, gap: 10, color: 'var(--terras-win-text-3, #94a3b8)', textAlign: 'center',
                         }}>
                             <i className="bi bi-diagram-3" style={{ fontSize: 40, opacity: 0.35 }}></i>
                             <div style={{ fontSize: 12, maxWidth: 220 }}>

@@ -7,7 +7,7 @@ import ModalWrapper from '../shared/ModalWrapper';
 import CameraScanner from '../shared/CameraScanner';
 import LotLabelPrintModal from './LotLabelPrintModal';
 import { LotChips, LotChip } from '../shared/LotChips';
-import { CodeChip, xpFont, xpBtn as xpBtnBase, XP_BTN } from '../shared/xpTheme';
+import { CodeChip, xpFont, xpBtn as xpBtnBase, XP_BTN, ToggleChip } from '../shared/xpTheme';
 import { field as xpInputBase, BTN_TONES } from '@bryanadamg/terras-ui/styles';
 import type { StagedLot } from './WOStagingModal';
 import { API_BASE } from '../shared/apiBase';
@@ -376,12 +376,12 @@ export default function BagScanStageModal({ wo, onClose, onStaged, onManualMode 
         >
             <div style={{ fontFamily: xpFont, fontSize: 11 }}>
                 {onManualMode && (
-                    <div style={{ display: 'flex', gap: 0, marginBottom: 8, border: '1px solid #7f9db9', width: 'fit-content' }}>
-                        <button className={XP_BTN} onClick={onManualMode} style={{ ...xpBtn(false), border: 'none', borderRight: '1px solid #7f9db9', padding: '3px 12px' }}>Manual</button>
-                        <span style={{ padding: '3px 12px', fontWeight: 'bold', background: 'linear-gradient(to bottom,#cfe0ff,#8fb3e8)', color: '#0a2a66' }}>Scan</span>
+                    <div style={{ display: 'inline-flex', marginBottom: 8 }}>
+                        <ToggleChip on={false} onClick={onManualMode} seg="first">Manual</ToggleChip>
+                        <ToggleChip on onClick={() => {}} seg="last" title="Scan staging (current)">Scan</ToggleChip>
                     </div>
                 )}
-                <div style={{ fontSize: 10, color: '#555', marginBottom: 8 }}>
+                <div style={{ fontSize: 10, color: 'var(--terras-win-text-3, #555)', marginBottom: 8 }}>
                     Scan each label to feed this step — the lot number is captured automatically.
                     {hasBeamRows && (
                         <>
@@ -397,9 +397,9 @@ export default function BagScanStageModal({ wo, onClose, onStaged, onManualMode 
                 </div>
 
                 {loading ? (
-                    <div style={{ color: '#888', padding: 12 }}>Loading required materials...</div>
+                    <div style={{ color: 'var(--terras-win-text-3, #888)', padding: 12 }}>Loading required materials...</div>
                 ) : rows.length === 0 ? (
-                    <div style={{ color: '#b00', padding: 12 }}>
+                    <div style={{ color: 'var(--terras-status-red, #b00)', padding: 12 }}>
                         This WO has no materials to stage (no routing step assigned, or step has no materials).
                     </div>
                 ) : (
@@ -408,14 +408,14 @@ export default function BagScanStageModal({ wo, onClose, onStaged, onManualMode 
                             the "already staged" block below, but keyed to the MACHINE,
                             because that is what a mount is pegged to. */}
                         {hasBeamRows && (
-                            <div style={{ border: '1px solid #a8bcd0', background: '#f2f6fa', padding: '4px 6px', marginBottom: 8 }}>
-                                <div style={{ fontSize: 10, color: '#0a3f6e', fontWeight: 'bold', marginBottom: 3 }}>
+                            <div style={{ border: '1px solid var(--terras-chip-blue-border, #a8bcd0)', background: 'var(--terras-chip-blue-bg, #f2f6fa)', padding: '4px 6px', marginBottom: 8 }}>
+                                <div style={{ fontSize: 10, color: 'var(--terras-chip-blue-text, #0a3f6e)', fontWeight: 'bold', marginBottom: 3 }}>
                                     <i className="bi bi-arrow-bar-up" /> On the loom{loom?.work_center_code ? ` — ${loom.work_center_code}` : ''}
                                     {' '}({mountedPcs} / {beamSlots} beam position{beamSlots === 1 ? '' : 's'}
                                     {loom ? `, ${Number(loom.total_remaining || 0).toFixed(1)} kg` : ''})
                                 </div>
                                 {(loom?.mounts || []).length === 0 ? (
-                                    <div style={{ fontSize: 10, color: '#888', fontStyle: 'italic' }}>No warp mounted — scan a beam to gait it.</div>
+                                    <div style={{ fontSize: 10, color: 'var(--terras-win-text-3, #888)', fontStyle: 'italic' }}>No warp mounted — scan a beam to gait it.</div>
                                 ) : (
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                                         {(loom?.mounts || []).map(m => (
@@ -434,8 +434,8 @@ export default function BagScanStageModal({ wo, onClose, onStaged, onManualMode 
                             re-scans bags that are in fact staged already — the total
                             alone doesn't say which lots it came from. */}
                         {alreadyStaged.length > 0 && (
-                            <div style={{ border: '1px solid #a8d0a8', background: '#f2f9f2', padding: '4px 6px', marginBottom: 8 }}>
-                                <div style={{ fontSize: 10, color: '#1a5e1a', fontWeight: 'bold', marginBottom: 3 }}>
+                            <div style={{ border: '1px solid var(--terras-chip-green-border, #a8d0a8)', background: 'var(--terras-chip-green-bg, #f2f9f2)', padding: '4px 6px', marginBottom: 8 }}>
+                                <div style={{ fontSize: 10, color: 'var(--terras-chip-green-text, #1a5e1a)', fontWeight: 'bold', marginBottom: 3 }}>
                                     <i className="bi bi-box-seam" /> Already staged to this WO ({stagedKg.toFixed(2)} kg)
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -495,21 +495,21 @@ export default function BagScanStageModal({ wo, onClose, onStaged, onManualMode 
                         <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 6, flexWrap: 'wrap' }}>
                             {hasBeamRows && (
                                 <span>Beams: <b>{beamCart.length}</b>
-                                    <span style={{ color: '#555' }}> ({beamPcsAfter} / {beamSlots} up after mount)</span>
+                                    <span style={{ color: 'var(--terras-win-text-3, #555)' }}> ({beamPcsAfter} / {beamSlots} up after mount)</span>
                                 </span>
                             )}
                             <span>Bags: <b>{bagCart.length}</b></span>
                             <span>Total: <b>{cartKg.toFixed(2)} kg</b></span>
-                            <span style={{ color: '#555' }}>Required: {totalShortfall.toFixed(2)} kg</span>
+                            <span style={{ color: 'var(--terras-win-text-3, #555)' }}>Required: {totalShortfall.toFixed(2)} kg</span>
                         </div>
                         {overSlots && (
-                            <div style={{ background: '#fff3cd', border: '1px solid #b8860b', color: '#7a5000', padding: '4px 8px', marginBottom: 8, fontSize: 10 }}>
+                            <div style={{ background: 'var(--terras-chip-amber-bg, #fff3cd)', border: '1px solid var(--terras-chip-amber-border, #b8860b)', color: 'var(--terras-chip-amber-text, #7a5000)', padding: '4px 8px', marginBottom: 8, fontSize: 10 }}>
                                 That would put <b>{beamPcsAfter}</b> beams on a loom with <b>{beamSlots}</b> position{beamSlots === 1 ? '' : 's'}.
                                 Beam positions are a readiness target, not a cap — the mount will still go through.
                             </div>
                         )}
                         {overRequired && (
-                            <div style={{ background: '#fff3cd', border: '1px solid #b8860b', color: '#7a5000', padding: '4px 8px', marginBottom: 8, fontSize: 10 }}>
+                            <div style={{ background: 'var(--terras-chip-amber-bg, #fff3cd)', border: '1px solid var(--terras-chip-amber-border, #b8860b)', color: 'var(--terras-chip-amber-text, #7a5000)', padding: '4px 8px', marginBottom: 8, fontSize: 10 }}>
                                 Staged load ({cartKg.toFixed(2)} kg) exceeds the WO&apos;s required {totalShortfall.toFixed(2)} kg by{' '}
                                 <b>{(cartKg - totalShortfall).toFixed(2)} kg</b>. All scanned bags will still be staged.
                             </div>
@@ -519,7 +519,7 @@ export default function BagScanStageModal({ wo, onClose, onStaged, onManualMode 
                         <div style={{ border: '1px solid #7f9db9', maxHeight: 300, overflowY: 'auto' }}>
                             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10 }}>
                                 <thead>
-                                    <tr style={{ background: '#d4d0c8', textAlign: 'left', position: 'sticky', top: 0 }}>
+                                    <tr style={{ background: 'var(--terras-toolbar-bg, #f5f4ef)', textAlign: 'left', position: 'sticky', top: 0 }}>
                                         <th style={{ padding: '3px 5px', width: 34 }}>#</th>
                                         <th style={{ padding: '3px 5px' }}>Lot</th>
                                         <th style={{ padding: '3px 5px' }}>Item</th>
@@ -530,14 +530,14 @@ export default function BagScanStageModal({ wo, onClose, onStaged, onManualMode 
                                 </thead>
                                 <tbody>
                                     {cart.length === 0 ? (
-                                        <tr><td colSpan={6} style={{ padding: 10, color: '#aaa', textAlign: 'center' }}>
+                                        <tr><td colSpan={6} style={{ padding: 10, color: 'var(--terras-win-text-3, #aaa)', textAlign: 'center' }}>
                                             No {hasBeamRows ? 'lots' : 'bags'} scanned yet.
                                         </td></tr>
                                     ) : cart.map((b, i) => {
                                         const beam = isBeam(b);
                                         return (
-                                            <tr key={b.id} style={{ borderBottom: '1px solid #cfccc4' }}>
-                                                <td style={{ padding: '3px 5px', color: '#888' }}>{i + 1}</td>
+                                            <tr key={b.id} style={{ borderBottom: '1px solid var(--terras-table-line, #cfccc4)' }}>
+                                                <td style={{ padding: '3px 5px', color: 'var(--terras-win-text-3, #888)' }}>{i + 1}</td>
                                                 <td style={{ padding: '3px 5px' }}>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
                                                         <CodeChip code={b.batch_number} />
@@ -554,17 +554,17 @@ export default function BagScanStageModal({ wo, onClose, onStaged, onManualMode 
                                                         manual staging picker, so a wrong-variant lot is visible. */}
                                                     <LotChips batch={b} />
                                                     {beam && b.ends ? (
-                                                        <div style={{ color: '#555', fontSize: 9 }}>{b.ends} utas</div>
+                                                        <div style={{ color: 'var(--terras-win-text-3, #555)', fontSize: 9 }}>{b.ends} utas</div>
                                                     ) : null}
                                                 </td>
-                                                <td style={{ padding: '3px 5px', color: '#0058e6' }}>{b.location_name || '—'}</td>
+                                                <td style={{ padding: '3px 5px', color: 'var(--terras-win-blue, #0058e6)' }}>{b.location_name || '—'}</td>
                                                 <td style={{ padding: '3px 5px', textAlign: 'right' }}>
                                                     {beam ? (
                                                         // A warp is atomic: the whole beam goes up, so there is nothing
                                                         // to type. Its kg is a readout of what the loom will draw down.
                                                         <>
                                                             <b>{Number(b.remaining || 0).toFixed(2)}</b>
-                                                            <div style={{ color: '#0a3f6e', fontSize: 9 }}>whole beam</div>
+                                                            <div style={{ color: 'var(--terras-chip-blue-text, #0a3f6e)', fontSize: 9 }}>whole beam</div>
                                                         </>
                                                     ) : (
                                                         <>
@@ -577,9 +577,9 @@ export default function BagScanStageModal({ wo, onClose, onStaged, onManualMode 
                                                                 onChange={e => setStageQtys(prev => ({ ...prev, [b.id]: e.target.value }))}
                                                                 style={{ width: 62, textAlign: 'right', fontFamily: xpFont, fontSize: 10, border: '1px solid #7f9db9', padding: '1px 4px', fontWeight: 'bold' }}
                                                             />
-                                                            <span style={{ color: '#888', marginLeft: 3 }}>/ {Number(b.remaining || 0).toFixed(2)}</span>
+                                                            <span style={{ color: 'var(--terras-win-text-3, #888)', marginLeft: 3 }}>/ {Number(b.remaining || 0).toFixed(2)}</span>
                                                             {stagedOf(b) < Number(b.remaining || 0) - 1e-6 && (
-                                                                <div style={{ color: '#7a5000', fontSize: 9 }}>
+                                                                <div style={{ color: 'var(--terras-chip-amber-text, #7a5000)', fontSize: 9 }}>
                                                                     splits {(Number(b.remaining || 0) - stagedOf(b)).toFixed(2)} leftover
                                                                 </div>
                                                             )}
@@ -590,7 +590,7 @@ export default function BagScanStageModal({ wo, onClose, onStaged, onManualMode 
                                                     <button
                                                         className={XP_BTN}
                                                         onClick={() => removeFromCart(b.id)}
-                                                        style={{ ...xpBtn(false), padding: '0 5px', color: '#900' }}
+                                                        style={{ ...xpBtn(false), padding: '0 5px', color: 'var(--terras-status-red, #900)' }}
                                                         title="Remove"
                                                     >×</button>
                                                 </td>
