@@ -15,6 +15,26 @@ on `main`:
 
 ## [Unreleased]
 
+## [1.10.0] - 2026-11-23
+
+### Added
+- Booking Stock counts open purchase order lines as incoming stock and lists them under each row
+- A lot's size can be changed from the Lot screen without changing its item or stock
+- Lab dip requests can be searched by colour, item and variant code, not just the request header
+- The lab dip request list shows each request's variants in the Items column, side by side with their full codes, and puts only the ones that don't fit into "+n more"
+
+### Changed
+- The lab dip and sample request detail panel is rebuilt on tinted cards, showing status in the Identity card and each field's label beside its value
+- The BOM expanded row is rebuilt as full-height tinted cards with a themed component table and the totals bar pinned at the bottom
+- The BOM designer, BOM automator and BOM save confirmation are restyled with tinted section cards, theme chips and a themed structure tree
+- Most create and edit dialogs are restyled with tinted cards, theme chips and theme colours, replacing the old beige boxes. This covers Create Item, sales order, New Manufacturing Order, New Production Run, Plan Work Orders, New Packing Order, bulk dyeing, dye recipe, stage and scan-bag, and the operator log and work order completion dialogs. Manual/Scan and pack-basis choices are now toggle chips
+
+### Fixed
+- Receive Goods offers Cones and Drum inputs again for purchase order items that aren't on the loaded items page
+- Confirm dialogs show their red title bar and danger button again instead of rendering blank
+- Long sample colour names wrap instead of overlapping, and the detail cards no longer clip or stretch
+- Tinted cards no longer show a white frame inside their corners, and the BOM designer fills its dialog with its footer spanning the full width
+
 ## [1.9.1] - 2026-11-20
 
 ### Changed
