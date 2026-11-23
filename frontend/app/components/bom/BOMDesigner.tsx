@@ -1278,7 +1278,7 @@ export default function BOMDesigner({
     );
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 'calc(var(--app-vh) * 80 / 100)', fontFamily: xpFont, fontSize: 11, background: '#ece9d8' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 'calc(var(--app-vh) * 80 / 100)', fontFamily: xpFont, fontSize: 11, background: 'var(--terras-table-bg, #fff)' }}>
             <CodeConfigModal
                 isOpen={isConfigOpen}
                 onClose={() => setIsConfigOpen(false)}
@@ -2095,7 +2095,7 @@ export default function BOMDesigner({
                                             {/* Component list */}
                                             <div style={{ ...xpInset, maxHeight: 260, padding: 0 }}>
                                                 {selectedNode.lines.length > 0 && (
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '2px 6px', background: '#ece9d8', borderBottom: '1px solid #aca899', fontSize: 9, color: '#555', fontWeight: 'bold' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '2px 6px', background: 'var(--terras-toolbar-bg, #f5f4ef)', borderBottom: '1px solid var(--terras-table-line, #d6d3ce)', fontSize: 9, color: 'var(--terras-win-text-2, #555)', fontWeight: 'bold' }}>
                                                         <span style={{ flex: 1 }}>Component</span>
                                                         <span style={{ width: 57, textAlign: 'right' }}>%</span>
                                                         <span style={{ width: 48, textAlign: 'right' }}>{isBeamNode(selectedNode) ? 'Ends' : 'Qty'}</span>
@@ -2248,7 +2248,7 @@ export default function BOMDesigner({
                                                 const hasZero = selectedNode.lines.some(l => (l.percentage || 0) === 0);
                                                 const isValid = !hasZero && Math.abs(nodePct - 100) < 0.01;
                                                 return (
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 6px', borderTop: '1px solid #aca899', background: '#ece9d8' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 6px', borderTop: '1px solid var(--terras-table-line, #d6d3ce)', background: 'var(--terras-toolbar-bg, #f5f4ef)' }}>
                                                         <span style={{ fontSize: 10, color: '#555', flex: 1 }}>Total %:</span>
                                                         <span style={xpBadge(isValid ? '#2a7a2a' : '#a02020')}>{nodePct.toFixed(1)}%</span>
                                                         {!isValid && <span style={{ fontSize: 10, color: '#a02020' }}>{hasZero ? 'set all percentages' : 'must = 100%'}</span>}
@@ -2383,31 +2383,32 @@ export default function BOMDesigner({
                         </div>
                     )}
 
-                    {/* Footer */}
-                    <div style={{
-                        borderTop: '1px solid #aca899',
-                        background: '#ece9d8',
-                        padding: '5px 10px',
-                        display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 6,
-                        flexShrink: 0,
-                    }}>
-                        {pctError && (
-                            <span style={{ flex: 1, fontSize: 10, color: '#a02020', fontFamily: xpFont }}>
-                                <i className="bi bi-exclamation-triangle-fill" style={{ marginRight: 4 }} />{pctError}
-                            </span>
-                        )}
-                        <button className={XP_BTN} style={xpBtn} onClick={onCancel}>{t('cancel')}</button>
-                        <button
-                            className={XP_BTN}
-                            data-testid="save-bom-tree-btn"
-                            style={{ ...xpBtnSuccess, opacity: isSaving ? 0.6 : 1 }}
-                            onClick={handleGlobalSave}
-                            disabled={isSaving}
-                        >
-                            {isSaving ? 'Processing...' : <><i className="bi bi-save" style={{ marginRight: 4 }} />Finish &amp; Save Tree</>}
-                        </button>
-                    </div>
                 </div>
+            </div>
+
+            {/* Footer — spans the whole dialog, under the tree too */}
+            <div style={{
+                borderTop: '1px solid var(--terras-modal-footer-border, #d6d3ce)',
+                background: 'var(--terras-modal-footer-bg, #f5f4ef)',
+                padding: '5px 10px',
+                display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 6,
+                flexShrink: 0,
+            }}>
+                {pctError && (
+                    <span style={{ flex: 1, fontSize: 10, color: '#a02020', fontFamily: xpFont }}>
+                        <i className="bi bi-exclamation-triangle-fill" style={{ marginRight: 4 }} />{pctError}
+                    </span>
+                )}
+                <button className={XP_BTN} style={xpBtn} onClick={onCancel}>{t('cancel')}</button>
+                <button
+                    className={XP_BTN}
+                    data-testid="save-bom-tree-btn"
+                    style={{ ...xpBtnSuccess, opacity: isSaving ? 0.6 : 1 }}
+                    onClick={handleGlobalSave}
+                    disabled={isSaving}
+                >
+                    {isSaving ? 'Processing...' : <><i className="bi bi-save" style={{ marginRight: 4 }} />Finish &amp; Save Tree</>}
+                </button>
             </div>
 
             {/* Photo preview overlay */}

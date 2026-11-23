@@ -62,7 +62,12 @@ interface Props {
 // Cards nested in a list row take a tinted header instead of the solid form blue:
 // solid bars stacked under the list's own chrome read too heavy. The header reads its
 // ground from this var, so overriding it on the card restyles just that bar.
-export const TINT = { '--terras-form-section-blue': 'var(--terras-chip-blue-bg, #dce4f5)' } as React.CSSProperties;
+// The default section edge is near-white and vanishes on a white ground, so the card
+// takes a blue-grey edge derived from the same chip family as its header.
+export const TINT = {
+    '--terras-form-section-blue': 'var(--terras-chip-blue-bg, #dce4f5)',
+    '--terras-form-section-border': 'color-mix(in srgb, var(--terras-chip-blue-border, #3a5faa) 40%, var(--terras-table-bg, #fff))',
+} as React.CSSProperties;
 const CARD: React.CSSProperties = { ...TINT, margin: 0, minWidth: 0, display: 'flex', flexDirection: 'column' };
 // Label beside value, two pairs per line — scans faster than label-over-value here.
 const FIELD_LABEL: React.CSSProperties = { width: 110, flexShrink: 0, fontSize: 'var(--terras-fs-sm, 10px)', fontWeight: 'bold', color: 'var(--terras-win-text-2, #333)' };
