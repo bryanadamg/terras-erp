@@ -9,6 +9,7 @@ import { useRememberedTab } from '../../hooks/useRememberedTab';
 import { xpBtn, xpFont, XP_BTN } from '../shared/xpTheme';
 import { field as xpInput, BTN_TONES } from '@bryanadamg/terras-ui/styles';
 import { FieldLabel } from '@bryanadamg/terras-ui/components/Field';
+import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
 import { settingsActions, settingsGrid, settingsHint } from './settingsStyles';
 import CompanyProfileView from './CompanyProfileView';
 import QtyFormulaPanel from './QtyFormulaPanel';
@@ -54,7 +55,7 @@ export default function SettingsGeneralTab({
     const { hasPermission } = useUser();
     const isAdmin = hasPermission('system_admin.edit');
     const { uiScale, setUiScale } = useTheme();
-    const { timezone, setTimezone } = useTimezone();
+    const { timezone, setTimezone, formatDateTime } = useTimezone();
 
     const sections: GeneralSection[] = isAdmin
         ? ['profile', 'password', 'display', 'company', 'production']
@@ -62,15 +63,6 @@ export default function SettingsGeneralTab({
     const [section, setSection] = useRememberedTab<GeneralSection>('settings.general', 'profile', sections);
 
     const [name, setName] = useState(appName);
-    const [tz, setTz] = useState(timezone);
-    const [scale, setScale] = useState(uiScale);
-
-    const saveDisplay = (e: React.FormEvent) => {
-        e.preventDefault();
-        setTimezone(tz);
-        setUiScale(scale);
-        showToast('Display preferences updated!', 'success');
-    };
 
     const saveAppName = (e: React.FormEvent) => {
         e.preventDefault();
@@ -90,39 +82,35 @@ export default function SettingsGeneralTab({
         profile: <ProfileSection />,
         password: <PasswordSection />,
         display: (
-            <form onSubmit={saveDisplay} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                <DetailSection title="Display" right={<span style={settingsHint()}>Applies on this device only</span>}>
-                    <div style={{ ...settingsGrid(220), maxWidth: 760 }}>
-                        <div>
-                            <FieldLabel>Interface Scale</FieldLabel>
-                            <select
-                                style={xpInput({ height: 'auto', padding: '2px 4px', width: '100%' })}
-                                value={scale}
-                                onChange={e => setScale(Number(e.target.value))}
-                            >
-                                {UI_SCALES.map(s => <option key={s} value={s}>{s}%{s === 80 ? ' (Default)' : ''}</option>)}
-                            </select>
-                            <div style={settingsHint()}>Fits more rows on screen without browser zoom. Phones and printouts always render at 100%.</div>
-                        </div>
-                        <div>
-                            <FieldLabel>Display Timezone</FieldLabel>
-                            <select
-                                style={xpInput({ height: 'auto', padding: '2px 4px', width: '100%' })}
-                                value={tz}
-                                onChange={e => setTz(e.target.value)}
-                            >
-                                {AVAILABLE_TIMEZONES.map(z => <option key={z} value={z}>{z.replace(/_/g, ' ')}</option>)}
-                            </select>
-                            <div style={settingsHint()}>Dates &amp; times (e.g. stock ledger) display in this zone on this device.</div>
+            <DetailSection title={<>Display <span style={{ fontWeight: 'normal', textTransform: 'none', letterSpacing: 0, color: '#888' }}>· this device only, applied as you change it</span></>}>
+                {/* Both live in this browser's storage, so they apply on change —
+                    a Save button suggested they went to the server for everyone. */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 760 }}>
+                    <div>
+                        <FieldLabel>Interface Scale</FieldLabel>
+                        <FilterChipBar
+                            ariaLabel="Interface scale"
+                            options={UI_SCALES.map(s => ({ value: String(s), label: `${s}%${s === 80 ? ' · default' : ''}` }))}
+                            value={String(uiScale)}
+                            onChange={v => setUiScale(Number(v))}
+                        />
+                        <div style={settingsHint()}>Fits more rows on screen without browser zoom. Phones and printouts always render at 100%.</div>
+                    </div>
+                    <div style={{ maxWidth: 360 }}>
+                        <FieldLabel>Display Timezone</FieldLabel>
+                        <select
+                            style={xpInput({ height: 'auto', padding: '2px 4px', width: '100%' })}
+                            value={timezone}
+                            onChange={e => setTimezone(e.target.value)}
+                        >
+                            {AVAILABLE_TIMEZONES.map(z => <option key={z} value={z}>{z.replace(/_/g, ' ')}</option>)}
+                        </select>
+                        <div style={settingsHint()}>
+                            Now: <b>{formatDateTime(new Date())}</b>. Dates &amp; times (e.g. stock ledger) display in this zone on this device.
                         </div>
                     </div>
-                </DetailSection>
-                <div style={{ ...settingsActions(), marginTop: 0, maxWidth: 760 }}>
-                    <button type="submit" style={xpBtn({ ...BTN_TONES.primary, padding: '3px 14px' })} className={XP_BTN}>
-                        <i className="bi bi-save" style={{ marginRight: 4 }} />Save Display
-                    </button>
                 </div>
-            </form>
+            </DetailSection>
         ),
         company: (
             <>

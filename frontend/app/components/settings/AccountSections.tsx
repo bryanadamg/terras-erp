@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useToast } from '../shared/Toast';
 import { useUser } from '../../context/UserContext';
-import { xpBtn, XP_BTN } from '../shared/xpTheme';
+import { xpBtn, xpFont, XP_BTN } from '../shared/xpTheme';
+import PixelAvatar from '../shared/PixelAvatar';
 import { field as xpInput, BTN_TONES } from '@bryanadamg/terras-ui/styles';
 import { FieldLabel } from '@bryanadamg/terras-ui/components/Field';
 import { settingsActions, settingsGrid } from './settingsStyles';
@@ -54,6 +55,9 @@ export function ProfileSection() {
     // Empty means "no recipe stored yet" — seeded from the username instead.
     const [avatarId, setAvatarId] = useState('');
     const [saving, setSaving] = useState(false);
+    // The picker is nine slot tabs and a thumbnail grid — most visits are to fix a
+    // name, so it opens on request instead of taking the top half of the page.
+    const [pickerOpen, setPickerOpen] = useState(false);
 
     useEffect(() => {
         if (!currentUser) return;
@@ -71,12 +75,34 @@ export function ProfileSection() {
 
     return (
         <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <DetailSection title="Avatar">
-                {/* AvatarPicker owns the preview: one outside it can't show the
-                    candidate you are hovering. */}
-                <FieldLabel hint="Hover an option to try it on; Shuffle rolls a whole new face.">Choose Avatar</FieldLabel>
-                <AvatarPicker value={avatarId} onChange={setAvatarId} seed={username} template={currentUser?.role?.default_avatar_id} />
-            </DetailSection>
+            <div style={{
+                display: 'flex', alignItems: 'center', gap: 16, padding: 12, maxWidth: 760,
+                border: '1px solid #c8c4b6', background: '#faf9f4', fontFamily: xpFont,
+            }}>
+                <div style={{ border: '1px solid', borderColor: '#fff #888 #888 #fff', background: '#e0dcd4', padding: 2, flexShrink: 0 }}>
+                    <PixelAvatar avatarId={avatarId} seed={username} template={currentUser?.role?.default_avatar_id} size={64} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 16, fontWeight: 'bold' }}>{fullName || '—'}</div>
+                    <div style={{ fontFamily: 'Consolas, "Courier New", monospace', fontSize: 11, color: '#666' }}>@{username}</div>
+                    {currentUser?.role && (
+                        <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>
+                            Role: <b style={{ color: '#333' }}>{currentUser.role.name}</b> · set by an administrator
+                        </div>
+                    )}
+                </div>
+                <button type="button" className={XP_BTN} style={xpBtn({ padding: '2px 10px' })} onClick={() => setPickerOpen(o => !o)}>
+                    <i className={`bi ${pickerOpen ? 'bi-check-lg' : 'bi-palette'}`} style={{ marginRight: 4 }} />{pickerOpen ? 'Done' : 'Change Avatar'}
+                </button>
+            </div>
+            {pickerOpen && (
+                <DetailSection title="Avatar">
+                    {/* AvatarPicker owns the preview: one outside it can't show the
+                        candidate you are hovering. */}
+                    <FieldLabel hint="Hover an option to try it on; Shuffle rolls a whole new face. Save Profile keeps it.">Choose Avatar</FieldLabel>
+                    <AvatarPicker value={avatarId} onChange={setAvatarId} seed={username} template={currentUser?.role?.default_avatar_id} />
+                </DetailSection>
+            )}
             <DetailSection title="Name">
                 <div style={{ ...settingsGrid(220), maxWidth: 760 }}>
                     <div>
@@ -105,6 +131,9 @@ export function PasswordSection() {
     const [next, setNext] = useState('');
     const [confirm, setConfirm] = useState('');
     const [saving, setSaving] = useState(false);
+    const [open, setOpen] = useState(false);
+
+    const close = () => { setOpen(false); setCurrent(''); setNext(''); setConfirm(''); };
 
     const submit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -113,11 +142,24 @@ export function PasswordSection() {
             return;
         }
         setSaving(true);
-        if (await saveSelf({ password: next, current_password: current }, 'Password changed')) {
-            setCurrent(''); setNext(''); setConfirm('');
-        }
+        if (await saveSelf({ password: next, current_password: current }, 'Password changed')) close();
         setSaving(false);
     };
+
+    if (!open) {
+        return (
+            <div style={{
+                display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', maxWidth: 760,
+                border: '1px solid #c8c4b6', background: '#faf9f4', fontFamily: xpFont, fontSize: 11,
+            }}>
+                <i className="bi bi-key-fill" style={{ color: '#888' }} />
+                <span style={{ flex: 1 }}>Your password is set. An administrator can also reset it for you.</span>
+                <button type="button" className={XP_BTN} style={xpBtn({ padding: '2px 10px' })} onClick={() => setOpen(true)}>
+                    Change Password…
+                </button>
+            </div>
+        );
+    }
 
     return (
         <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -141,6 +183,7 @@ export function PasswordSection() {
                 </div>
             </DetailSection>
             <div style={{ ...settingsActions(), marginTop: 0, maxWidth: 760 }}>
+                <button type="button" onClick={close} style={xpBtn({ padding: '3px 14px' })} className={XP_BTN}>Cancel</button>
                 <button type="submit" disabled={saving || !next} style={xpBtn({ ...BTN_TONES.primary, padding: '3px 14px' })} className={XP_BTN}>
                     <i className="bi bi-key" style={{ marginRight: 4 }} />Change Password
                 </button>
