@@ -565,20 +565,24 @@ export default function LabDipRequestView({
                                                 const its = r.items || [];
                                                 if (!its.length) return <span style={{ fontSize: 9, color: '#888', fontStyle: 'italic' }}>—</span>;
                                                 // All variants on one line, as many as the column fits; the rest collapse to
-                                                // "+n more" (hover lists them, click opens the row). The request number is
-                                                // already in the Request Code column, so only the variant letter is shown.
+                                                // "+n more" (hover lists them, click opens the row). Each shows its full
+                                                // variant code as one joined chip — it need not match the request's number.
                                                 return (
                                                     <OverflowRow
                                                         onMore={() => { if (!expandedIds.has(r.id)) toggleExpand(r.id); }}
                                                         items={its.map((it: any) => {
                                                             const code = it.variant_code || `${seqPart(r.code)}-${variantLetter(it.variant_seq ?? 0)}`;
                                                             const name = it.item_name || it.item_code || '—';
+                                                            const parts = splitVariantCode(code);
                                                             return {
                                                                 key: it.id,
                                                                 label: `${code}  ${name}`,
                                                                 node: (
                                                                     <span title={code} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                                                                        <span style={{ ...variantBadge(), fontSize: 9, padding: '0 5px' }}>{splitVariantCode(code).variant}</span>
+                                                                        <span style={{ display: 'inline-flex' }}>
+                                                                            <span style={{ ...seqBadge(), fontSize: 9, padding: '0 5px', borderTopRightRadius: 0, borderBottomRightRadius: 0, borderRight: 'none' }}>{parts.seq}</span>
+                                                                            <span style={{ ...variantBadge(), fontSize: 9, padding: '0 5px', borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }}>{parts.variant}</span>
+                                                                        </span>
                                                                         <span style={{ fontWeight: 'bold', fontSize: 11 }}>{name}</span>
                                                                     </span>
                                                                 ),
