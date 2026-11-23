@@ -5,18 +5,16 @@ import { useToast } from '../shared/Toast';
 import { useConfirm } from '../../context/ConfirmContext';
 import { useData } from '../../context/DataContext';
 import { useTimezone, AVAILABLE_TIMEZONES } from '../../context/TimezoneContext';
-import { xpBtn, CodeChip, StatusChip, CODE_FONT, xpFont, CHIP_RADIUS, XP_BTN, XPActionButton, ProgressBar } from '../shared/xpTheme';
+import { xpBtn, StatusChip, CODE_FONT, xpFont, CHIP_RADIUS, XP_BTN, XPActionButton, ProgressBar } from '../shared/xpTheme';
 import { field as xpInput, BTN_TONES } from '@bryanadamg/terras-ui/styles';
 import { FieldLabel } from '@bryanadamg/terras-ui/components/Field';
 import {
-    xpTableHeader, xpThCell, tdBase,
     settingsActions, settingsHint, SETTINGS_FIELD_GAP,
 } from './settingsStyles';
 import SettingsPanel from './SettingsPanel';
 import { MasterDetail, ListRow, DetailSection, Flag, StatusDot, relativeTime } from './accessParts';
 import { useRememberedTab } from '../../hooks/useRememberedTab';
 import ModalWrapper from '../shared/ModalWrapper';
-import { lvZebra } from '../shared/listViewTheme';
 import { API_BASE } from '../shared/apiBase';
 
 const xpDangerBtn: React.CSSProperties = {
@@ -48,6 +46,12 @@ const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Satu
 const pad2 = (n: number) => String(n).padStart(2, '0');
 
 type PingState = { ok: boolean; latency_ms: number | null } | null;
+
+/** One timeline row: when · origin · file · size · actions. */
+const snapRow: React.CSSProperties = {
+    display: 'grid', gridTemplateColumns: '170px 96px minmax(0, 1fr) 70px auto', alignItems: 'center', gap: 10,
+    padding: '6px 8px', borderBottom: '1px solid #f0eee6',
+};
 
 type DbSection = 'overview' | 'backups' | 'events' | 'connection' | 'danger';
 const DB_SECTIONS: DbSection[] = ['overview', 'backups', 'events', 'connection', 'danger'];
@@ -608,194 +612,192 @@ export default function SettingsDatabaseTab() {
         ),
         backups: (
             <>
-            <SettingsPanel icon="bi-clock-history" title="Scheduled Backups">
-                <form onSubmit={handleSaveSchedule}>
-                    {/* One field per row, not `settingsGrid`'s auto-fit columns.
-                        This panel is the narrow column of the band, so auto-fit
-                        landed on two or three tracks depending on the viewport and
-                        left the last row half-empty — six fields that each read as
-                        a different width and sat in a different place per screen.
-                        A stack also keeps Keep Last's hint under its own field. */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: SETTINGS_FIELD_GAP }}>
-                        <div>
-                            <FieldLabel>Enabled</FieldLabel>
-                            {<label style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: xpFont, fontSize: 11 }}>
-                                    <input type="checkbox" checked={scheduleForm.enabled} onChange={e => setScheduleForm({ ...scheduleForm, enabled: e.target.checked })} />
-                                    Run automatic backups
-                                </label>}
-                        </div>
-                        <div>
-                            <FieldLabel>Frequency</FieldLabel>
-                            <select
-                                style={xpInput({ height: 'auto', padding: '2px 4px', width: '100%' })}
-                                value={scheduleForm.frequency}
-                                onChange={e => setScheduleForm({ ...scheduleForm, frequency: e.target.value })}
-                            >
-                                <option value="daily">Daily</option>
-                                <option value="weekly">Weekly</option>
-                            </select>
-                        </div>
-                        {scheduleForm.frequency === 'weekly' && (
-                            <div>
-                                <FieldLabel>Day of Week</FieldLabel>
-                                <select
-                                    style={xpInput({ height: 'auto', padding: '2px 4px', width: '100%' })}
-                                    value={scheduleForm.day_of_week}
-                                    onChange={e => setScheduleForm({ ...scheduleForm, day_of_week: Number(e.target.value) })}
-                                >
-                                    {DAY_NAMES.map((d, i) => <option key={i} value={i}>{d}</option>)}
-                                </select>
-                            </div>
-                        )}
-                        <div>
-                            <FieldLabel>Time</FieldLabel>
-                            <input
-                                type="time"
-                                style={xpInput({ width: '100%' })}
-                                value={`${pad2(scheduleForm.hour)}:${pad2(scheduleForm.minute)}`}
-                                onChange={e => {
-                                    const [h, m] = e.target.value.split(':').map(Number);
-                                    if (!Number.isNaN(h) && !Number.isNaN(m)) setScheduleForm({ ...scheduleForm, hour: h, minute: m });
+                <SettingsPanel icon="bi-clock-history" title="Backup Schedule">
+                    <form onSubmit={handleSaveSchedule}>
+                        {/* The schedule reads as one sentence. Six stacked full-width
+                            fields made "03:00" and "14" span the screen and kept every
+                            field live while automatic backups were off — nothing said
+                            that none of it would run. */}
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, fontFamily: xpFont, fontSize: 12 }}>
+                            <button
+                                type="button"
+                                role="switch"
+                                aria-checked={scheduleForm.enabled}
+                                aria-label="Run automatic backups"
+                                onClick={() => setScheduleForm({ ...scheduleForm, enabled: !scheduleForm.enabled })}
+                                style={{
+                                    position: 'relative', width: 36, height: 20, flexShrink: 0, marginTop: 3, cursor: 'pointer',
+                                    borderRadius: 10, border: `1px solid ${scheduleForm.enabled ? '#1a5e1a' : '#7a7a7a'}`,
+                                    background: scheduleForm.enabled ? '#2d7a2d' : '#b8b4a8', padding: 0,
                                 }}
-                            />
-                        </div>
-                        <div>
-                            <FieldLabel>Timezone</FieldLabel>
-                            <select
-                                style={xpInput({ height: 'auto', padding: '2px 4px', width: '100%' })}
-                                value={scheduleForm.timezone}
-                                onChange={e => setScheduleForm({ ...scheduleForm, timezone: e.target.value })}
                             >
-                                {AVAILABLE_TIMEZONES.map(z => <option key={z} value={z}>{z.replace(/_/g, ' ')}</option>)}
-                            </select>
+                                <span style={{
+                                    position: 'absolute', top: 2, left: scheduleForm.enabled ? 18 : 2, width: 14, height: 14,
+                                    borderRadius: '50%', background: '#fff', border: '1px solid #888', transition: 'left 0.15s',
+                                }} />
+                            </button>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{
+                                    display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6, lineHeight: '26px',
+                                    color: scheduleForm.enabled ? '#222' : '#999',
+                                }}>
+                                    <b>Automatic backups {scheduleForm.enabled ? 'on' : 'off'}</b> —
+                                    <select
+                                        aria-label="Frequency"
+                                        disabled={!scheduleForm.enabled}
+                                        style={xpInput({ height: 'auto', padding: '2px 4px' })}
+                                        value={scheduleForm.frequency}
+                                        onChange={e => setScheduleForm({ ...scheduleForm, frequency: e.target.value })}
+                                    >
+                                        <option value="daily">every day</option>
+                                        <option value="weekly">every week on</option>
+                                    </select>
+                                    {scheduleForm.frequency === 'weekly' && (
+                                        <select
+                                            aria-label="Day of week"
+                                            disabled={!scheduleForm.enabled}
+                                            style={xpInput({ height: 'auto', padding: '2px 4px' })}
+                                            value={scheduleForm.day_of_week}
+                                            onChange={e => setScheduleForm({ ...scheduleForm, day_of_week: Number(e.target.value) })}
+                                        >
+                                            {DAY_NAMES.map((d, i) => <option key={i} value={i}>{d}</option>)}
+                                        </select>
+                                    )}
+                                    at
+                                    <input
+                                        type="time"
+                                        aria-label="Time"
+                                        disabled={!scheduleForm.enabled}
+                                        style={xpInput({ width: 100 })}
+                                        value={`${pad2(scheduleForm.hour)}:${pad2(scheduleForm.minute)}`}
+                                        onChange={e => {
+                                            const [h, m] = e.target.value.split(':').map(Number);
+                                            if (!Number.isNaN(h) && !Number.isNaN(m)) setScheduleForm({ ...scheduleForm, hour: h, minute: m });
+                                        }}
+                                    />
+                                    <select
+                                        aria-label="Timezone"
+                                        disabled={!scheduleForm.enabled}
+                                        style={xpInput({ height: 'auto', padding: '2px 4px' })}
+                                        value={scheduleForm.timezone}
+                                        onChange={e => setScheduleForm({ ...scheduleForm, timezone: e.target.value })}
+                                    >
+                                        {AVAILABLE_TIMEZONES.map(z => <option key={z} value={z}>{z.replace(/_/g, ' ')}</option>)}
+                                    </select>
+                                    , keeping the last
+                                    <input
+                                        type="number"
+                                        min={1}
+                                        aria-label="Scheduled snapshots to keep"
+                                        disabled={!scheduleForm.enabled}
+                                        style={xpInput({ width: 60 })}
+                                        value={scheduleForm.retain_count}
+                                        onChange={e => setScheduleForm({ ...scheduleForm, retain_count: Math.max(1, Number(e.target.value)) })}
+                                    />
+                                    scheduled snapshots.
+                                </div>
+                                <div style={settingsHint()}>Older scheduled snapshots are pruned automatically. Manual snapshots are never deleted.</div>
+                            </div>
                         </div>
-                        <div>
-                            <FieldLabel>Keep Last</FieldLabel>
-                            <input
-                                type="number"
-                                min={1}
-                                style={xpInput({ width: '100%' })}
-                                value={scheduleForm.retain_count}
-                                onChange={e => setScheduleForm({ ...scheduleForm, retain_count: Math.max(1, Number(e.target.value)) })}
-                            />
-                            <div style={settingsHint()}>Oldest scheduled snapshots beyond this count are pruned automatically. Manual snapshots are never deleted.</div>
-                        </div>
-                    </div>
 
-                    {schedule && (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', marginTop: SETTINGS_FIELD_GAP }}>
-                            {schedule.last_run_at && (
+                        <div style={{ ...settingsActions(), justifyContent: 'flex-start' }}>
+                            {schedule?.last_run_at && (
                                 <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                    <StatusChip status={schedule.last_run_status === 'failed' ? 'FAILED' : 'SUCCESS'} title={schedule.last_run_error || undefined} />
+                                    <StatusChip status={backupFailed ? 'FAILED' : 'SUCCESS'} title={schedule.last_run_error || undefined} />
                                     <span style={settingsHint()}>Last run {tzDateTime(schedule.last_run_at)}</span>
                                 </span>
                             )}
-                            {schedule.next_run_at && (
-                                <span style={settingsHint()}>Next run {tzDateTime(schedule.next_run_at)}</span>
-                            )}
+                            <span style={settingsHint()}>
+                                {schedule?.enabled && schedule.next_run_at
+                                    ? <>Next run <b style={{ color: '#333' }}>{tzDateTime(schedule.next_run_at)}</b></>
+                                    : 'No backups will run until this is switched on and saved.'}
+                            </span>
+                            <span style={{ flex: 1 }} />
+                            <button
+                                type="button"
+                                style={xpBtn({ padding: '3px 14px' })}
+                                className={XP_BTN}
+                                onClick={handleRunNow}
+                                disabled={isRunningNow || isScheduleLoading}
+                                title="Take a scheduled-style backup now (counts toward the keep-last limit)"
+                            >
+                                {isRunningNow ? <span className="spinner-border spinner-border-sm" style={{ marginRight: 4 }}></span> : <i className="bi bi-play-fill" style={{ marginRight: 4 }}></i>}
+                                Run Now
+                            </button>
+                            <button
+                                type="submit"
+                                style={xpBtn({ ...BTN_TONES.primary, padding: '3px 14px', display: 'flex', alignItems: 'center', gap: 4 })}
+                                className={XP_BTN}
+                                disabled={isSavingSchedule}
+                            >
+                                <i className="bi bi-save" style={{ marginRight: 4 }}></i>
+                                Save Schedule
+                            </button>
+                        </div>
+                    </form>
+                </SettingsPanel>
+
+                <SettingsPanel
+                    icon="bi-camera-fill"
+                    title="Snapshots"
+                    right={
+                        <span style={{ display: 'flex', gap: 4 }}>
+                            <label style={xpBtn({ padding: '1px 8px', marginBottom: 0 })}>
+                                <i className="bi bi-cloud-upload" style={{ marginRight: 4 }}></i>Upload
+                                <input type="file" hidden onChange={handleUploadSnapshot} disabled={isSnapshotLoading} />
+                            </label>
+                            <button
+                                type="button"
+                                style={xpBtn({ padding: '1px 8px' })}
+                                className={XP_BTN}
+                                onClick={handleCreateSnapshot}
+                                disabled={isSnapshotLoading}
+                            >
+                                {isSnapshotLoading ? <span className="spinner-border spinner-border-sm" style={{ marginRight: 4 }}></span> : <i className="bi bi-camera" style={{ marginRight: 4 }}></i>}
+                                Snapshot Now
+                            </button>
+                        </span>
+                    }
+                >
+                    {/* Newest first on a rail, with the next scheduled run as a dashed
+                        node on top — the gap between "next" and "last" is the thing an
+                        admin checks this list for. */}
+                    <div className="snap-tl" style={{ fontFamily: xpFont, fontSize: 11 }}>
+                        {schedule?.enabled && schedule.next_run_at && (
+                            <div className="snap-node" data-kind="next" style={{ ...snapRow, color: '#888' }}>
+                                <span>{tzDateTime(schedule.next_run_at)}</span>
+                                <span style={{ gridColumn: '2 / -1' }}>Next scheduled backup</span>
+                            </div>
+                        )}
+                        {snapshots.map(sn => (
+                            <div key={sn.name} className="snap-node" data-kind={sn.label === 'manual' ? 'manual' : 'scheduled'} style={snapRow}>
+                                <span>
+                                    <b>{tzDateTime(sn.created_at)}</b>
+                                    <div style={{ fontSize: 10, color: '#888' }}>{relativeTime(sn.created_at)}</div>
+                                </span>
+                                <span><StatusChip status={(sn.label || 'manual').toUpperCase()} /></span>
+                                <span style={{ fontFamily: CODE_FONT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={sn.name}>{sn.name}</span>
+                                <span style={{ color: '#666', textAlign: 'right' }}>{prettyBytes(sn.size)}</span>
+                                <span className="snap-acts" style={{ display: 'flex', gap: 4 }}>
+                                    <XPActionButton tone="primary" icon="bi-download" title="Download"
+                                        onClick={() => handleDownloadSnapshot(sn.name)} />
+                                    <XPActionButton tone="success" icon="bi-arrow-counterclockwise" title="Restore this snapshot"
+                                        onClick={() => handleRestoreSnapshot(sn.name)} disabled={isSnapshotLoading} />
+                                    <XPActionButton tone="danger" icon="bi-trash" title="Delete snapshot file"
+                                        onClick={() => handleDeleteSnapshot(sn.name)} disabled={isSnapshotLoading} />
+                                </span>
+                            </div>
+                        ))}
+                        {snapshots.length === 0 && (
+                            <div style={{ padding: '16px 8px', color: '#888', fontStyle: 'italic' }}>No snapshots yet — take one with Snapshot Now.</div>
+                        )}
+                    </div>
+                    {snapshots.length > 0 && (
+                        <div style={{ ...settingsHint(), marginTop: 6 }}>
+                            {snapshots.length} snapshot{snapshots.length !== 1 ? 's' : ''} · {prettyBytes(snapshots.reduce((n, sn) => n + (sn.size || 0), 0))} on disk
                         </div>
                     )}
-
-                    <div style={settingsActions()}>
-                        <button
-                            type="button"
-                            style={xpBtn({ padding: '3px 14px' })}
-                            className={XP_BTN}
-                            onClick={handleRunNow}
-                            disabled={isRunningNow || isScheduleLoading}
-                        >
-                            {isRunningNow ? <span className="spinner-border spinner-border-sm" style={{ marginRight: 4 }}></span> : <i className="bi bi-play-fill" style={{ marginRight: 4 }}></i>}
-                            Run Now
-                        </button>
-                        <button
-                            type="submit"
-                            style={xpBtn({ ...BTN_TONES.primary, padding: '3px 14px', display: 'flex', alignItems: 'center', gap: 4 })}
-                            className={XP_BTN}
-                            disabled={isSavingSchedule}
-                        >
-                            <i className="bi bi-save" style={{ marginRight: 4 }}></i>
-                            Save Schedule
-                        </button>
-                    </div>
-                </form>
-            </SettingsPanel>
-            <SettingsPanel
-                icon="bi-camera-fill"
-                title="Snapshots"
-                flush
-                right={
-                    <span style={{ display: 'flex', gap: 4 }}>
-                        <label
-                            style={xpBtn({ padding: '1px 8px', marginBottom: 0 })}
-                        >
-                            <i className="bi bi-cloud-upload" style={{ marginRight: 4 }}></i>Upload
-                            <input type="file" hidden onChange={handleUploadSnapshot} disabled={isSnapshotLoading} />
-                        </label>
-                        <button
-                            type="button"
-                            style={xpBtn({ padding: '1px 8px' })}
-                            className={XP_BTN}
-                            onClick={handleCreateSnapshot}
-                            disabled={isSnapshotLoading}
-                        >
-                            {isSnapshotLoading ? <span className="spinner-border spinner-border-sm" style={{ marginRight: 4 }}></span> : <i className="bi bi-plus-lg" style={{ marginRight: 4 }}></i>}
-                            New Snapshot
-                        </button>
-                    </span>
-                }
-            >
-                <div className="table-responsive">
-                        <table
-                            style={{ width: '100%', borderCollapse: 'collapse' as const, background: '#fff' }}
-                        >
-                            <thead style={xpTableHeader}>
-                                <tr>
-                                    <th style={{ ...xpThCell }}>Snapshot Filename</th>
-                                    <th style={xpThCell}>Origin</th>
-                                    <th style={xpThCell}>Created At</th>
-                                    <th style={xpThCell}>Size</th>
-                                    <th style={{ ...xpThCell, textAlign: 'right' as const, borderRight: 'none' }}>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {snapshots.map((s, i) => (
-                                    <tr
-                                        key={i}
-                                        style={{ background: lvZebra(i), borderBottom: '1px solid #c0bdb5' }}
-                                    >
-                                        <td style={tdBase}><CodeChip code={s.name} /></td>
-                                        <td style={tdBase}><StatusChip status={(s.label || 'manual').toUpperCase()} /></td>
-                                        <td style={tdBase}>{tzDateTime(s.created_at)}</td>
-                                        <td style={tdBase}>{(s.size / 1024 / 1024).toFixed(2)} MB</td>
-                                        <td style={{ ...tdBase, borderRight: 'none', textAlign: 'right' as const }}>
-                                            <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
-                                                <XPActionButton tone="primary" icon="bi-download" title="Export/Download"
-                                                    onClick={() => handleDownloadSnapshot(s.name)}
-                                                />
-                                                <XPActionButton tone="success" icon="bi-arrow-counterclockwise" title="Restore/Rollback"
-                                                    onClick={() => handleRestoreSnapshot(s.name)}
-                                                    disabled={isSnapshotLoading}
-                                                />
-                                                <XPActionButton tone="danger" icon="bi-trash" title="Delete snapshot file"
-                                                    onClick={() => handleDeleteSnapshot(s.name)}
-                                                    disabled={isSnapshotLoading}
-                                                />
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                                {snapshots.length === 0 && (
-                                    <tr>
-                                        <td
-                                            colSpan={5}
-                                            style={{ ...tdBase, borderRight: 'none', textAlign: 'center', padding: '20px 8px', color: '#888', fontStyle: 'italic' }}
-                                        >No snapshots found. Create one to begin.</td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-            </SettingsPanel>
+                </SettingsPanel>
             </>
         ),
         events: (

@@ -1500,3 +1500,15 @@ textarea {
 
 /* Access Control list/detail — row hover (inline styles can't do :hover). */
 .access-list-row:hover { background: #eef3fb; }
+
+/* Database snapshot timeline — the rail and nodes are pseudo-elements. */
+.snap-tl { position: relative; padding-left: 22px; }
+.snap-tl::before { content: ""; position: absolute; left: 8px; top: 12px; bottom: 12px; width: 2px; background: #d6d3c6; }
+.snap-tl:has(> .snap-node:only-child)::before { display: none; }
+.snap-node { position: relative; }
+.snap-node::before { content: ""; position: absolute; left: -20px; top: 50%; margin-top: -6px; width: 12px; height: 12px; box-sizing: border-box; border-radius: 50%; background: #fff; border: 2px solid #316ac5; }
+.snap-node[data-kind="manual"]::before { border-color: #7a7a7a; }
+.snap-node[data-kind="next"]::before { border-style: dashed; border-color: #aaa; }
+.snap-node:hover { background: #f7f9fd; }
+.snap-node .snap-acts { opacity: 0.45; transition: opacity 0.12s; }
+.snap-node:hover .snap-acts, .snap-node:focus-within .snap-acts { opacity: 1; }
