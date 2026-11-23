@@ -1497,3 +1497,6 @@ textarea {
 
 /* BOM expanded-row tree: hover on selectable (sub-assembly) nodes only. */
 .bom-tree-hover:hover { background: var(--terras-row-hover, #e8f0fc); }
+
+/* Access Control list/detail — row hover (inline styles can't do :hover). */
+.access-list-row:hover { background: #eef3fb; }

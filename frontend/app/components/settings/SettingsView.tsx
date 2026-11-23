@@ -76,7 +76,8 @@ export default function SettingsView({
                                 <SettingsDatabaseTab />
                             </div>
 
-                            <div style={{ display: activeTab === 'access' ? 'block' : 'none' }}>
+                            {/* Full height: Access Control's list and detail panes scroll on their own. */}
+                            <div style={{ display: activeTab === 'access' ? 'block' : 'none', height: '100%' }}>
                                 <SettingsAccessTab />
                             </div>
                         </>
