@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useToast } from '../shared/Toast';
 import { useTheme, UI_SCALES } from '../../context/ThemeContext';
 import { useTimezone, AVAILABLE_TIMEZONES } from '../../context/TimezoneContext';
@@ -25,6 +25,45 @@ const SECTION_META: Record<GeneralSection, { title: string; icon: string }> = {
     company: { title: 'Company', icon: 'bi-building' },
     production: { title: 'Production Rules', icon: 'bi-calculator' },
 };
+
+/** Weighing tolerance lives on the company profile record but is a production
+ *  rule (manufacturing and packing read it), so it is edited here. */
+function WeighingTolerance({ profile, onUpdate }: { profile: any; onUpdate: (p: any) => Promise<void> }) {
+    const { showToast } = useToast();
+    const [pct, setPct] = useState(String(profile?.measurement_tolerance_pct ?? 2));
+    const [saving, setSaving] = useState(false);
+    useEffect(() => { setPct(String(profile?.measurement_tolerance_pct ?? 2)); }, [profile?.measurement_tolerance_pct]);
+
+    const submit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setSaving(true);
+        try {
+            // The PUT is partial but `name` is required by the schema.
+            await onUpdate({ name: profile?.name || '', measurement_tolerance_pct: Number(pct) || 0 });
+            showToast('Weighing tolerance saved', 'success');
+        } catch {
+            showToast('Failed to save weighing tolerance', 'danger');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <form onSubmit={submit}>
+            <DetailSection title="Weighing">
+                <FieldLabel>Weighing Tolerance</FieldLabel>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <input type="number" min={0} max={10} step={0.1} style={xpInput({ width: 80 })} value={pct} onChange={e => setPct(e.target.value)} />
+                    <span style={{ fontFamily: xpFont, fontSize: 11 }}>%</span>
+                    <button type="submit" disabled={saving || !profile} style={xpBtn({ ...BTN_TONES.primary, padding: '2px 12px', marginLeft: 8 })} className={XP_BTN}>
+                        <i className="bi bi-save" style={{ marginRight: 4 }} />Save
+                    </button>
+                </div>
+                <div style={settingsHint()}>How far a scale reading may differ from the book qty and still count as on target (0–10%).</div>
+            </DetailSection>
+        </form>
+    );
+}
 
 /** Small uppercase heading over a group of menu rows. */
 function NavGroup({ icon, children }: { icon: string; children: React.ReactNode }) {
@@ -134,7 +173,12 @@ export default function SettingsGeneralTab({
                 </form>
             </>
         ),
-        production: <QtyFormulaPanel />,
+        production: (
+            <>
+                <WeighingTolerance profile={companyProfile} onUpdate={onUpdateCompanyProfile} />
+                <QtyFormulaPanel />
+            </>
+        ),
     };
 
     return (
@@ -155,7 +199,9 @@ export default function SettingsGeneralTab({
                         )}
                     </nav>
                 }
-                detail={body[section]}
+                // Forms and the formula table read badly at 2000px — cap the measure
+                // (Access/Database keep full width for their chip grids and lists).
+                detail={<div style={{ maxWidth: 960, display: 'flex', flexDirection: 'column', gap: 14 }}>{body[section]}</div>}
             />
         </div>
     );
