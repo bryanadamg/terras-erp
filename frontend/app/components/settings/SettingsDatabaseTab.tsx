@@ -12,7 +12,7 @@ import {
     settingsActions, settingsHint, SETTINGS_FIELD_GAP,
 } from './settingsStyles';
 import SettingsPanel from './SettingsPanel';
-import { MasterDetail, ListRow, DetailSection, Flag, StatusDot, relativeTime } from './settingsParts';
+import { ListRow, DetailSection, Flag, StatusDot, relativeTime } from './settingsParts';
 import { useRememberedTab } from '../../hooks/useRememberedTab';
 import ModalWrapper from '../shared/ModalWrapper';
 import { API_BASE } from '../shared/apiBase';
@@ -579,9 +579,11 @@ export default function SettingsDatabaseTab() {
         ] },
     ] : [];
 
-    const sectionBody: Record<DbSection, React.ReactNode> = {
-        overview: (
-            <SettingsPanel icon="bi-speedometer2" title="Overview" right={refreshButton}>
+    // Each section is the body of the one Database panel: its title and actions go
+    // in the panel header, its content sits beside the menu with no box of its own.
+    const sections: Record<DbSection, { title: string; icon: string; right?: React.ReactNode; body: React.ReactNode }> = {
+        overview: { title: 'Overview', icon: 'bi-speedometer2', right: refreshButton, body: (
+            <>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 10 }}>
                         <SummaryCard
@@ -608,11 +610,11 @@ export default function SettingsDatabaseTab() {
                     </DetailSection>
                     {statusCheckedAt && <div style={settingsHint()}>Last checked {statusCheckedAt.toLocaleTimeString()} · refreshes every 30s</div>}
                 </div>
-            </SettingsPanel>
-        ),
-        backups: (
+            </>
+        ) },
+        backups: { title: 'Backups', icon: 'bi-clock-history', body: (
             <>
-                <SettingsPanel icon="bi-clock-history" title="Backup Schedule">
+                <DetailSection title="Schedule">
                     <form onSubmit={handleSaveSchedule}>
                         {/* The schedule reads as one sentence. Six stacked full-width
                             fields made "03:00" and "14" span the screen and kept every
@@ -735,10 +737,11 @@ export default function SettingsDatabaseTab() {
                             </button>
                         </div>
                     </form>
-                </SettingsPanel>
+                </DetailSection>
 
-                <SettingsPanel
-                    icon="bi-camera-fill"
+                <div style={{ borderTop: '1px solid #dedbd2' }} />
+
+                <DetailSection
                     title="Snapshots"
                     right={
                         <span style={{ display: 'flex', gap: 4 }}>
@@ -797,11 +800,11 @@ export default function SettingsDatabaseTab() {
                             {snapshots.length} snapshot{snapshots.length !== 1 ? 's' : ''} · {prettyBytes(snapshots.reduce((n, sn) => n + (sn.size || 0), 0))} on disk
                         </div>
                     )}
-                </SettingsPanel>
+                </DetailSection>
             </>
-        ),
-        events: (
-            <SettingsPanel icon="bi-broadcast-pin" title="Live Events" right={refreshButton}>
+        ) },
+        events: { title: 'Live Events', icon: 'bi-broadcast-pin', right: refreshButton, body: (
+            <>
                 {/* Counters reset when the API process restarts — they answer "is the
                     feed healthy right now", not "how much has ever happened". Backlog
                     is the one to watch: above zero for more than a few seconds means
@@ -820,14 +823,10 @@ export default function SettingsDatabaseTab() {
                 ) : (
                     <div style={settingsHint()}>Live-event counters are unavailable — the API did not answer /health/events.</div>
                 )}
-            </SettingsPanel>
-        ),
-        connection: (
-            <SettingsPanel
-                icon="bi-database-fill-gear"
-                title={<span data-testid="db-infrastructure-header">Database Infrastructure</span>}
-                right="Admin only"
-            >
+            </>
+        ) },
+        connection: { title: 'Connection', icon: 'bi-database-fill-gear', body: (
+            <div data-testid="db-infrastructure-header">
                 <div style={{ marginBottom: SETTINGS_FIELD_GAP }}>
                     <FieldLabel>Current Connection</FieldLabel>
                     {<div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -838,10 +837,7 @@ export default function SettingsDatabaseTab() {
                         </div>}
                 </div>
 
-                {/* Stacked, not a 7/5 split. This panel now shares its row with
-                    the snapshot list, so there is no width left to split: a
-                    connection URL and a profile list side by side both end in an
-                    ellipsis. Reading order is the action, then the shortcut into it. */}
+                {/* Stacked: the action, then the shortcut into it. */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: SETTINGS_FIELD_GAP }}>
                     <div>
                         <FieldLabel>Switch to New Database</FieldLabel>
@@ -885,12 +881,12 @@ export default function SettingsDatabaseTab() {
                             </div>}
                     </div>
                 </div>
-            </SettingsPanel>
-        ),
-        danger: (
-        <SettingsPanel icon="bi-exclamation-octagon-fill" title="Danger Zone">
+            </div>
+        ) },
+        danger: { title: 'Danger Zone', icon: 'bi-exclamation-octagon-fill', body: (
+            <>
             {/* Severity is carried by the copy and the button, not by a red
-                window bar — the panel is a peer of the others, its action
+                header bar — the section is a peer of the others, its action
                 is not. */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
                 <div style={{ flex: '1 1 340px', minWidth: 0 }}>
@@ -910,16 +906,29 @@ export default function SettingsDatabaseTab() {
                             <i className="bi bi-trash3-fill" style={{ marginRight: 4 }}></i>Wipe Database
                         </button>}
             </div>
-        </SettingsPanel>
-        ),
+            </>
+        ) },
     };
+    const current = sections[section];
 
     return (
         <div style={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-            <MasterDetail
-                listWidth="200px"
-                list={
-                    <SettingsPanel icon="bi-database-fill-gear" title="Database" flush fill>
+            {/* One panel: the menu only picks what the panel shows, so it lives
+                inside the same frame as a strip down its left edge. */}
+            <SettingsPanel
+                icon={current.icon}
+                // Fixed header height: sections with a header button (Refresh) and
+                // without one would otherwise shift the body a few px on every switch.
+                title={<span style={{ display: 'inline-flex', alignItems: 'center', minHeight: 22 }}>{current.title}</span>}
+                right={current.right}
+                flush
+                fill
+            >
+                <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
+                    <nav aria-label="Database sections" style={{
+                        width: 190, flexShrink: 0, overflow: 'auto',
+                        background: '#f4f2ea', borderRight: '1px solid #d6d3c6',
+                    }}>
                         {nav.map(n => (
                             <ListRow key={n.key} selected={section === n.key} onClick={() => setSection(n.key)}>
                                 <i className={`bi ${n.icon}`} style={n.key === 'danger' && section !== 'danger' ? { color: '#8e0000' } : undefined} />
@@ -927,14 +936,12 @@ export default function SettingsDatabaseTab() {
                                 {n.badge}
                             </ListRow>
                         ))}
-                    </SettingsPanel>
-                }
-                detail={
-                    <div style={{ height: '100%', overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
-                        {sectionBody[section]}
+                    </nav>
+                    <div style={{ flex: 1, minWidth: 0, overflow: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                        {current.body}
                     </div>
-                }
-            />
+                </div>
+            </SettingsPanel>
 
             <ModalWrapper
                 isOpen={showWipeModal}
