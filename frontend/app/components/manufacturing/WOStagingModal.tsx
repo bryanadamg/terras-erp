@@ -6,7 +6,7 @@ import { useToast } from '../shared/Toast';
 import TreeSelect, { buildLocationPickerTree } from '../shared/TreeSelect';
 import ModalWrapper from '../shared/ModalWrapper';
 import { LotChips, LotChip } from '../shared/LotChips';
-import { CodeChip, xpFont, xpBtn as xpBtnBase, XP_BTN } from '../shared/xpTheme';
+import { CodeChip, xpFont, xpBtn as xpBtnBase, XP_BTN, ToggleChip } from '../shared/xpTheme';
 import { field as xpInputBase, BTN_TONES } from '@bryanadamg/terras-ui/styles';
 import { lvPickerRow } from '../shared/listViewTheme';
 import { RowCheckbox } from '@bryanadamg/terras-ui/components/Table';
@@ -366,19 +366,17 @@ export default function WOStagingModal({ wo, onClose, onStaged, onScanMode }: Pr
         >
             <div style={{ fontFamily: xpFont, fontSize: 11 }}>
                 {onScanMode && (
-                    <div style={{ display: 'flex', gap: 0, marginBottom: 8, border: '1px solid #7f9db9', width: 'fit-content' }}>
-                        <span style={{ padding: '3px 12px', fontWeight: 'bold', background: 'linear-gradient(to bottom,#cfe0ff,#8fb3e8)', color: '#0a2a66' }}>Manual</span>
+                    <div style={{ display: 'inline-flex', marginBottom: 8 }}>
+                        <ToggleChip on onClick={() => {}} seg="first" title="Manual staging (current)">Manual</ToggleChip>
                         {/* "bags" only when there is nothing to mount: on a loom the scan
                             branch puts a warp up, and calling that a bag misreads it. */}
-                        <button className={XP_BTN} onClick={onScanMode} style={{ ...xpBtn(false), border: 'none', borderLeft: '1px solid #7f9db9', padding: '3px 12px' }}>
-                            {hasBeams ? 'Scan' : 'Scan bags'}
-                        </button>
+                        <ToggleChip on={false} onClick={onScanMode} seg="last">{hasBeams ? 'Scan' : 'Scan bags'}</ToggleChip>
                     </div>
                 )}
                 {moIdentity && (
                     <div style={{
                         display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
-                        border: '1px solid #cfccc4', background: '#f7f6f2',
+                        border: '1px solid var(--terras-table-line, #cfccc4)', background: 'var(--terras-toolbar-bg, #f7f6f2)',
                         padding: '4px 6px', marginBottom: 8,
                     }}>
                         <span style={{ fontWeight: 'bold' }}>{mo?.item_code || mo?.code || ''}</span>
@@ -393,15 +391,15 @@ export default function WOStagingModal({ wo, onClose, onStaged, onScanMode }: Pr
                         ) : null}
                     </div>
                 )}
-                <div style={{ fontSize: 10, color: '#555', marginBottom: 8 }}>
+                <div style={{ fontSize: 10, color: 'var(--terras-win-text-3, #555)', marginBottom: 8 }}>
                     Moves each material from its source store into this work order&apos;s input location
                     (<b>{wo.input_location?.code || wo.input_location_id || 'no input location'}</b>).
                 </div>
 
                 {hasBeams && (
                     <div style={{
-                        border: '1px solid #7f9db9', background: '#f4f8ff',
-                        padding: '5px 7px', marginBottom: 8, fontSize: 10, color: '#243a5e',
+                        border: '1px solid #7f9db9', background: 'var(--terras-chip-blue-bg, #f4f8ff)',
+                        padding: '5px 7px', marginBottom: 8, fontSize: 10, color: 'var(--terras-chip-blue-text, #243a5e)',
                     }}>
                         <b>Beams belong to the machine, not this work order.</b> A mounted warp stays up
                         and feeds every WO that runs on{' '}
@@ -415,13 +413,13 @@ export default function WOStagingModal({ wo, onClose, onStaged, onScanMode }: Pr
                             </>
                         ) : null}
                         {loom && loom.mounts.length > 0 && (
-                            <div style={{ marginTop: 4, paddingTop: 4, borderTop: '1px solid #c8d8ef' }}>
+                            <div style={{ marginTop: 4, paddingTop: 4, borderTop: '1px solid var(--terras-chip-blue-border, #c8d8ef)' }}>
                                 {loom.mounts.map(m => (
                                     <div key={m.id}>
                                         <b>{m.beam_number}</b>
-                                        {m.ends ? <span style={{ color: '#666' }}> — {m.ends} ends</span> : null}
-                                        <span style={{ color: '#0058e6' }}> {m.remaining.toFixed(1)} kg left</span>
-                                        {m.mounted_by ? <span style={{ color: '#777' }}> · by {m.mounted_by}</span> : null}
+                                        {m.ends ? <span style={{ color: 'var(--terras-win-text-3, #666)' }}> — {m.ends} ends</span> : null}
+                                        <span style={{ color: 'var(--terras-win-blue, #0058e6)' }}> {m.remaining.toFixed(1)} kg left</span>
+                                        {m.mounted_by ? <span style={{ color: 'var(--terras-win-text-3, #777)' }}> · by {m.mounted_by}</span> : null}
                                     </div>
                                 ))}
                             </div>
@@ -434,10 +432,10 @@ export default function WOStagingModal({ wo, onClose, onStaged, onScanMode }: Pr
                     disagree; `on_line` is live, so a consumed lot reads 0 left. */}
                 {!loading && allStagedLots.length > 0 && (
                     <div style={{
-                        border: '1px solid #a8d0a8', background: '#f2f9f2',
+                        border: '1px solid var(--terras-chip-green-border, #a8d0a8)', background: 'var(--terras-chip-green-bg, #f2f9f2)',
                         padding: '4px 6px', marginBottom: 8,
                     }}>
-                        <div style={{ fontSize: 10, color: '#1a5e1a', fontWeight: 'bold', marginBottom: 3 }}>
+                        <div style={{ fontSize: 10, color: 'var(--terras-chip-green-text, #1a5e1a)', fontWeight: 'bold', marginBottom: 3 }}>
                             <i className="bi bi-box-seam" /> Staged on line ({stagedKg.toFixed(2)})
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -459,7 +457,7 @@ export default function WOStagingModal({ wo, onClose, onStaged, onScanMode }: Pr
                                         ) : null}
                                         <LotChips batch={sl} showOrder />
                                         {sl.staged_at ? (
-                                            <span style={{ color: '#888', fontSize: 9 }}>
+                                            <span style={{ color: 'var(--terras-win-text-3, #888)', fontSize: 9 }}>
                                                 {new Date(sl.staged_at).toLocaleString()}
                                             </span>
                                         ) : null}
@@ -483,7 +481,7 @@ export default function WOStagingModal({ wo, onClose, onStaged, onScanMode }: Pr
 
                 {!loading && overKg > 1e-6 && (
                     <div style={{
-                        background: '#fff3cd', border: '1px solid #b8860b', color: '#7a5000',
+                        background: 'var(--terras-chip-amber-bg, #fff3cd)', border: '1px solid var(--terras-chip-amber-border, #b8860b)', color: 'var(--terras-chip-amber-text, #7a5000)',
                         padding: '4px 8px', marginBottom: 8, fontSize: 10,
                     }}>
                         This stage puts <b>{overKg.toFixed(2)}</b> past what the step requires.
@@ -493,16 +491,16 @@ export default function WOStagingModal({ wo, onClose, onStaged, onScanMode }: Pr
                 )}
 
                     {loading ? (
-                        <div style={{ color: '#888', padding: 12 }}>Loading required materials...</div>
+                        <div style={{ color: 'var(--terras-win-text-3, #888)', padding: 12 }}>Loading required materials...</div>
                     ) : rows.length === 0 ? (
-                        <div style={{ color: '#888', padding: 12 }}>
+                        <div style={{ color: 'var(--terras-win-text-3, #888)', padding: 12 }}>
                             No materials for this step. Assign a routing step with materials on the WO/BOM.
                         </div>
                     ) : (
                         <div style={{ overflowX: 'auto' }}>
                             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10 }}>
                                 <thead>
-                                    <tr style={{ background: '#d4d0c8', textAlign: 'left' }}>
+                                    <tr style={{ background: 'var(--terras-toolbar-bg, #f5f4ef)', textAlign: 'left' }}>
                                         <th style={{ padding: '3px 5px' }}>Material</th>
                                         <th style={{ padding: '3px 5px' }}>Source</th>
                                         <th style={{ padding: '3px 5px', textAlign: 'right' }}>Required</th>
@@ -521,10 +519,10 @@ export default function WOStagingModal({ wo, onClose, onStaged, onScanMode }: Pr
                                         const stagedLots = r.staged_lots || [];
                                         return (
                                             <React.Fragment key={r.item_id}>
-                                            <tr style={{ borderBottom: '1px solid #cfccc4' }}>
+                                            <tr style={{ borderBottom: '1px solid var(--terras-table-line, #cfccc4)' }}>
                                                 <td style={{ padding: '3px 5px' }}>
                                                     <div style={{ fontWeight: 'bold' }}>{r.item_code || '—'}</div>
-                                                    <div style={{ color: '#777' }}>{r.item_name}</div>
+                                                    <div style={{ color: 'var(--terras-win-text-3, #777)' }}>{r.item_name}</div>
                                                     {/* The variant the BOM line calls for — a material row can be
                                                         variant-specific (combo/colour) even when the lot rows aren't. */}
                                                     <LotChips
@@ -553,18 +551,18 @@ export default function WOStagingModal({ wo, onClose, onStaged, onScanMode }: Pr
                                                             <div style={{ fontWeight: 'bold' }}>
                                                                 {Math.max(1, r.required_pcs)} pcs
                                                             </div>
-                                                            <div style={{ color: '#777' }}>
+                                                            <div style={{ color: 'var(--terras-win-text-3, #777)' }}>
                                                                 {r.required_qty.toFixed(1)}{r.uom ? ` ${r.uom}` : ''}
                                                             </div>
                                                         </>
                                                     ) : (
                                                         <>
                                                             {r.required_qty.toFixed(2)}
-                                                            {r.uom && <span style={{ color: '#888', marginLeft: 3, fontSize: 9 }}>{r.uom}</span>}
+                                                            {r.uom && <span style={{ color: 'var(--terras-win-text-3, #888)', marginLeft: 3, fontSize: 9 }}>{r.uom}</span>}
                                                         </>
                                                     )}
                                                 </td>
-                                                <td style={{ padding: '3px 5px', textAlign: 'right', color: short ? '#b00' : '#333' }}>
+                                                <td style={{ padding: '3px 5px', textAlign: 'right', color: short ? 'var(--terras-status-red, #b00)' : 'var(--terras-win-text-2, #333)' }}>
                                                     {r.on_hand.toFixed(2)}
                                                 </td>
                                                 <td style={{ padding: '3px 5px', textAlign: 'right' }}>
@@ -572,17 +570,17 @@ export default function WOStagingModal({ wo, onClose, onStaged, onScanMode }: Pr
                                                         <>
                                                             <div style={{
                                                                 fontWeight: 'bold',
-                                                                color: r.mounted_pcs >= Math.max(1, r.required_pcs) ? '#0a6b0a' : '#b06000',
+                                                                color: r.mounted_pcs >= Math.max(1, r.required_pcs) ? 'var(--terras-status-green, #0a6b0a)' : 'var(--terras-status-amber, #b06000)',
                                                             }}>
                                                                 {r.mounted_pcs} / {Math.max(1, r.required_pcs)} pcs
                                                             </div>
-                                                            <div style={{ color: '#777' }}>{r.staged.toFixed(1)} kg up</div>
+                                                            <div style={{ color: 'var(--terras-win-text-3, #777)' }}>{r.staged.toFixed(1)} kg up</div>
                                                         </>
                                                     ) : (
                                                         <>
                                                             <div>{r.staged.toFixed(2)}</div>
                                                             {stagedLots.length ? (
-                                                                <div style={{ color: '#777', fontSize: 9 }}>
+                                                                <div style={{ color: 'var(--terras-win-text-3, #777)', fontSize: 9 }}>
                                                                     {stagedLots.length} lot{stagedLots.length === 1 ? '' : 's'}
                                                                 </div>
                                                             ) : null}
@@ -614,7 +612,7 @@ export default function WOStagingModal({ wo, onClose, onStaged, onScanMode }: Pr
                                                             maxHeight: 260, overflowY: 'auto', minWidth: 320,
                                                         }}>
                                                             {(batchesByItem[r.item_id] || []).length === 0 ? (
-                                                                <div style={{ color: '#aaa', padding: '2px 4px' }}>
+                                                                <div style={{ color: 'var(--terras-win-text-3, #aaa)', padding: '2px 4px' }}>
                                                                     {r.is_beam ? '— no free beams to mount —' : '— no beams/lots available —'}
                                                                 </div>
                                                             ) : (batchesByItem[r.item_id] || []).map((b: any) => {
@@ -653,7 +651,7 @@ export default function WOStagingModal({ wo, onClose, onStaged, onScanMode }: Pr
                                                                             </div>
                                                                             <LotChips batch={b} showOrder />
                                                                             {Array.isArray(b.source_lots) && b.source_lots.length > 0 ? (
-                                                                                <span style={{ color: '#777', fontSize: 9 }}>
+                                                                                <span style={{ color: 'var(--terras-win-text-3, #777)', fontSize: 9 }}>
                                                                                     RM lot: {b.source_lots.join(', ')}
                                                                                 </span>
                                                                             ) : null}
@@ -662,7 +660,7 @@ export default function WOStagingModal({ wo, onClose, onStaged, onScanMode }: Pr
                                                                 );
                                                             })}
                                                         </div>
-                                                    ) : <span style={{ color: '#bbb' }}>—</span>}
+                                                    ) : <span style={{ color: 'var(--terras-win-text-3, #bbb)' }}>—</span>}
                                                 </td>
                                             </tr>
                                             </React.Fragment>
