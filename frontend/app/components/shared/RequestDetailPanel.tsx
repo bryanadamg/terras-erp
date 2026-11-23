@@ -2,13 +2,12 @@
 import React from 'react';
 import { FormSection } from '@bryanadamg/terras-ui/components/FormSection';
 import { Table, EmptyRow } from '@bryanadamg/terras-ui/components/Table';
-import { DetailGrid, Detail } from '@bryanadamg/terras-ui/components/DetailGrid';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Shared expanded-row detail panel for request-style pages (Sample Requests,
 // Lab Dip Requests). Two cards side by side on the panel's own ground:
 //   LEFT  — the request's variants/colors as a terras-ui Table
-//   RIGHT — grouped DetailGrid sections
+//   RIGHT — grouped label/value sections
 // Built only from terras-ui parts and tokens, so it follows the active theme.
 // Cards size to their content — a one-variant request no longer leaves a void.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -65,6 +64,10 @@ interface Props {
 // ground from this var, so overriding it on the card restyles just that bar.
 const TINT = { '--terras-form-section-blue': 'var(--terras-chip-blue-bg, #dce4f5)' } as React.CSSProperties;
 const CARD: React.CSSProperties = { ...TINT, margin: 0, minWidth: 0, display: 'flex', flexDirection: 'column' };
+// Label beside value, two pairs per line — scans faster than label-over-value here.
+const FIELD_GRID: React.CSSProperties = { margin: 0, display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '4px 20px', fontFamily: 'var(--terras-font-classic)' };
+const FIELD_LABEL: React.CSSProperties = { width: 110, flexShrink: 0, fontSize: 'var(--terras-fs-sm, 10px)', fontWeight: 'bold', color: 'var(--terras-win-text-2, #333)' };
+const FIELD_VALUE: React.CSSProperties = { margin: 0, minWidth: 0, fontSize: 'var(--terras-fs-base, 11px)', color: 'var(--terras-win-text, #000)', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' };
 const tintTitle = (t: React.ReactNode) => <span style={{ color: 'var(--terras-chip-blue-text, #0d2a6e)' }}>{t}</span>;
 
 export default function RequestDetailPanel({
@@ -117,10 +120,18 @@ export default function RequestDetailPanel({
 
             <div style={{ flex: 1, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 8, ...(fixed ? { overflowY: 'auto' } : {}) }}>
                 {sections.map((sec, si) => (
-                    <FormSection key={si} title={tintTitle(sec.title)} style={{ ...TINT, margin: 0 }} bodyStyle={{ padding: 0 }}>
-                        <DetailGrid>
-                            {sec.fields.map((f, fi) => <Detail key={fi} label={f.label} value={f.value === '—' ? null : f.value} wide={f.full} />)}
-                        </DetailGrid>
+                    <FormSection key={si} title={tintTitle(sec.title)} style={{ ...TINT, margin: 0 }} bodyStyle={{ padding: '6px 10px' }}>
+                        <dl style={FIELD_GRID}>
+                            {sec.fields.map((f, fi) => {
+                                const empty = f.value == null || f.value === '' || f.value === '—';
+                                return (
+                                    <div key={fi} style={{ display: 'flex', gap: 8, alignItems: 'baseline', minWidth: 0, ...(f.full ? { gridColumn: '1 / -1' } : {}) }}>
+                                        <dt style={FIELD_LABEL}>{f.label}</dt>
+                                        <dd style={{ ...FIELD_VALUE, ...(empty ? { color: 'var(--terras-win-text-3, #666)' } : {}) }}>{empty ? '—' : f.value}</dd>
+                                    </div>
+                                );
+                            })}
+                        </dl>
                     </FormSection>
                 ))}
             </div>
