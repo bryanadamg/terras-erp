@@ -47,11 +47,11 @@ function hasTeknisFor(b: any): boolean {
 }
 
 // ── Expanded-row workspace styles ────────────────────────────────────────────
-// Each card sizes to its content and scrolls past PANE_MAX, so a short component
-// list doesn't leave a tall empty well.
-const PANE_MAX = 420;
-const PANE: React.CSSProperties = { ...TINT, margin: 0, minWidth: 0, maxHeight: PANE_MAX, display: 'flex', flexDirection: 'column' };
-const PANE_BODY: React.CSSProperties = { padding: 0, overflowY: 'auto', minHeight: 0, flex: '0 1 auto' };
+// A fixed-height workspace: all three cards run to the bottom of the row (it reads as
+// one framed tool, not three floating boxes) and each scrolls its own overflow.
+const PANE_H = 420;
+const PANE: React.CSSProperties = { ...TINT, margin: 0, minWidth: 0, display: 'flex', flexDirection: 'column' };
+const PANE_BODY: React.CSSProperties = { padding: 0, overflowY: 'auto', minHeight: 0, flex: 1 };
 type Tone = 'blue' | 'green' | 'amber' | 'red' | 'gray';
 const toneChip = (f: Tone): React.CSSProperties => ({
     background: `var(--terras-chip-${f}-bg)`, border: `1px solid var(--terras-chip-${f}-border)`, color: `var(--terras-chip-${f}-text)`,
@@ -465,11 +465,11 @@ export default function BOMView({
         return (
             <tr key={`${bom.id}-detail`}>
                 {/* Frame on a wrapper so its inset shadow isn't painted over. Three tinted cards
-                    on the panel's own ground, each sized to its content and scrolling past
-                    PANE_MAX — the same card language as the request detail panels. */}
+                    on the panel's own ground, stretched to PANE_H — the same card language as
+                    the request detail panels. */}
                 <td colSpan={9} style={{ padding: 0 }}>
                     <div style={{ ...expandedRowFrame(), padding: '8px 8px 8px 12px', background: 'var(--terras-table-bg, #fff)' }}>
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontFamily: xpFont, fontSize: 11 }}>
+                    <div style={{ display: 'flex', gap: 8, height: PANE_H, fontFamily: xpFont, fontSize: 11 }}>
 
                         {/* LEFT: Tree */}
                         <FormSection
@@ -497,12 +497,13 @@ export default function BOMView({
                                 </span>
                             )}
                             right={!isRootSelected && parentName ? <span style={{ fontSize: 9, color: 'var(--terras-chip-blue-text, #0d2a6e)' }}>Sub-assembly of <b>{parentName}</b></span> : undefined}
-                            style={{ ...PANE, flex: 1, minWidth: 0 }} bodyStyle={PANE_BODY}
+                            style={{ ...PANE, flex: 1, minWidth: 0 }} bodyStyle={{ ...PANE_BODY, overflowY: 'hidden', display: 'flex', flexDirection: 'column' }}
                         >
                             {lines.length === 0 ? (
                                 <div style={{ fontSize: 10, color: 'var(--terras-win-text-3, #555)', fontStyle: 'italic', padding: '8px 10px' }}>No components defined.</div>
                             ) : (
                             <>
+                                <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
                                 <Table style={{ borderLeft: 'none', borderTop: 'none' }}>
                                     <thead>
                                         <tr>
@@ -545,7 +546,8 @@ export default function BOMView({
                                         ))}
                                     </tbody>
                                 </Table>
-                                <div style={{ position: 'sticky', bottom: 0, padding: '4px 10px', background: 'var(--terras-toolbar-bg, #f5f4ef)', borderTop: '1px solid var(--terras-table-line, #d6d3ce)', fontSize: 10, color: 'var(--terras-win-text-2, #444)', textAlign: 'right' }}>
+                                </div>
+                                <div style={{ flexShrink: 0, padding: '4px 10px', background: 'var(--terras-toolbar-bg, #f5f4ef)', borderTop: '1px solid var(--terras-table-line, #d6d3ce)', fontSize: 10, color: 'var(--terras-win-text-2, #444)', textAlign: 'right' }}>
                                     {lines.length} component{lines.length !== 1 ? 's' : ''}
                                     {hasPct && (
                                         <> · Total %: <span style={{ fontWeight: 'bold', color: Math.abs(totalPct - 100) < 0.01 ? 'var(--terras-status-green, #004400)' : 'var(--terras-status-red, #880000)' }}>{totalPct.toFixed(1)}%</span></>
