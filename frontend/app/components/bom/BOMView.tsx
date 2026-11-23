@@ -647,7 +647,9 @@ export default function BOMView({
                 modeless
                 bodyScroll={false}
             >
-                <div style={{ width: '100%', height: 'min(calc(var(--app-vh) * 82 / 100), 860px)', overflow: 'hidden' }}>
+                {/* Full-bleed: cancel the modal body's 12/14px padding so the designer's own
+                    ground and footer meet the window frame, not a tinted band around them. */}
+                <div style={{ margin: '-12px -14px', width: 'calc(100% + 28px)', height: 'min(calc(var(--app-vh) * 82 / 100), 860px)', overflow: 'hidden' }}>
                     <BOMDesigner
                         rootItemCode={editingBOM ? editingBOM.item_code : (initialItemCode || '')}
                         initialAttributeValueIds={editingBOM ? (editingBOM.attribute_value_ids || []) : initialAttributeIds}
