@@ -6,11 +6,10 @@ import { useRememberedTab } from '../../hooks/useRememberedTab';
 import { Tabs, TabDef } from '../shared/Tabs';
 import { ShellWindow, scrollAreaStyle } from '../shared/shellTheme';
 import SettingsGeneralTab from './SettingsGeneralTab';
-import SettingsAccountTab from './SettingsAccountTab';
 import SettingsDatabaseTab from './SettingsDatabaseTab';
 import SettingsAccessTab from './SettingsAccessTab';
 
-type TabKey = 'general' | 'account' | 'database' | 'access';
+type TabKey = 'general' | 'database' | 'access';
 
 const modernFont = 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 
@@ -23,7 +22,6 @@ export default function SettingsView({
 
     const tabs: TabDef<TabKey>[] = [
         { key: 'general', label: 'General', icon: 'bi-gear-fill' },
-        { key: 'account', label: 'My Account', icon: 'bi-person-fill' },
         ...(isAdmin ? [
             { key: 'database' as TabKey, label: 'Database & Backups', icon: 'bi-database-fill-gear' },
             { key: 'access' as TabKey, label: 'Access Control', icon: 'bi-shield-lock' },
@@ -56,7 +54,7 @@ export default function SettingsView({
                     padding: 16,
                     background: '#ece9d8',
                 }}>
-                    <div style={{ display: activeTab === 'general' ? 'block' : 'none' }}>
+                    <div style={{ display: activeTab === 'general' ? 'block' : 'none', height: '100%' }}>
                         <SettingsGeneralTab
                             appName={appName}
                             onUpdateAppName={onUpdateAppName}
@@ -66,12 +64,8 @@ export default function SettingsView({
                         />
                     </div>
 
-                    <div style={{ display: activeTab === 'account' ? 'block' : 'none' }}>
-                        <SettingsAccountTab />
-                    </div>
-
-                    {/* Database and Access Control are full height: their nav/list and
-                        detail panes scroll on their own. */}
+                    {/* Every tab is full height: its menu/list and detail panes scroll
+                        on their own. */}
                     {isAdmin && (
                         <>
                             <div style={{ display: activeTab === 'database' ? 'block' : 'none', height: '100%' }}>

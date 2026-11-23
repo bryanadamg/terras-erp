@@ -5,7 +5,7 @@ import { xpBtn, XP_BTN } from '../shared/xpTheme';
 import { field as xpInput, BTN_TONES } from '@bryanadamg/terras-ui/styles';
 import { FieldLabel } from '@bryanadamg/terras-ui/components/Field';
 import { settingsActions, settingsGrid, settingsHint, SETTINGS_FIELD_GAP } from './settingsStyles';
-import SettingsPanel from './SettingsPanel';
+import { DetailSection } from './settingsParts';
 
 export default function CompanyProfileView({ profile, onUpdate, onUploadLogo, authFetch }: any) {
     const { showToast } = useToast();
@@ -68,11 +68,7 @@ export default function CompanyProfileView({ profile, onUpdate, onUploadLogo, au
     const inputClass = '';
 
     return (
-        <SettingsPanel
-            icon="bi-building"
-            title="Company Profile"
-            right="Used on printed document headers"
-        >
+        <DetailSection title="Company Profile" right={<span style={settingsHint()}>Printed on document headers</span>}>
             <form onSubmit={handleSubmit}>
                 {/* Logo is one decision and the address block is another, so they
                     sit side by side and wrap as a unit — not as a bootstrap
@@ -156,6 +152,6 @@ export default function CompanyProfileView({ profile, onUpdate, onUploadLogo, au
                     </button>
                 </div>
             </form>
-        </SettingsPanel>
+        </DetailSection>
     );
 }
