@@ -73,20 +73,21 @@ const tintTitle = (t: React.ReactNode) => <span style={{ color: 'var(--terras-ch
 export default function RequestDetailPanel({
     leftTitle, leftWidth = '56%', columns, rows, emptyText = 'No rows.', sections, minHeight = 160, height,
 }: Props) {
-    // A fixed height clamps the panel and lets each card scroll its own overflow;
+    // A fixed height clamps the panel and lets each card scroll its own overflow —
+    // cards still size to their content (max 100%), so a short table leaves no void;
     // otherwise it grows with content (minHeight floor). min-width: 0 on the cards
     // stops their content width feeding back into the outer list table's layout.
     const fixed = height != null;
     const outer: React.CSSProperties = {
-        display: 'flex', gap: 8, padding: 8, alignItems: fixed ? 'stretch' : 'flex-start',
+        display: 'flex', gap: 8, padding: 8, alignItems: 'flex-start',
         boxSizing: 'border-box', ...(fixed ? { height, overflow: 'hidden' } : { minHeight }),
     };
-    const scroll: React.CSSProperties = fixed ? { overflowY: 'auto', flex: 1, minHeight: 0 } : {};
+    const scroll: React.CSSProperties = fixed ? { overflowY: 'auto', flex: '0 1 auto', minHeight: 0 } : {};
     const last = columns.length - 1;
 
     return (
         <div style={outer}>
-            <FormSection title={tintTitle(leftTitle)} style={{ ...CARD, width: leftWidth, flexShrink: 0 }} bodyStyle={{ padding: 0, ...scroll }}>
+            <FormSection title={tintTitle(leftTitle)} style={{ ...CARD, width: leftWidth, flexShrink: 0, ...(fixed ? { maxHeight: '100%' } : {}) }} bodyStyle={{ padding: 0, ...scroll }}>
                 <Table style={{ tableLayout: 'fixed', borderLeft: 'none', borderTop: 'none' }}>
                     <colgroup>
                         {columns.map((col, i) => <col key={i} style={col.width ? { width: col.width } : undefined} />)}
@@ -103,7 +104,9 @@ export default function RequestDetailPanel({
                         {rows.map((row, ri) => (
                             <tr key={row.key}>
                                 {row.cells.map((cell, ci) => (
-                                    <td key={ci} style={{
+                                    // Wrap, don't spill: a long name grows the row instead of painting over the next cell.
+                                    <td key={ci} className="terras-cell-wrap" style={{
+                                        overflowWrap: 'anywhere',
                                         textAlign: columns[ci]?.align || 'left',
                                         background: row.background,
                                         ...(ci === last ? { borderRight: 'none' } : {}),
@@ -118,9 +121,9 @@ export default function RequestDetailPanel({
                 </Table>
             </FormSection>
 
-            <div style={{ flex: 1, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 8, ...(fixed ? { overflowY: 'auto' } : {}) }}>
+            <div style={{ flex: 1, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 8, ...(fixed ? { overflowY: 'auto', maxHeight: '100%' } : {}) }}>
                 {sections.map((sec, si) => (
-                    <FormSection key={si} title={tintTitle(sec.title)} style={{ ...TINT, margin: 0 }} bodyStyle={{ padding: '6px 10px' }}>
+                    <FormSection key={si} title={tintTitle(sec.title)} style={{ ...TINT, margin: 0, flexShrink: 0 }} bodyStyle={{ padding: '6px 10px' }}>
                         <dl style={FIELD_GRID}>
                             {sec.fields.map((f, fi) => {
                                 const empty = f.value == null || f.value === '' || f.value === '—';
