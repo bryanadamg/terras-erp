@@ -712,7 +712,7 @@ export default function LabDipRequestView({
                                                         >
                                                             <i className="bi bi-arrow-repeat" style={{ fontSize: 10}} />
                                                         </button>
-                                                    ) : <span style={{ color: '#bbb' }}>—</span>,
+                                                    ) : null,
                                                 ],
                                             };
                                         });
@@ -742,8 +742,8 @@ export default function LabDipRequestView({
                                         ];
 
                                         const rightHeader = (
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', flexWrap: 'wrap' as const, borderBottom: '1px solid #d0cdc8', background: '#fff' }}>
-                                                <span style={{ fontSize: 10, fontWeight: 'bold', color: '#111'}}>Request Status:</span>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const }}>
+                                                <span style={{ fontSize: 10, fontWeight: 'bold', color: 'var(--terras-win-text-2, #333)' }}>Request Status</span>
                                                 <select style={{ ...xpInput(), width: 140 }} value={r.status} disabled={!canUpdateStatus} onChange={e => doUpdateStatus(r.id, e.target.value)}>
                                                     {REQUEST_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
                                                 </select>
