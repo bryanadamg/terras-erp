@@ -61,7 +61,7 @@ export default function FieldPalette({
 
     const label = (text: string, extra?: React.CSSProperties) => ({
         fontFamily: xpFont,
-        fontSize: 10, color: '#4a4436',
+        fontSize: 10, color: 'var(--terras-win-text-2, #4a4436)',
         ...extra,
     });
 
@@ -81,7 +81,7 @@ export default function FieldPalette({
                     textAlign: 'left', background: 'none', border: 'none',
                     padding: '2px 3px 2px 10px', borderRadius: 0,
                     fontFamily: xpFont, fontSize: 11,
-                    color: !canPlace ? '#aaa' : (already ? '#8a8a8a' : ('#2b2822')),
+                    color: !canPlace ? '#aaa' : (already ? '#8a8a8a' : ('var(--terras-win-text, #2b2822)')),
                     cursor: canPlace ? 'pointer' : 'default',
                 }}
                 onMouseEnter={e => { if (canPlace) e.currentTarget.style.background = '#d6e6ff'; }}
@@ -97,7 +97,7 @@ export default function FieldPalette({
     };
 
     return (
-        <div style={{ marginTop: 10, borderTop: '1px solid #b0a898', paddingTop: 6 }}>
+        <div style={{ marginTop: 10, borderTop: '1px solid var(--terras-table-line, #b0a898)', paddingTop: 6 }}>
             <div style={label('', { fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 4 })}>
                 Add a field
             </div>
@@ -130,7 +130,7 @@ export default function FieldPalette({
                                     textAlign: 'left', background: 'none', border: 'none',
                                     padding: '2px 3px', borderRadius: 0, cursor: 'pointer',
                                     fontFamily: xpFont, fontSize: 11,
-                                    color: '#2b2822',
+                                    color: 'var(--terras-win-text, #2b2822)',
                                 }}
                             >
                                 <i className={`bi ${open ? 'bi-chevron-down' : 'bi-chevron-right'}`} style={{ fontSize: 8 }} />
