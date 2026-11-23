@@ -61,7 +61,12 @@ interface Props {
     height?: number;                        // fixed panel height; panes scroll internally past it
 }
 
-const CARD: React.CSSProperties = { margin: 0, minWidth: 0, display: 'flex', flexDirection: 'column' };
+// Cards nested in a list row take a tinted header instead of the solid form blue:
+// solid bars stacked under the list's own chrome read too heavy. The header reads its
+// ground from this var, so overriding it on the card restyles just that bar.
+const TINT = { '--terras-form-section-blue': 'var(--terras-chip-blue-bg, #dce4f5)' } as React.CSSProperties;
+const CARD: React.CSSProperties = { ...TINT, margin: 0, minWidth: 0, display: 'flex', flexDirection: 'column' };
+const tintTitle = (t: React.ReactNode) => <span style={{ color: 'var(--terras-chip-blue-text, #0d2a6e)' }}>{t}</span>;
 
 export default function RequestDetailPanel({
     leftTitle, leftWidth = '56%', columns, rows, emptyText = 'No rows.', sections, rightHeader, minHeight = 160, height,
@@ -79,7 +84,7 @@ export default function RequestDetailPanel({
 
     return (
         <div style={outer}>
-            <FormSection title={leftTitle} style={{ ...CARD, width: leftWidth, flexShrink: 0 }} bodyStyle={{ padding: 0, ...scroll }}>
+            <FormSection title={tintTitle(leftTitle)} style={{ ...CARD, width: leftWidth, flexShrink: 0 }} bodyStyle={{ padding: 0, ...scroll }}>
                 <Table style={{ tableLayout: 'fixed', borderLeft: 'none', borderTop: 'none' }}>
                     <colgroup>
                         {columns.map((col, i) => <col key={i} style={col.width ? { width: col.width } : undefined} />)}
@@ -114,7 +119,7 @@ export default function RequestDetailPanel({
             <div style={{ flex: 1, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 8, ...(fixed ? { overflowY: 'auto' } : {}) }}>
                 {rightHeader}
                 {sections.map((sec, si) => (
-                    <FormSection key={si} title={sec.title} style={{ margin: 0 }} bodyStyle={{ padding: 0 }}>
+                    <FormSection key={si} title={tintTitle(sec.title)} style={{ ...TINT, margin: 0 }} bodyStyle={{ padding: 0 }}>
                         <DetailGrid>
                             {sec.fields.map((f, fi) => <Detail key={fi} label={f.label} value={f.value === '—' ? null : f.value} wide={f.full} />)}
                         </DetailGrid>
