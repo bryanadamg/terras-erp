@@ -12,7 +12,7 @@ import ModalWrapper from '../shared/ModalWrapper';
 import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import Pager from '../shared/Pager';
 import { StatusChip, useFloatingMenu, MenuTriggerButton, FloatingMenu, CodeChip, ColorSwatchChip, xpFont, TableSkeleton, useTableSkeletonMetrics, CHIP_RADIUS, FORM_SECTION_BLUE, xpBtn as xpBtnBase } from '../shared/xpTheme';
-import { FormSection } from '@bryanadamg/terras-ui/components/FormSection';
+import { TintCard } from '../shared/RequestDetailPanel';
 import { ExpandedRowPanel, rowStateBg } from '@bryanadamg/terras-ui/components/Table';
 import { field as xpInputBase } from '@bryanadamg/terras-ui/styles';
 import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
@@ -759,10 +759,10 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                     {/* A recipe is made FOR one Library Color. The color drives the recipe
                         code + name + color standard, so those are read-only here — the
                         panel only asks for the color plus recipe-specific fields. */}
-                    <FormSection title="Recipe Info">
+                    <TintCard title="Recipe Info" style={{ marginBottom: 10 }} bodyStyle={{ padding: 10 }}>
                         <div style={{ marginBottom: 8 }}>
                             <label style={lvLabel()}>
-                                Library Color <span style={{ color: 'red'}}>*</span>
+                                Library Color <span style={{ color: 'var(--terras-status-red, red)'}}>*</span>
                             </label>
                             <SearchableSelect
                                 options={colorOptions}
@@ -770,7 +770,7 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                                 onChange={(v: string) => setForm(f => ({ ...f, color_id: v }))}
                                 placeholder="Select color code to make recipe for…"
                             />
-                            <div style={{ fontSize: 10, color: '#666', marginTop: 3 }}>
+                            <div style={{ fontSize: 10, color: 'var(--terras-win-text-3, #666)', marginTop: 3 }}>
                                 Recipe code, name and color standard are taken from the selected color.
                             </div>
                         </div>
@@ -781,7 +781,7 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                                     <div style={{ display: 'flex', gap: 4 }}>
                                         <input
                                             readOnly
-                                            style={{ ...inputStyle(), flex: 1, background: '#ece9d8', color: '#333'}}
+                                            style={{ ...inputStyle(), flex: 1, background: 'var(--terras-toolbar-bg, #f5f4ef)', color: 'var(--terras-win-text-2, #333)'}}
                                             value={form.code}
                                             placeholder="(auto)"
                                         />
@@ -797,7 +797,7 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                                     <label style={lvLabel()}>Color Standard</label>
                                     <input
                                         readOnly
-                                        style={{ ...inputStyle(), width: '100%', boxSizing: 'border-box', background: '#ece9d8', color: '#333'}}
+                                        style={{ ...inputStyle(), width: '100%', boxSizing: 'border-box', background: 'var(--terras-toolbar-bg, #f5f4ef)', color: 'var(--terras-win-text-2, #333)'}}
                                         value={form.color_standard || '—'}
                                     />
                                 </div>
@@ -829,7 +829,7 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                                 />
                             </div>
                             <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 2 }}>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', color: '#333', fontSize: undefined}}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', color: 'var(--terras-win-text-2, #333)', fontSize: undefined}}>
                                     <input
                                         type="checkbox"
                                         checked={form.is_active}
@@ -853,14 +853,14 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                                 placeholder="Optional notes"
                             />
                         </div>
-                    </FormSection>
+                    </TintCard>
 
                     {/* ── Chemical Lines ── */}
-                    <FormSection title="Chemical Lines">
-                        <div style={{ border: '1px solid #7f9db9' }}>
+                    <TintCard title="Chemical Lines" style={{ marginBottom: 10 }} bodyStyle={{ padding: 10 }}>
+                        <div style={{ border: '1px solid var(--terras-table-line, #d6d3ce)', background: 'var(--terras-table-bg, #fff)' }}>
                             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10}}>
                                 <thead>
-                                    <tr style={{ background: '#eef2f8' }}>
+                                    <tr style={{ background: 'var(--terras-toolbar-bg, #f5f4ef)' }}>
                                         <th style={thStyle({ width: 24 })}>#</th>
                                         <th style={thStyle({ width: 80 })}>Type</th>
                                         <th style={thStyle()}>Item</th>
@@ -879,14 +879,14 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                                 <tbody>
                                     {form.lines.length === 0 && (
                                         <tr>
-                                            <td colSpan={7} style={{ padding: '6px', color: '#888', textAlign: 'center' }}>
+                                            <td colSpan={7} style={{ padding: '6px', color: 'var(--terras-win-text-3, #888)', textAlign: 'center' }}>
                                                 No lines. Click "Add Line" to begin.
                                             </td>
                                         </tr>
                                     )}
                                     {form.lines.map((line, idx) => (
-                                        <tr key={idx} style={{ background: idx % 2 === 0 ? 'white' : '#f7f9fc'}}>
-                                            <td style={{ padding: '2px 4px', color: '#666', borderBottom: undefined}}>{idx + 1}</td>
+                                        <tr key={idx} style={{ background: idx % 2 === 0 ? 'var(--terras-table-bg, #fff)' : 'var(--terras-row-stripe-sub, #fbfaf7)'}}>
+                                            <td style={{ padding: '2px 4px', color: 'var(--terras-win-text-3, #666)', borderBottom: undefined}}>{idx + 1}</td>
                                             <td style={{ padding: '2px 4px', borderBottom: undefined}}>
                                                 <select
                                                     style={{ ...inputStyle(), height: 20, width: '100%' }}
@@ -945,7 +945,7 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                                             </td>
                                             <td style={{ padding: '2px 4px', textAlign: 'center', borderBottom: undefined}}>
                                                 <button
-                                                    style={{ ...xpBtn, padding: '0px 5px', fontSize: 10, color: '#aa0000' }}
+                                                    style={{ ...xpBtn, padding: '0px 5px', fontSize: 10, color: 'var(--terras-status-red, #aa0000)' }}
                                                     onClick={() => removeLine(idx)}
                                                     title="Remove line"
                                                 >X</button>
@@ -954,17 +954,17 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                                     ))}
                                 </tbody>
                             </table>
-                            <div style={{ padding: '4px 6px', borderTop: '1px solid #e8eef5', background: '#f7f9fc'}}>
+                            <div style={{ padding: '4px 6px', borderTop: '1px solid var(--terras-table-line, #d6d3ce)', background: 'var(--terras-toolbar-bg, #f5f4ef)'}}>
                                 <button style={btnStyle()} onClick={addLine}>Add Line</button>
                             </div>
                         </div>
-                    </FormSection>
+                    </TintCard>
 
                     {/* ── Bak Cuci ── */}
-                    <FormSection title="Bak Cuci">
+                    <TintCard title="Bak Cuci" style={{ marginBottom: 10 }} bodyStyle={{ padding: 10 }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10}}>
                             <thead>
-                                <tr style={{ background: '#eef2f8' }}>
+                                <tr style={{ background: 'var(--terras-toolbar-bg, #f5f4ef)' }}>
                                     <th style={thStyle({ width: 50 })}>No.</th>
                                     <th style={thStyle()}>Description</th>
                                     <th style={thStyle({ width: 36 })}></th>
@@ -972,7 +972,7 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                             </thead>
                             <tbody>
                                 {washBaths.map((wb, i) => (
-                                    <tr key={i} style={{ background: i % 2 === 0 ? 'white' : '#f7f9fc'}}>
+                                    <tr key={i} style={{ background: i % 2 === 0 ? 'var(--terras-table-bg, #fff)' : 'var(--terras-row-stripe-sub, #fbfaf7)'}}>
                                         <td style={{ padding: '2px 4px', borderBottom: undefined}}>
                                             <input type="number" style={{ ...inputStyle(), width: '100%' }}
                                                 value={wb.bath_number}
@@ -992,7 +992,7 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                                             />
                                         </td>
                                         <td style={{ padding: '2px 4px', textAlign: 'center', borderBottom: undefined}}>
-                                            <button style={{ ...xpBtn, padding: '0px 5px', fontSize: 10, color: '#aa0000' }}
+                                            <button style={{ ...xpBtn, padding: '0px 5px', fontSize: 10, color: 'var(--terras-status-red, #aa0000)' }}
                                                 onClick={() => setWashBaths(washBaths.filter((_, j) => j !== i))}>×</button>
                                         </td>
                                     </tr>
@@ -1002,14 +1002,14 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                         <button style={{ ...xpBtn, marginTop: 4, fontSize: 10 }}
                             onClick={() => setWashBaths([...washBaths, { bath_number: washBaths.length + 1, attribute_value_id: '', description: '' }])}>+ Add Bath</button>
                         {washBathOptions.length <= 1 && (
-                            <div style={{ marginTop: 4, fontSize: 10, color: '#666'}}>
+                            <div style={{ marginTop: 4, fontSize: 10, color: 'var(--terras-win-text-3, #666)'}}>
                                 No bath values defined yet — add them to the &quot;Wash Bath&quot; attribute under Inventory &gt; Item Metadata.
                             </div>
                         )}
-                    </FormSection>
+                    </TintCard>
 
                     {/* ── Finishing ── */}
-                    <FormSection title="Finishing">
+                    <TintCard title="Finishing" bodyStyle={{ padding: 10 }}>
                         {finishingSteps.map((fs, i) => (
                             <div key={i} style={{ display: 'flex', gap: 6, marginBottom: 4, alignItems: 'center' }}>
                                 <div style={{ flex: 1 }}>
@@ -1025,18 +1025,18 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
                                         size="sm"
                                     />
                                 </div>
-                                <button style={{ ...xpBtn, padding: '0px 5px', fontSize: 10, color: '#aa0000', flexShrink: 0 }}
+                                <button style={{ ...xpBtn, padding: '0px 5px', fontSize: 10, color: 'var(--terras-status-red, #aa0000)', flexShrink: 0 }}
                                     onClick={() => setFinishingSteps(finishingSteps.filter((_, j) => j !== i))}>×</button>
                             </div>
                         ))}
                         <button style={{ ...xpBtn, fontSize: 10 }}
                             onClick={() => setFinishingSteps([...finishingSteps, { attribute_value_id: '', description: '', sort_order: finishingSteps.length }])}>+ Add Finishing Step</button>
                         {finishingOptions.length <= 1 && (
-                            <div style={{ marginTop: 4, fontSize: 10, color: '#666'}}>
+                            <div style={{ marginTop: 4, fontSize: 10, color: 'var(--terras-win-text-3, #666)'}}>
                                 No finishing values defined yet — add them to the &quot;Finishing Step&quot; attribute under Inventory &gt; Item Metadata.
                             </div>
                         )}
-                    </FormSection>
+                    </TintCard>
 
                 </ModalWrapper>
 
