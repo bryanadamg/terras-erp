@@ -22,6 +22,7 @@ import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
 import { qtyFmt } from '../shared/format';
 import { useComboSearch, useFinishedGoodsSearch } from '../shared/useEntitySearch';
 import Pager from '../shared/Pager';
+import { TintCard } from '../shared/RequestDetailPanel';
 import { Tooltip } from '@bryanadamg/terras-ui/components/Tooltip';
 import { ShellWindow, SearchField, ToolbarButton } from '../shared/shellTheme';
 import { toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
@@ -1573,7 +1574,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                <FormSection title="Order Details">
                <div className="row g-3">
                    <div className="col-md-4">
-                       <FieldLabel right={<i className="bi bi-gear-fill" style={{cursor:'pointer',color:'#555',fontSize:'11px'}} onClick={() => setIsConfigOpen(true)} title="Configure Auto-Suggestion"></i>}>Ref No. (PO#)</FieldLabel>
+                       <FieldLabel right={<i className="bi bi-gear-fill" style={{cursor:'pointer',color:'var(--terras-win-text-3, #555)',fontSize:'11px'}} onClick={() => setIsConfigOpen(true)} title="Configure Auto-Suggestion"></i>}>Ref No. (PO#)</FieldLabel>
                        <input className="form-control" style={xpInput()} placeholder="Auto-generated" value={newSO.po_number} onChange={e => setNewSO({...newSO, po_number: e.target.value})} required />
                    </div>
                    <div className="col-md-4">
@@ -1607,8 +1608,8 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                    style={{
                                        fontFamily: xpFont, fontSize: '9px',
                                        fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.4px',
-                                       background: '#e8f5e9', border: '1px solid #2e7d32',
-                                       color: '#1b4620', padding: '0 5px', borderRadius: CHIP_RADIUS, whiteSpace: 'nowrap',
+                                       background: 'var(--terras-chip-green-bg, #e8f5e9)', border: '1px solid var(--terras-chip-green-border, #2e7d32)',
+                                       color: 'var(--terras-chip-green-text, #1b4620)', padding: '0 5px', borderRadius: CHIP_RADIUS, whiteSpace: 'nowrap',
                                    }}
                                >
                                    Finished Goods only
@@ -1628,11 +1629,10 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6}}>
 
                                {/* Left: Qty inputs panel */}
-                               <div style={{ background: '#f8f7f2', border: '1px solid #c0bdb5', padding: '6px 8px'}}>
+                               <div style={{ background: 'var(--terras-toolbar-bg, #f5f4ef)', border: '1px solid var(--terras-table-line, #d6d3ce)', padding: '6px 8px'}}>
 
                                    {/* LENGTH GROUP */}
-                                   <div style={{ border: '1px solid #a0988c', padding: '4px 8px 8px', marginBottom: 8, position: 'relative' }}>
-                                       <span style={{ position: 'absolute', top: -7, left: 8, background: '#f8f7f2', padding: '0 4px', fontSize: '10px', fontWeight: 'bold', color: '#444', textTransform: 'uppercase' as const, letterSpacing: '0.4px', fontFamily: xpFont }}>Length</span>
+                                   <TintCard title="Length" style={{ marginBottom: 8 }} bodyStyle={{ padding: '0 8px 8px' }}>
                                        <div style={{ paddingTop: 4, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 5}}>
                                            <div>
                                                <FieldLabel>Yard</FieldLabel>
@@ -1643,15 +1643,14 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                                <input type="number" className="form-control" style={xpInput({width:'100%'})} placeholder="0" value={qtyMeter} onChange={e => handleQtyMeterChange(e.target.value)} />
                                            </div>
                                            <div>
-                                               <FieldLabel><span style={{ whiteSpace: 'nowrap' }}>Gross Yd <span style={{ fontWeight: 'normal', fontSize: '10px', color: '#888' }}>(144 yd)</span></span></FieldLabel>
+                                               <FieldLabel><span style={{ whiteSpace: 'nowrap' }}>Gross Yd <span style={{ fontWeight: 'normal', fontSize: '10px', color: 'var(--terras-win-text-3, #888)' }}>(144 yd)</span></span></FieldLabel>
                                                <input type="number" className="form-control" style={xpInput({width:'100%'})} placeholder="0" value={qtyGrossYd} onChange={e => handleQtyGrossYdChange(e.target.value)} />
                                            </div>
                                        </div>
-                                   </div>
+                                   </TintCard>
 
                                    {/* WEIGHT GROUP */}
-                                   <div style={{ border: '1px solid #a0988c', padding: '4px 8px 8px', marginBottom: 8, position: 'relative' }}>
-                                       <span style={{ position: 'absolute', top: -7, left: 8, background: '#f8f7f2', padding: '0 4px', fontSize: '10px', fontWeight: 'bold', color: '#444', textTransform: 'uppercase' as const, letterSpacing: '0.4px', fontFamily: xpFont }}>Weight</span>
+                                   <TintCard title="Weight" style={{ marginBottom: 8 }} bodyStyle={{ padding: '0 8px 8px' }}>
                                        <div style={{ paddingTop: 4}}>
                                            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4 }}>
                                                <div style={{ flex: 1 }}>
@@ -1666,24 +1665,24 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                                <div style={{ paddingBottom: 1 }}>
                                                    {kgAuto ? (
                                                        <button type="button" onClick={toggleKgAuto} title="Click to enter manually"
-                                                           style={{fontFamily:xpFont,fontSize:'9px',padding:'1px 6px',background:'linear-gradient(to bottom,#4a9ae8,#1a5ec8)',border:'1px solid',borderColor:'#1a3a8a #0a2a6a #0a2a6a #1a3a8a',color:'#fff',cursor:'pointer',borderRadius:0}}
+                                                           style={{fontFamily:xpFont,fontSize:'9px',padding:'1px 6px',background:'var(--terras-chip-blue-bg, #dce4f5)',border:'1px solid var(--terras-chip-blue-border, #7f9db9)',color:'var(--terras-chip-blue-text, #0d2a6e)',cursor:'pointer',borderRadius:CHIP_RADIUS}}
                                                        >AUTO</button>
                                                    ) : (
                                                        <button type="button" onClick={toggleKgAuto} title="Click to restore auto calculation"
-                                                           style={{fontFamily:xpFont,fontSize:'9px',padding:'1px 6px',background:'linear-gradient(to bottom,#ffffff,#d4d0c8)',border:'1px solid',borderColor:'#dfdfdf #808080 #808080 #dfdfdf',color:'#000',cursor:'pointer',borderRadius:0}}
+                                                           style={{fontFamily:xpFont,fontSize:'9px',padding:'1px 6px',background:'var(--terras-table-bg, #fff)',border:'1px solid var(--terras-chip-blue-border, #7f9db9)',color:'var(--terras-chip-blue-text, #0d2a6e)',cursor:'pointer',borderRadius:CHIP_RADIUS}}
                                                        >&larr; Auto</button>
                                                    )}
                                                </div>
                                            </div>
                                            {kgAuto && isAutoCalcSupported(newLine.item_id) && (
-                                               <div style={{ fontFamily:xpFont, fontSize:'10px', color:'#666', fontStyle:'italic', marginTop:2 }}>
+                                               <div style={{ fontFamily:xpFont, fontSize:'10px', color:'var(--terras-win-text-3, #666)', fontStyle:'italic', marginTop:2 }}>
                                                    {getItemWeightUnit(newLine.item_id) === 'g/y'
                                                        ? `${getItemWeight(newLine.item_id)} g/y ↔ Yd`
                                                        : `${getItemWeight(newLine.item_id)} g/m ↔ m`}
                                                </div>
                                            )}
                                        </div>
-                                   </div>
+                                   </TintCard>
 
                                    {/* Alt Unit compound input */}
                                    <div>
@@ -1699,7 +1698,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                                            style={xpInput({ flex: 1, borderRight: 'none', minWidth: 0 })}
                                                            placeholder="0" value={newLine.qty2} onChange={e => handleQty2Change(e.target.value)} />
                                                        <select
-                                                           style={{ fontFamily:xpFont, fontSize:'11px', border:'1px solid #7f9db9', height:'20px', borderRadius:0, padding:'1px 4px', background:'#ffffff', outline:'none', color:'#000', flexShrink: 0 }}
+                                                           style={{ fontFamily:xpFont, fontSize:'11px', border:'1px solid #7f9db9', height:'20px', borderRadius:0, padding:'1px 4px', background:'var(--terras-table-bg, #fff)', outline:'none', color:'var(--terras-win-text, #000)', flexShrink: 0 }}
                                                            value={newLine.uom2} onChange={e => { setNewLine(prev => ({ ...prev, uom2: e.target.value, uom2_factor: null })); }}
                                                        >
                                                            <option value="">Unit</option>
@@ -1718,7 +1717,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                                                const active = newLine.uom2_factor === fVal;
                                                                return (
                                                                    <button key={f.id} type="button"
-                                                                       style={{ fontFamily:xpFont, fontSize:'10px', padding:'1px 6px', cursor:'pointer', borderRadius:0, border: active ? '1px solid #1a3a8a' : '1px solid #7f9db9', background: active ? 'linear-gradient(to bottom,#4a9ae8,#1a5ec8)' : 'linear-gradient(to bottom,#fff,#e8e4d8)', color: active ? '#fff' : '#000' }}
+                                                                       style={{ fontFamily:xpFont, fontSize:'10px', padding:'1px 6px', cursor:'pointer', borderRadius:CHIP_RADIUS, border: '1px solid var(--terras-chip-blue-border, #7f9db9)', background: active ? 'var(--terras-chip-blue-bg, #dce4f5)' : 'var(--terras-table-bg, #fff)', color: 'var(--terras-chip-blue-text, #0d2a6e)', fontWeight: active ? 'bold' : 'normal' }}
                                                                        onClick={() => handleUom2FactorChange(String(fVal))}
                                                                    >
                                                                        ×{fVal} {unitLabel}{totalYd !== null ? ` = ${totalYd} Yd` : ''}{f.label ? ` (${f.label})` : ''}
@@ -1729,9 +1728,9 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                                    )}
                                                    {factors.length > 0 && !isSystem && (
                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 3 }}>
-                                                           <span style={{ fontFamily:xpFont, fontSize:'10px', color:'#804800', whiteSpace:'nowrap' }}>1 {newLine.uom2} =</span>
+                                                           <span style={{ fontFamily:xpFont, fontSize:'10px', color:'var(--terras-chip-amber-text, #804800)', whiteSpace:'nowrap' }}>1 {newLine.uom2} =</span>
                                                            <select
-                                                               style={{ fontFamily:xpFont, fontSize:'11px', border:'1px solid #7f9db9', height:'20px', borderRadius:0, padding:'1px 4px', background: newLine.uom2_factor ? '#fff8e8' : '#ffffff', outline:'none', color:'#000', flex: 1 }}
+                                                               style={{ fontFamily:xpFont, fontSize:'11px', border:'1px solid #7f9db9', height:'20px', borderRadius:0, padding:'1px 4px', background: newLine.uom2_factor ? 'var(--terras-chip-amber-bg, #fff8e8)' : 'var(--terras-table-bg, #fff)', outline:'none', color:'var(--terras-win-text, #000)', flex: 1 }}
                                                                value={newLine.uom2_factor ?? ''}
                                                                onChange={e => handleUom2FactorChange(e.target.value)}
                                                            >
@@ -1767,8 +1766,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                        {/* Variants */}
                        {currentBoundAttrs.length > 0 && (
                            <div className="col-12 mt-1">
-                               <div style={{background:'#ffffff',border:'1px solid #b0a898',padding:'4px 6px'}}>
-                                   <div style={{fontFamily:xpFont,fontSize:'10px',fontWeight:'bold',color:'#444',marginBottom:4}}>Variants</div>
+                               <TintCard title="Variants" bodyStyle={{ padding: 8 }}>
                                    <div className="row g-2">
                                        {currentBoundAttrs.map((attr: any) => {
                                            const isCombo = comboAttr && attr.id === comboAttr.id;
@@ -1822,7 +1820,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                            );
                                        })}
                                    </div>
-                               </div>
+                               </TintCard>
                            </div>
                        )}
 
@@ -1830,17 +1828,16 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                            Writes color_id on the line; drives the DYEING recipe match. */}
                        {currentVariantType === 'color' && newLine.item_id && (
                            <div className="col-12 mt-1">
-                               <div style={{background:'#ffffff',border:'1px solid #b0a898',padding:'4px 6px'}}>
-                                   <div style={{fontFamily:xpFont,fontSize:'10px',fontWeight:'bold',color:'#444',marginBottom:4}}>Color Code</div>
+                               <TintCard title="Color Code" bodyStyle={{ padding: 8 }}>
                                    {newLine.color_id ? (
                                        <div style={{display:'flex',alignItems:'center',gap:8}}>
-                                           <span style={{fontFamily:xpFont,fontSize:'11px',color:'#000'}}>{newLine.color_label}</span>
-                                           <button type="button" onClick={clearColor} style={{fontFamily:xpFont,fontSize:'10px',border:'1px solid #7f9db9',background:'#ece9d8',padding:'1px 6px',cursor:'pointer'}}>Change</button>
+                                           <span style={{fontFamily:xpFont,fontSize:'11px',color:'var(--terras-win-text, #000)'}}>{newLine.color_label}</span>
+                                           <button type="button" onClick={clearColor} className={XP_BTN} style={xpBtn({ fontSize: '10px', padding: '1px 6px' })}>Change</button>
                                        </div>
                                    ) : newLine.labdip_variant_code ? (
                                        <div style={{display:'flex',alignItems:'center',gap:8}}>
-                                           <span style={{fontFamily:xpFont,fontSize:'11px',color:'#8a6d00'}}>Pending lab dip: {newLine.labdip_label}</span>
-                                           <button type="button" onClick={clearLabdip} style={{fontFamily:xpFont,fontSize:'10px',border:'1px solid #7f9db9',background:'#ece9d8',padding:'1px 6px',cursor:'pointer'}}>Change</button>
+                                           <span style={{fontFamily:xpFont,fontSize:'11px',color:'var(--terras-status-amber, #8a6d00)'}}>Pending lab dip: {newLine.labdip_label}</span>
+                                           <button type="button" onClick={clearLabdip} className={XP_BTN} style={xpBtn({ fontSize: '10px', padding: '1px 6px' })}>Change</button>
                                        </div>
                                    ) : (
                                        <div style={{position:'relative'}}
@@ -1851,33 +1848,33 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                                placeholder="Search approved color, or pick a pending lab dip below..."
                                                style={{display:'flex',width:'100%'}} />
                                            {colorFocused && (colorResults.length > 0 || labdipResults.length > 0) && (
-                                               <div style={{position:'absolute',zIndex:20,top:'100%',left:0,right:0,maxHeight:220,overflowY:'auto',background:'#ffffff',border:'1px solid #7f9db9'}}>
+                                               <div style={{position:'absolute',zIndex:20,top:'100%',left:0,right:0,maxHeight:220,overflowY:'auto',background:'var(--terras-table-bg, #fff)',border:'1px solid var(--terras-table-line, #d6d3ce)'}}>
                                                    {labdipResults.length > 0 && (
                                                        <>
-                                                           <div style={{padding:'2px 6px',fontFamily:xpFont,fontSize:'10px',fontWeight:'bold',color:'#8a6d00',background:'#fbf4dd',borderBottom:'1px solid #e8dca8'}}>Pending (Lab Dip) — not yet approved</div>
+                                                           <div style={{padding:'2px 6px',fontFamily:xpFont,fontSize:'10px',fontWeight:'bold',color:'var(--terras-chip-amber-text, #8a6d00)',background:'var(--terras-chip-amber-bg, #fbf4dd)',borderBottom:'1px solid var(--terras-chip-amber-border, #e8dca8)'}}>Pending (Lab Dip) — not yet approved</div>
                                                            {labdipResults.map((v: any) => (
                                                                <div
                                                                    key={v.labdip_item_id}
                                                                    onClick={() => selectLabdip(v)}
-                                                                   style={{padding:'3px 6px',cursor:'pointer',fontFamily:xpFont,fontSize:'11px',borderBottom:'1px solid #eee'}}
+                                                                   style={{padding:'3px 6px',cursor:'pointer',fontFamily:xpFont,fontSize:'11px',borderBottom:'1px solid var(--terras-table-line, #d6d3ce)'}}
                                                                    onMouseDown={e => e.preventDefault()}
                                                                >
-                                                                   <b>{v.variant_code}</b>{v.request_code ? <span style={{color:'#888'}}> · {v.request_code}</span> : null}<span style={{color:'#8a6d00'}}> · {v.status}</span>
+                                                                   <b>{v.variant_code}</b>{v.request_code ? <span style={{color:'var(--terras-win-text-3, #888)'}}> · {v.request_code}</span> : null}<span style={{color:'var(--terras-status-amber, #8a6d00)'}}> · {v.status}</span>
                                                                </div>
                                                            ))}
                                                        </>
                                                    )}
                                                    {colorResults.length > 0 && (
                                                        <>
-                                                           {labdipResults.length > 0 && <div style={{padding:'2px 6px',fontFamily:xpFont,fontSize:'10px',fontWeight:'bold',color:'#444',background:'#f0f0f0',borderBottom:'1px solid #ddd'}}>Approved Colors</div>}
+                                                           {labdipResults.length > 0 && <div style={{padding:'2px 6px',fontFamily:xpFont,fontSize:'10px',fontWeight:'bold',color:'var(--terras-win-text-2, #444)',background:'var(--terras-toolbar-bg, #f5f4ef)',borderBottom:'1px solid var(--terras-table-line, #d6d3ce)'}}>Approved Colors</div>}
                                                            {colorResults.map((c: any) => (
                                                                <div
                                                                    key={c.id}
                                                                    onClick={() => selectColor(c)}
-                                                                   style={{padding:'3px 6px',cursor:'pointer',fontFamily:xpFont,fontSize:'11px',borderBottom:'1px solid #eee'}}
+                                                                   style={{padding:'3px 6px',cursor:'pointer',fontFamily:xpFont,fontSize:'11px',borderBottom:'1px solid var(--terras-table-line, #d6d3ce)'}}
                                                                    onMouseDown={e => e.preventDefault()}
                                                                >
-                                                                   <b>{c.code}</b>{c.name ? ` — ${c.name}` : ''}{c.pantone_ref ? <span style={{color:'#888'}}> · {c.pantone_ref}</span> : null}
+                                                                   <b>{c.code}</b>{c.name ? ` — ${c.name}` : ''}{c.pantone_ref ? <span style={{color:'var(--terras-win-text-3, #888)'}}> · {c.pantone_ref}</span> : null}
                                                                </div>
                                                            ))}
                                                        </>
@@ -1886,7 +1883,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                            )}
                                        </div>
                                    )}
-                               </div>
+                               </TintCard>
                            </div>
                        )}
 
@@ -1894,7 +1891,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                            physical swatch. Per line (i.e. per color variant), informational. */}
                        {newLine.item_id && (
                            <div className="col-12 mt-1">
-                               <div style={{background:'#ffffff',border:'1px solid #b0a898',padding:'4px 6px'}}>
+                               <div style={{background:'var(--terras-table-bg, #fff)',border:'1px solid var(--terras-table-line, #d6d3ce)',padding:'4px 6px'}}>
                                    <label style={{display:'flex',alignItems:'center',gap:6,cursor:'pointer',margin:0}}>
                                        <input
                                            type="checkbox"
@@ -1902,8 +1899,8 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                            onChange={e => setNewLine({...newLine, no_color_swatch: e.target.checked})}
                                            style={{margin:0}}
                                        />
-                                       <span style={{fontFamily:xpFont,fontSize:'11px',color:'#000'}}>No Color Swatch</span>
-                                       <span style={{fontFamily:xpFont,fontSize:'10px',color:'#888'}}>— customer has not supplied a physical swatch yet</span>
+                                       <span style={{fontFamily:xpFont,fontSize:'11px',color:'var(--terras-win-text, #000)'}}>No Color Swatch</span>
+                                       <span style={{fontFamily:xpFont,fontSize:'10px',color:'var(--terras-win-text-3, #888)'}}>— customer has not supplied a physical swatch yet</span>
                                    </label>
                                </div>
                            </div>
@@ -1929,11 +1926,10 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                <>
                                    {itemBoms.length > 1 && (
                                        <div className="col-12 mt-1">
-                                           <div style={{background:'#ffffff',border:'1px solid #b0a898',padding:'4px 6px'}}>
-                                               <div style={{fontFamily:xpFont,fontSize:'10px',fontWeight:'bold',color:'#444',marginBottom:4}}>BOM <span style={{fontWeight:'normal',color:'#888'}}>(optional — the Production Run picks one)</span></div>
+                                           <TintCard title={<>BOM <span style={{fontWeight:'normal',color:'var(--terras-win-text-3, #888)'}}>(optional — the Production Run picks one)</span></>} bodyStyle={{ padding: 8 }}>
                                                <select
                                                    className="form-select form-select-sm"
-                                                   style={{fontFamily:xpFont,fontSize:'11px',border:'1px solid #7f9db9',height:'22px',borderRadius:0,padding:'1px 4px',background:'#ffffff',outline:'none',width:'100%'}}
+                                                   style={{fontFamily:xpFont,fontSize:'11px',border:'1px solid #7f9db9',height:'22px',borderRadius:0,padding:'1px 4px',background:'var(--terras-table-bg, #fff)',color:'var(--terras-win-text, #000)',outline:'none',width:'100%'}}
                                                    value={newLine.bom_id}
                                                    onChange={e => setNewLine({...newLine, bom_id: e.target.value, bom_size_id: ''})}
                                                >
@@ -1942,16 +1938,15 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                                        <option key={b.id} value={b.id}>{b.code}{b.description ? ` — ${b.description}` : ''}</option>
                                                    ))}
                                                </select>
-                                           </div>
+                                           </TintCard>
                                        </div>
                                    )}
                                    {sizeOptions.length > 0 && (
                                        <div className="col-12 mt-1">
-                                           <div style={{background:'#ffffff',border:'1px solid #b0a898',padding:'4px 6px'}}>
-                                               <div style={{fontFamily:xpFont,fontSize:'10px',fontWeight:'bold',color:'#444',marginBottom:4}}>Size / Measurement</div>
+                                           <TintCard title="Size / Measurement" bodyStyle={{ padding: 8 }}>
                                                <select
                                                    className="form-select form-select-sm"
-                                                   style={{fontFamily:xpFont,fontSize:'11px',border:'1px solid #7f9db9',height:'22px',borderRadius:0,padding:'1px 4px',background:'#ffffff',outline:'none',width:'100%'}}
+                                                   style={{fontFamily:xpFont,fontSize:'11px',border:'1px solid #7f9db9',height:'22px',borderRadius:0,padding:'1px 4px',background:'var(--terras-table-bg, #fff)',color:'var(--terras-win-text, #000)',outline:'none',width:'100%'}}
                                                    value={sizeValue}
                                                    onChange={e => pickSize(e.target.value)}
                                                >
@@ -1960,7 +1955,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                                        <option key={o.value} value={o.value}>{joinSize(o.name, o.measurement)}</option>
                                                    ))}
                                                </select>
-                                           </div>
+                                           </TintCard>
                                        </div>
                                    )}
                                </>
@@ -1971,7 +1966,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                    {/* Add Line button — full width, bottom of form */}
                    <div style={{ marginTop: 6, marginBottom: 6}}>
                        {newLineVariantErr && (
-                           <div style={{ fontFamily: xpFont, fontSize: '10px', fontWeight: 'bold', color: '#8a6d00', marginBottom: 4 }}>
+                           <div style={{ fontFamily: xpFont, fontSize: '10px', fontWeight: 'bold', color: 'var(--terras-status-amber, #8a6d00)', marginBottom: 4 }}>
                                <i className="bi bi-exclamation-triangle me-1"></i>{newLineVariantErr}
                            </div>
                        )}
@@ -1990,29 +1985,29 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                    {/* Lines list */}
                    <div>
                        {newSO.lines.map((line: any, idx) => (
-                           <div key={idx} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'3px 6px',background:lvZebra(idx),border:'1px solid #c0bdb5',marginBottom:2,fontFamily:xpFont,fontSize:'11px',flexWrap:'wrap' as const,gap:4}}>
+                           <div key={idx} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'3px 6px',background:lvZebra(idx),border:'1px solid var(--terras-table-line, #d6d3ce)',marginBottom:2,fontFamily:xpFont,fontSize:'11px',flexWrap:'wrap' as const,gap:4}}>
                                <div>
                                    <span style={{fontWeight:'bold'}}>{getItemName(line.item_id, line.item_name)}</span>
                                    <CodeChip code={getItemCode(line.item_id, line.item_code)} tier={2} style={{ marginLeft: 8 }} />
-                                   {isSample(line.item_id) && <span style={{ borderRadius: CHIP_RADIUS,background:'#fff8dc',border:'1px solid #c8a000',color:'#4a3000',padding:'0 4px',fontSize:'9px',fontFamily:xpFont,marginLeft:6}}>Sample</span>}
+                                   {isSample(line.item_id) && <span style={{ borderRadius: CHIP_RADIUS,background:'var(--terras-chip-amber-bg, #fff8dc)',border:'1px solid var(--terras-chip-amber-border, #c8a000)',color:'var(--terras-chip-amber-text, #4a3000)',padding:'0 4px',fontSize:'9px',fontFamily:xpFont,marginLeft:6}}>Sample</span>}
                                    {(() => {
                                        const { chips, plainIds } = buildVariantChips(line.attribute_value_ids || [], line.color_label, line.color_hex, !line.color_id ? line.labdip_variant_code : null);
                                        return (
                                            <>
-                                               {plainIds.length > 0 && <div style={{color:'#666',fontSize:'10px',fontStyle:'italic'}}>{plainIds.map(getAttributeValueName).join(', ')}</div>}
+                                               {plainIds.length > 0 && <div style={{color:'var(--terras-win-text-3, #666)',fontSize:'10px',fontStyle:'italic'}}>{plainIds.map(getAttributeValueName).join(', ')}</div>}
                                                {chips.length > 0 && renderChipRow(chips)}
                                            </>
                                        );
                                    })()}
                                    {(() => {
                                        const { name, measurement } = getLineSizeParts(line);
-                                       return name ? <div style={{color:'#005',fontSize:'10px',fontWeight:'bold'}}><i className="bi bi-rulers me-1"></i>{joinSize(name, measurement)}</div> : null;
+                                       return name ? <div style={{color:'var(--terras-chip-blue-text, #0d2a6e)',fontSize:'10px',fontWeight:'bold'}}><i className="bi bi-rulers me-1"></i>{joinSize(name, measurement)}</div> : null;
                                    })()}
-                                   {line.no_color_swatch && <div style={{color:'#a33',fontSize:'10px',fontWeight:'bold'}}><i className="bi bi-palette me-1"></i>No Color Swatch</div>}
+                                   {line.no_color_swatch && <div style={{color:'var(--terras-status-red, #a33)',fontSize:'10px',fontWeight:'bold'}}><i className="bi bi-palette me-1"></i>No Color Swatch</div>}
                                </div>
                                <div style={{display:'flex',alignItems:'flex-end',gap:6,flexWrap:'wrap' as const}}>
                                    <div style={{display:'flex',flexDirection:'column',gap:1}}>
-                                       <span style={{color:'#999',fontSize:'9px'}}>Req</span>
+                                       <span style={{color:'var(--terras-win-text-3, #999)',fontSize:'9px'}}>Req</span>
                                        <input type="date"
                                            style={xpInput({width:110, height:'20px'})}
                                            value={line.due_date || ''}
@@ -2021,7 +2016,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                        />
                                    </div>
                                    <div style={{display:'flex',flexDirection:'column',gap:1}}>
-                                       <span style={{color:'#999',fontSize:'9px'}}>Conf</span>
+                                       <span style={{color:'var(--terras-win-text-3, #999)',fontSize:'9px'}}>Conf</span>
                                        <input type="date"
                                            style={xpInput({width:110, height:'20px'})}
                                            value={line.internal_confirmation_date || ''}
@@ -2039,7 +2034,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                                onChange={e => handleLineQtyChange(idx, e.target.value)}
                                                title="Quantity ordered (Yd)"
                                            />
-                                           <span style={{color:'#777',fontSize:'10px',fontWeight:'normal'}}>Yd</span>
+                                           <span style={{color:'var(--terras-win-text-3, #777)',fontSize:'10px',fontWeight:'normal'}}>Yd</span>
                                        </div>
                                    </div>
                                    {(() => {
@@ -2048,7 +2043,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                        const conv = describeUom2(line);
                                        return (
                                            <div style={{display:'flex',flexDirection:'column',gap:1}}>
-                                               <span style={{color: conv?.drift != null ? '#c00000' : ('#999'), fontSize:'9px', fontWeight: conv?.drift != null ? 'bold' : 'normal'}}
+                                               <span style={{color: conv?.drift != null ? 'var(--terras-status-red, #c00000)' : 'var(--terras-win-text-3, #999)', fontSize:'9px', fontWeight: conv?.drift != null ? 'bold' : 'normal'}}
                                                    title={conv?.drift != null ? `Alt unit works out to ${conv.total}, but this line is ${line.qty} Yd` : undefined}
                                                >
                                                    {conv?.drift != null && <i className="bi bi-exclamation-triangle-fill" style={{ marginRight: 2 }}></i>}
@@ -2063,7 +2058,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                                        title="Quantity in the alternate unit the customer ordered in"
                                                    />
                                                    <select
-                                                       style={{ fontFamily:xpFont, fontSize:'11px', border:'1px solid #7f9db9', height:'20px', borderRadius:0, padding:'1px 2px', background:'#fff', outline:'none', color:'#000', width:66 }}
+                                                       style={{ fontFamily:xpFont, fontSize:'11px', border:'1px solid #7f9db9', height:'20px', borderRadius:0, padding:'1px 2px', background:'var(--terras-table-bg, #fff)', outline:'none', color:'var(--terras-win-text, #000)', width:66 }}
                                                        value={line.uom2 || ''}
                                                        onChange={e => handleLineAltChange(idx, { uom2: e.target.value })}
                                                        title="Alternate unit"
@@ -2073,7 +2068,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                                    </select>
                                                    {lineFactors.length > 0 && (
                                                        <select
-                                                           style={{ fontFamily:xpFont, fontSize:'11px', border:'1px solid #7f9db9', height:'20px', borderRadius:0, padding:'1px 2px', background: line.uom2_factor ? '#fff8e8' : '#fff', outline:'none', color:'#000', width:96 }}
+                                                           style={{ fontFamily:xpFont, fontSize:'11px', border:'1px solid #7f9db9', height:'20px', borderRadius:0, padding:'1px 2px', background: line.uom2_factor ? 'var(--terras-chip-amber-bg, #fff8e8)' : 'var(--terras-table-bg, #fff)', outline:'none', color:'var(--terras-win-text, #000)', width:96 }}
                                                            value={line.uom2_factor ?? ''}
                                                            onChange={e => handleLineAltChange(idx, { uom2_factor: e.target.value ? parseFloat(e.target.value) : null })}
                                                            title={`How much one ${line.uom2 || 'alt unit'} is`}
@@ -2094,19 +2089,19 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                        <span style={{fontSize:'9px'}} aria-hidden="true">&nbsp;</span>
                                        <label style={{display:'flex',alignItems:'center',gap:3,cursor:'pointer',margin:0,height:'20px'}} title="Customer has not supplied a physical color swatch — untick once it arrives">
                                            <input type="checkbox" checked={!!line.no_color_swatch} onChange={() => handleLineSwatchToggle(idx)} style={{margin:0}} />
-                                           <span style={{color:'#777',fontSize:'9px'}}>No swatch</span>
+                                           <span style={{color:'var(--terras-win-text-3, #777)',fontSize:'9px'}}>No swatch</span>
                                        </label>
                                    </div>
                                    <div style={{display:'flex',flexDirection:'column',gap:1}}>
                                        <span style={{fontSize:'9px'}} aria-hidden="true">&nbsp;</span>
                                        <button type="button" style={{...xpBtn(),border:'1px solid transparent',background:'transparent',padding:'1px 5px',height:'20px',lineHeight:'16px'}} className={XP_BTN} onClick={() => handleRemoveLine(idx)}>
-                                           <i className="bi bi-x-circle" style={{color:'#c00000'}}></i>
+                                           <i className="bi bi-x-circle" style={{color:'var(--terras-status-red, #c00000)'}}></i>
                                        </button>
                                    </div>
                                </div>
                            </div>
                        ))}
-                       {newSO.lines.length === 0 && <div style={{textAlign:'center',padding:'8px',fontFamily:xpFont,fontSize:'11px',color:'#888',fontStyle:'italic'}}>No items added yet</div>}
+                       {newSO.lines.length === 0 && <div style={{textAlign:'center',padding:'8px',fontFamily:xpFont,fontSize:'11px',color:'var(--terras-win-text-3, #888)',fontStyle:'italic'}}>No items added yet</div>}
                    </div>
                </FormSection>
            </form>
