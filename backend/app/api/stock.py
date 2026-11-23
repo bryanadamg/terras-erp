@@ -8,7 +8,7 @@ from app.services import stock_service, audit_service, kpi_service, packing_serv
 from app.services.xlsx_service import xlsx_response, zone_or_400, local_cell
 from app.core.ws_manager import manager
 from app.core.pagination import PageParams, PageWindow
-from app.schemas import StockLedgerResponse, StockBalanceResponse, PaginatedStockBalanceResponse, PaginatedStockLedgerResponse, StockEntryCreate, StockTransferCreate, StockBulkTransferCreate, BookingStockRow, BookingDemandMO, BookingSupplyMO, BookingReservedSO, PaginatedBookingStockResponse
+from app.schemas import StockLedgerResponse, StockBalanceResponse, PaginatedStockBalanceResponse, PaginatedStockLedgerResponse, StockEntryCreate, StockTransferCreate, StockBulkTransferCreate, BookingStockRow, BookingDemandMO, BookingSupplyMO, BookingSupplyPO, BookingReservedSO, PaginatedBookingStockResponse
 from app.models.auth import User
 from app.api.auth import get_current_user, require_permission, require_any_permission, get_current_admin
 from app.models.item import Item
@@ -1147,7 +1147,8 @@ async def _compute_booking_rows(db: AsyncSession) -> list:
     For every component demanded by an ONGOING manufacturing order (PENDING or
     IN_PROGRESS), nets physical on-hand against outstanding demand and against
     incoming scheduled receipts (the outstanding output of in-flight production
-    MOs that produce the item):
+    MOs that produce the item, plus the unreceived qty of open purchase order
+    lines — any PO not yet RECEIVED or CANCELLED):
 
         net_free = on_hand + incoming - required
 
@@ -1206,7 +1207,7 @@ async def _compute_booking_rows(db: AsyncSession) -> list:
 
     # demand + supply keyed by (item_id, attr_key, size_token) — no location.
     demand: dict[tuple, dict] = defaultdict(lambda: {"total_required": 0.0, "contributions": []})
-    supply: dict[tuple, dict] = defaultdict(lambda: {"total_incoming": 0.0, "contributions": []})
+    supply: dict[tuple, dict] = defaultdict(lambda: {"total_incoming": 0.0, "contributions": [], "pos": []})
 
     for mo in mo_rows:
         completed = sum(float(c.qty_completed) for c in mo.completions if not c.rejected)
@@ -1250,6 +1251,27 @@ async def _compute_booking_rows(db: AsyncSession) -> list:
         s["total_incoming"] += outstanding
         s["contributions"].append(BookingSupplyMO(
             mo_id=mo.id, mo_code=mo.code, mo_qty=float(mo.qty), incoming_qty=outstanding,
+        ))
+
+    # ── Supply: open purchase order lines still to be received ──
+    # Bought material has no size, so it lands in the generic "" bucket — the same
+    # one an unsized component's demand nets in.
+    from app.models.purchase import PurchaseOrder, PurchaseOrderLine
+    po_lines = (await db.execute(
+        select(PurchaseOrderLine, PurchaseOrder.po_number)
+        .join(PurchaseOrder, PurchaseOrder.id == PurchaseOrderLine.purchase_order_id)
+        .where(PurchaseOrder.status.notin_(("RECEIVED", "CANCELLED")))
+        .options(selectinload(PurchaseOrderLine.attribute_values))
+    )).all()
+    for line, po_number in po_lines:
+        outstanding = float(line.qty or 0) - float(line.qty_received or 0)
+        if outstanding <= 0:
+            continue
+        key = (str(line.item_id), ",".join(sorted(str(v.id) for v in line.attribute_values)), "")
+        s = supply[key]
+        s["total_incoming"] += outstanding
+        s["pos"].append(BookingSupplyPO(
+            po_id=line.purchase_order_id, po_number=po_number, incoming_qty=outstanding,
         ))
 
     # ── Reserved: on-hand held for open sales orders ──
@@ -1347,6 +1369,7 @@ async def _compute_booking_rows(db: AsyncSession) -> list:
             qty_net_free=on_hand + incoming - required - res_qty,
             demand_mos=data["contributions"],
             supply_mos=sup["contributions"] if sup else [],
+            supply_pos=sup["pos"] if sup else [],
             reserved_sos=reserved_sos.get(key, []),
         ))
 
@@ -1436,12 +1459,13 @@ async def export_stock_availability(
     return xlsx_response(
         "Booking Stock",
         ["Item Code", "Item Name", "Category", "Variant", "Size", "UOM", "On Hand", "Required", "Incoming",
-         "Reserved", "Net Free", "Demand MOs", "Supply MOs", "Reserved Sales Orders"],
+         "Reserved", "Net Free", "Demand MOs", "Supply MOs", "Supply POs", "Reserved Sales Orders"],
         ([
             r.item_code, r.item_name, r.category_name, _variant(r), r.size_label, r.uom,
             r.qty_on_hand, r.qty_required, r.qty_incoming, r.qty_reserved, r.qty_net_free,
             ", ".join(m.mo_code for m in r.demand_mos) or None,
             ", ".join(m.mo_code for m in r.supply_mos) or None,
+            ", ".join(p.po_number for p in r.supply_pos) or None,
             ", ".join(s.so_number for s in r.reserved_sos) or None,
         ] for r in rows),
         "booking-stock",

@@ -741,6 +741,12 @@ class BookingSupplyMO(BaseModel):
     mo_qty: float
     incoming_qty: float
 
+class BookingSupplyPO(BaseModel):
+    """One open purchase order line still to be received for this item."""
+    po_id: UUID
+    po_number: str
+    incoming_qty: float
+
 class BookingReservedSO(BaseModel):
     """One sales order holding part of this row's on-hand — see stock_reservations."""
     sales_order_id: UUID
@@ -763,11 +769,12 @@ class BookingStockRow(BaseModel):
     category_name: str | None = None
     qty_on_hand: float       # current physical balance
     qty_required: float      # outstanding demand from ongoing MOs
-    qty_incoming: float       # scheduled receipts from in-flight production MOs
+    qty_incoming: float       # scheduled receipts: in-flight production MOs + open purchase order lines
     qty_reserved: float = 0.0 # on-hand promised to open sales orders (stock_reservations)
     qty_net_free: float      # on_hand + incoming - required - reserved  (negative = shortfall)
     demand_mos: list[BookingDemandMO]
     supply_mos: list[BookingSupplyMO]
+    supply_pos: list[BookingSupplyPO] = []
     reserved_sos: list[BookingReservedSO] = []
 
 class PaginatedBookingStockResponse(BaseModel):

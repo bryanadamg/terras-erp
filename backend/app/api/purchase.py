@@ -96,6 +96,7 @@ async def create_purchase_order(
         db.add(db_line)
 
     await db.commit()
+    await manager.broadcast({"type": "STOCK_UPDATE"})  # open PO lines count as Booking Stock incoming
     await audit_service.log_activity(
         db, current_user.id, "CREATE", "PurchaseOrder", str(po.id),
         details=f"Created PO {po.po_number}"
@@ -173,6 +174,7 @@ async def update_purchase_order(
         db.add(db_line)
 
     await db.commit()
+    await manager.broadcast({"type": "STOCK_UPDATE"})  # open PO lines count as Booking Stock incoming
 
     await audit_service.log_activity(
         db,
@@ -714,6 +716,7 @@ async def close_purchase_order(
     prev_status = po.status
     po.status = "RECEIVED"
     await db.commit()
+    await manager.broadcast({"type": "STOCK_UPDATE"})  # open PO lines count as Booking Stock incoming
 
     await audit_service.log_activity(
         db,
@@ -751,4 +754,5 @@ async def delete_purchase_order(
     )
     await db.delete(po)
     await db.commit()
+    await manager.broadcast({"type": "STOCK_UPDATE"})  # open PO lines count as Booking Stock incoming
     return {"status": "success"}
