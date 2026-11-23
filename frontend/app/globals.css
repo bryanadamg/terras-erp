@@ -1498,8 +1498,8 @@ textarea {
 /* BOM expanded-row tree: hover on selectable (sub-assembly) nodes only. */
 .bom-tree-hover:hover { background: var(--terras-row-hover, #e8f0fc); }
 
-/* Access Control list/detail — row hover (inline styles can't do :hover). */
-.access-list-row:hover { background: #eef3fb; }
+/* Settings list/detail panes — row hover (inline styles can't do :hover). */
+.settings-list-row:hover { background: #eef3fb; }
 
 /* Database snapshot timeline — the rail and nodes are pseudo-elements. */
 .snap-tl { position: relative; padding-left: 22px; }

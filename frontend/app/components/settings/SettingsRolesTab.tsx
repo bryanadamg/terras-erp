@@ -17,7 +17,7 @@ import { API_BASE } from '../shared/apiBase';
 import {
     MasterDetail, ListRow, DetailSection, Callout, CoverageStrip, CoveragePills,
     sectionCoverage, isAdminPerms, permissionOverlap, relativeTime,
-} from './accessParts';
+} from './settingsParts';
 
 const hasScope = (r: RoleLike) =>
     !!(r.allowed_work_center_types?.length || r.allowed_categories?.length || r.allowed_locations?.length);

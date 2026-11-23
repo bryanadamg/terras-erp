@@ -12,7 +12,7 @@ import {
     settingsActions, settingsHint, SETTINGS_FIELD_GAP,
 } from './settingsStyles';
 import SettingsPanel from './SettingsPanel';
-import { MasterDetail, ListRow, DetailSection, Flag, StatusDot, relativeTime } from './accessParts';
+import { MasterDetail, ListRow, DetailSection, Flag, StatusDot, relativeTime } from './settingsParts';
 import { useRememberedTab } from '../../hooks/useRememberedTab';
 import ModalWrapper from '../shared/ModalWrapper';
 import { API_BASE } from '../shared/apiBase';
@@ -61,7 +61,7 @@ function SummaryCard({ icon, title, headline, sub, onClick }: {
     icon: string; title: string; headline: React.ReactNode; sub: React.ReactNode; onClick: () => void;
 }) {
     return (
-        <button type="button" onClick={onClick} className="access-list-row" style={{
+        <button type="button" onClick={onClick} className="settings-list-row" style={{
             textAlign: 'left', border: '1px solid #c8c4b6', background: '#faf9f4', padding: '10px 12px', cursor: 'pointer',
             display: 'flex', flexDirection: 'column', gap: 5, fontFamily: xpFont, fontSize: 11, color: '#333',
         }}>

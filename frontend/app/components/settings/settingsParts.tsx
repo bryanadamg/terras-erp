@@ -6,10 +6,10 @@ import { groupPermissionsBySection } from '../shared/permissionMatrix';
 import { PermissionOption } from './PermissionsPicker';
 
 /**
- * Building blocks for the Access Control list/detail screens. The tab used to
- * stack a roles table on a users table, with role detail expanding inline and
- * shoving the users off-screen; a narrow list beside a detail pane keeps both
- * the "who" and the "what can they do" on screen without the page jumping.
+ * Building blocks for the Settings list/detail screens (Access Control's users
+ * and roles, Database & Backups' section navigator). Both tabs used to stack
+ * full-width panels in one long scroll; a narrow list beside a detail pane keeps
+ * the choice and its detail on screen together without the page jumping.
  */
 
 export const isAdminPerms = (perms: { code: string }[]) => perms.some(p => p.code === 'admin.access');
@@ -85,7 +85,7 @@ export function ListRow({ selected, dim = false, onClick, children }: {
             aria-pressed={selected}
             onClick={onClick}
             onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
-            className={selected ? undefined : 'access-list-row'}
+            className={selected ? undefined : 'settings-list-row'}
             style={{
                 display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', cursor: 'pointer',
                 borderBottom: '1px solid #ebe8dd', fontFamily: xpFont, fontSize: 11,

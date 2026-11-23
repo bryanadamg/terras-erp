@@ -19,7 +19,7 @@ import { API_BASE } from '../shared/apiBase';
 import {
     MasterDetail, ListRow, DetailSection, Callout, CoveragePills, Flag,
     sectionCoverage, isAdminPerms, relativeTime, effectivePermissionList,
-} from './accessParts';
+} from './settingsParts';
 
 type StatusFilter = 'all' | 'active' | 'inactive' | 'attention';
 
