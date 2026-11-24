@@ -16,6 +16,7 @@ import { FieldLabel } from '@bryanadamg/terras-ui/components/Field';
 import { field as xpInputBase, BTN_TONES } from '@bryanadamg/terras-ui/styles';
 import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
 import { SearchField, ToolbarButton, pageFillStyle } from '../shared/shellTheme';
+import ExportExcelButton, { fetchAllRows } from '../shared/ExportExcelButton';
 import { bevel as sharedXpBevel, toolbar as sharedXpToolbar } from '@bryanadamg/terras-ui/styles';
 import TreeSelect, { buildCategoryTree, buildLocationPickerTree } from '../shared/TreeSelect';
 import { Tabs, TabDef } from '../shared/Tabs';
@@ -1124,6 +1125,25 @@ export default function InventoryView({
               <div style={{ marginLeft: 'auto', fontFamily: xpFont, fontSize: '10px', color: '#555555' }}>
                 {filteredItems.length} item{filteredItems.length !== 1 ? 's' : ''} on page
               </div>
+              {/* Every item under the current search/category, not just this page. */}
+              <ExportExcelButton grant="item.export" filename="items" columns={[
+                  { label: 'Item Code', value: (i: any) => i.code },
+                  { label: 'Item Name', value: (i: any) => i.name },
+                  { label: 'Category', value: (i: any) => (i.category_path?.length ? i.category_path.join(' / ') : i.category) },
+                  { label: 'UOM', value: (i: any) => i.uom },
+                  { label: 'Item Type', value: (i: any) => i.variant_type },
+                  { label: 'Weight', value: (i: any) => i.weight_per_unit },
+                  { label: 'Weight Unit', value: (i: any) => i.weight_unit },
+                  { label: 'Source Sample', value: (i: any) => i.source_sample_code },
+                  { label: 'Source Colour', value: (i: any) => i.source_color_name },
+              ]} fetchRows={async () => {
+                  const all = await fetchAllRows(authFetch, `${API_BASE}/items`, {
+                      search: itemSearch, category_id: categoryL3 || categoryL2 || categoryL1,
+                  });
+                  return forcedCategory
+                      ? all.filter((i: any) => (i.category_path?.length ? i.category_path.includes(forcedCategory) : i.category === forcedCategory))
+                      : all;
+              }} />
               {(canManage || canImport) && (
                 <div style={{ display: 'flex', gap: 4 }}>
                   {canImport && (

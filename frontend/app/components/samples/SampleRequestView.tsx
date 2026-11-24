@@ -18,6 +18,7 @@ import { rowStateBg, expandedRowFrame } from '@bryanadamg/terras-ui/components/T
 import { field as xpInputBase, BTN_TONES } from '@bryanadamg/terras-ui/styles';
 import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
 import { ShellWindow, SearchField, ToolbarButton } from '../shared/shellTheme';
+import ExportExcelButton, { fetchAllRows } from '../shared/ExportExcelButton';
 import { toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
 import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
 import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
@@ -1139,6 +1140,29 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                            >{unreadCount} unread{unreadOnly ? ' ×' : ''}</span></>
                        )}
                    </ToolbarCount>
+                   {/* Every request under the current filters, not just this page. */}
+                   <ExportExcelButton grant="sample_request.export" filename="sample-requests"
+                       fetchRows={() => fetchAllRows(authFetch, `${API_BASE}/samples`, {
+                           search: searchQuery,
+                           status: statusFilter !== 'ALL' ? statusFilter : '',
+                           category_value_id: categoryFilter !== 'ALL' ? categoryFilter : '',
+                           created_from: createdFrom, created_to: createdTo,
+                           unread: unreadOnly ? 'true' : '',
+                       })}
+                       columns={[
+                           { label: 'Request Code', value: (s: any) => s.code },
+                           { label: 'Request Date', value: (s: any) => s.request_date },
+                           { label: 'Category', value: (s: any) => s.category },
+                           { label: 'Customer', value: (s: any) => (s.customer_id ? getCustomerName(s.customer_id) : null) },
+                           { label: 'Article', value: (s: any) => s.customer_article_code },
+                           { label: 'Project', value: (s: any) => s.project },
+                           { label: 'Type', value: (s: any) => s.variant_type },
+                           { label: 'Width', value: (s: any) => s.width },
+                           { label: 'Colors', value: (s: any) => (s.colors || []).map((c: any) => `${c.name}${c.is_repeat ? ' (R)' : ''}`).join(', ') },
+                           { label: 'Status', value: (s: any) => s.status },
+                           { label: 'Est. Completion', value: (s: any) => s.estimated_completion_date },
+                           { label: 'Notes', value: (s: any) => s.notes },
+                       ]} />
                    {canManage && (
                        <ToolbarButton tone="create" icon="bi-plus-lg" onClick={openCreateModal}>
                            {t('create')}

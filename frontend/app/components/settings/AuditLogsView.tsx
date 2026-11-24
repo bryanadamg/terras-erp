@@ -3,6 +3,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useUser } from '../../context/UserContext';
 import { ShellWindow } from '../shared/shellTheme';
+import ExportExcelButton, { fetchAllRows, xlsDateTime } from '../shared/ExportExcelButton';
 import { toolbar as sharedXpToolbar } from '@bryanadamg/terras-ui/styles';
 import { lvTh, lvRow, LV_XP_FONT, LV_MODERN_FONT, lvThead, ResizableTable } from '../shared/listViewTheme';
 import { StatusChip, xpFont, xpBtn, TableSkeleton, useTableSkeletonMetrics, CHIP_RADIUS, XP_BTN } from '../shared/xpTheme';
@@ -141,6 +142,18 @@ export default function AuditLogsView({ auditLogs, currentPage, totalItems, page
                   <span style={{ marginLeft: 'auto', fontFamily: xpFont, fontSize: '11px', color: '#444' }}>
                       <b>{totalItems}</b> total entries · click a row to expand diff
                   </span>
+                  {/* ponytail: the whole trail under the entity filter in one request; add a
+                      date range here if the log grows past what one browser POST should carry. */}
+                  <ExportExcelButton grant="audit_log.export" filename="audit-log" disabled={!totalItems}
+                      fetchRows={() => fetchAllRows(authFetch, `${API_BASE}/audit-logs`, { entity_type: filterType })}
+                      columns={[
+                          { label: 'Timestamp', value: (l: any) => xlsDateTime(l.timestamp) },
+                          { label: 'User', value: (l: any) => userNameById[l.user_id] || (l.user_id ? l.user_id : 'System') },
+                          { label: 'Action', value: (l: any) => l.action },
+                          { label: 'Entity', value: (l: any) => formatEntityType(l.entity_type) },
+                          { label: 'Entity ID', value: (l: any) => l.entity_id },
+                          { label: 'Details', value: (l: any) => l.details },
+                      ]} />
               </div>
           )}
 
