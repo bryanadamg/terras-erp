@@ -742,6 +742,48 @@ async def resolve_root_mos(db: AsyncSession, mo_ids: list[str]) -> dict[str, lis
     }
 
 
+@router.get("/work-orders/export")
+async def export_work_orders(
+    status: str = "",
+    work_center_id: str = "",
+    group_id: str = "",
+    center_type: str = "",
+    search: str = "",
+    component_item_id: str = "",
+    unprinted: bool = False,
+    tz: str = "Asia/Jakarta",
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(require_permission("work_order.export")),
+):
+    """The Work Orders list as an .xlsx — every step matching the screen's filters,
+    not just the page. Reuses the list endpoint uncapped so the file can never
+    disagree with the grid."""
+    from app.services.xlsx_service import xlsx_response, zone_or_400, local_cell
+    zone = zone_or_400(tz)
+    data = await list_work_orders_flat(
+        status=status, work_center_id=work_center_id, group_id=group_id, center_type=center_type,
+        search=search, component_item_id=component_item_id, unprinted=unprinted, wo_id="", order_by="",
+        window=PageWindow(page=1, size=0, offset=0, limit=None), db=db, current_user=current_user,
+    )
+    rows = [[
+        wo.code, wo.name, wo.mo_code, ", ".join(wo.root_mo_codes) or None, wo.item_name,
+        wo.combo_label, " ".join(x for x in (wo.color_code, wo.color_name) if x) or wo.color_label or wo.labdip_variant_code,
+        wo.size_label, wo.work_center_name, wo.work_center_type, wo.status,
+        wo.qty, wo.qty_completed_total, wo.qty_rejected_total,
+        local_cell(wo.target_start_date, zone), local_cell(wo.target_end_date, zone),
+        local_cell(wo.actual_start_date, zone), local_cell(wo.actual_end_date, zone),
+        local_cell(wo.created_at, zone), wo.notes,
+    ] for wo in data["items"]]
+    return xlsx_response(
+        "Work Orders",
+        ["WO Code", "Step", "MO", "Root MO", "Item", "Combo", "Color", "Size", "Work Center", "Type",
+         "Status", "Qty", "Completed", "Rejected", "Target Start", "Target End",
+         "Actual Start", "Actual End", "Created", "Notes"],
+        rows,
+        "work-orders",
+    )
+
+
 @router.get("/work-orders", response_model=WorkOrderFlatPageResponse)
 async def list_work_orders_flat(
     status: str = Query(""),

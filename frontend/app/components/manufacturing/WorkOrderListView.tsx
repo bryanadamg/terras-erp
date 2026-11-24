@@ -30,6 +30,8 @@ import VariantChips from '../shared/VariantChips';
 import { Tabs, TabDef } from '../shared/Tabs';
 import { SearchField, ToolbarButton, pageFillStyle, viewShellStyle } from '../shared/shellTheme';
 import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
+import { API_BASE } from '../shared/apiBase';
+import { saveResponse } from '../shared/download';
 
 const STATUSES = ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
 
@@ -166,7 +168,7 @@ export default function WorkOrderListView({
     const router = useRouter();
     // The weighing tolerance: a step weighed out this far under its target counts as
     // met — same rule the server uses to auto-complete the WO.
-    const { companyProfile } = useData();
+    const { companyProfile, authFetch } = useData();
     const metFrac = 1 - Number(companyProfile?.measurement_tolerance_pct ?? 2) / 100;
     // Dense: the completion log shares its row with the other detail panes.
     const subTh = lvSubTh();
@@ -175,7 +177,8 @@ export default function WorkOrderListView({
     const canManage = hasAnyPermission('work_order.edit', 'work_order.delete', 'work_order.print_card', 'work_order.stage');
     const canPrintCard = hasPermission('work_order.print_card');
     const canPrintLabel = hasPermission('work_order.print_label');
-    const { formatCustom: tzFmt } = useTimezone();
+    const canExport = hasPermission('work_order.export');
+    const { formatCustom: tzFmt, timezone } = useTimezone();
     const fmtDate = (v: any) => {
         if (!v) return '—';
         return tzFmt(v, { day: '2-digit', month: 'short', year: 'numeric' }, 'id-ID');
@@ -186,6 +189,23 @@ export default function WorkOrderListView({
     };
 
     const { showToast } = useToast();
+    // Excel: every step matching the screen's filters, not just this page.
+    const [exporting, setExporting] = useState(false);
+    const handleExport = async () => {
+        setExporting(true);
+        try {
+            const q = new URLSearchParams({ tz: timezone });
+            const filters: Record<string, string> = {
+                status: filterStatus, group_id: filterGroup, work_center_id: filterWC, search: woSearch.trim(),
+                center_type: activeTab === 'ALL' ? '' : activeTab, component_item_id: filterComponentId,
+                unprinted: filterUnprinted ? 'true' : '',
+            };
+            Object.entries(filters).forEach(([k, v]) => { if (v) q.set(k, v); });
+            const res = await authFetch(`${API_BASE}/work-orders/export?${q}`);
+            if (!res.ok) { showToast('Export failed', 'danger'); return; }
+            await saveResponse(res, 'work-orders.xlsx');
+        } finally { setExporting(false); }
+    };
     // Floating "more actions" menu (Print / Edit / Delete)
     const { openId: openMenuId, pos: menuPos, toggle: toggleMenu, close: closeMenu } = useFloatingMenu();
     // Floating status menu — lists WO lifecycle statuses + staging state/action together
@@ -747,6 +767,11 @@ export default function WorkOrderListView({
                             {canPrintCard && sel.count > 0 && (
                                 <ToolbarButton tone="neutral" icon="bi-printer" onClick={() => setBulkPrintOpen(true)}>
                                     Print Selected ({sel.count})
+                                </ToolbarButton>
+                            )}
+                            {canExport && (
+                                <ToolbarButton tone="neutral" icon="bi-file-earmark-excel" disabled={exporting || !total} onClick={handleExport}>
+                                    {exporting ? 'Exporting…' : 'Export Excel'}
                                 </ToolbarButton>
                             )}
                             <ToolbarCount>{filtered.length} of {flatWOs.length} steps</ToolbarCount>

@@ -507,6 +507,7 @@ def seed_rbac(db):
             ("work_order.print_card", "Print Kartu Kerja"),
             ("work_order.print_label", "Print Work Order Labels"),
             ("work_order.view", "View Work Orders"),
+            ("work_order.export", "Export Work Orders Excel"),
             ("work_order.stage", "Stage Work Order Materials"),
             # Weaving Monitor
             ("weaving_monitor.start", "Start Weaving Runs"),
@@ -605,7 +606,7 @@ def seed_rbac(db):
                 "manufacturing_order.create", "manufacturing_order.edit", "manufacturing_order.delete",
                 "manufacturing_order.print", "manufacturing_order.view", "manufacturing_order.close",
                 "work_order.create", "work_order.log", "work_order.edit", "work_order.delete",
-                "work_order.print_card", "work_order.print_label", "work_order.view", "work_order.stage",
+                "work_order.print_card", "work_order.print_label", "work_order.view", "work_order.stage", "work_order.export",
                 "weaving_monitor.start", "weaving_monitor.stop", "weaving_monitor.export", "weaving_monitor.view",
                 "dyeing_monitor.export", "dyeing_monitor.view",
                 "calendar.edit", "calendar.view", "beam.unmount", "beam.view",

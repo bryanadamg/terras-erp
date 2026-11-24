@@ -155,7 +155,7 @@ export const RESOURCE_ACTIONS: Record<string, PermissionMatrixAction[]> = {
     // CREATE gates both "+ Add Work Order" and "Plan Beaming" (WorkOrderPanel) —
     // it was missing from this row, so work_order.create existed in the backend
     // taxonomy with no checkbox anywhere that could grant it.
-    work_order: [CREATE, A('log', 'Log'), EDIT, DELETE, A('print_card', 'Print Kartu Kerja'), VIEW, A('print_label', 'Print Label'), A('stage', 'Stage')],
+    work_order: [CREATE, A('log', 'Log'), EDIT, DELETE, A('print_card', 'Print Kartu Kerja'), VIEW, A('print_label', 'Print Label'), A('stage', 'Stage'), A('export', 'Export Excel')],
     weaving_monitor: [A('start', 'Start'), A('stop', 'Stop'), A('export', 'Export Excel'), VIEW],
     // No lifecycle verbs: a dye batch is started and completed from the Dyeing
     // Orders tab under work_order.log. export takes the grid off as Excel.
