@@ -427,7 +427,16 @@ async def get_sales_orders(
         count_query = count_query.filter(cond)
     if search:
         like = f"%{search}%"
-        cond = or_(SalesOrder.po_number.ilike(like), SalesOrder.customer_po_ref.ilike(like))
+        has_item = (
+            select(SalesOrderLine.id)
+            .join(ItemModel, ItemModel.id == SalesOrderLine.item_id)
+            .where(
+                SalesOrderLine.sales_order_id == SalesOrder.id,
+                or_(ItemModel.code.ilike(like), ItemModel.name.ilike(like)),
+            )
+            .exists()
+        )
+        cond = or_(SalesOrder.po_number.ilike(like), SalesOrder.customer_po_ref.ilike(like), has_item)
         query = query.filter(cond)
         count_query = count_query.filter(cond)
     if customer:
