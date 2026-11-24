@@ -17,7 +17,7 @@ from app.models.size import Size
 from sqlalchemy.orm import aliased
 from app.models.color import Color
 from app.models.production_run import ProductionRun, PRBomEntry
-from app.models.manufacturing import ManufacturingOrder
+from app.models.manufacturing import ManufacturingOrder, MODependency
 from app.models.work_order import WorkOrder
 from app.models.batch import Batch
 from app.models.location import Location
@@ -403,6 +403,35 @@ _SO_SORT_MAP = {
 }
 
 
+def _so_ids_by_mo_code(like: str):
+    """SO ids whose `mo_progress` shows a code matching `like`.
+
+    The same set `so_fulfilment_service.mo_progress_map` draws: root MOs
+    (`_root_mo_filter`) on the order, their work-order steps, and every component
+    MO reached down `mo_dependencies` at any depth. Walked upward here — from the
+    matching MOs to the roots that depend on them — so one recursive CTE answers
+    it; UNION (not UNION ALL) makes a cyclic peg terminate.
+    """
+    hits = select(ManufacturingOrder.id.label("id")).where(ManufacturingOrder.code.ilike(like))
+    up = hits.cte("mo_code_hits", recursive=True)
+    up = up.union(
+        select(MODependency.dependent_mo_id).join(up, MODependency.required_mo_id == up.c.id)
+    )
+    wo_hit = (
+        select(WorkOrder.id)
+        .where(
+            WorkOrder.manufacturing_order_id == ManufacturingOrder.id,
+            WorkOrder.status != "CANCELLED",  # `_mo_progress_node` drops them from steps
+            WorkOrder.code.ilike(like),
+        )
+        .exists()
+    )
+    return select(ManufacturingOrder.sales_order_id).where(
+        *so_fulfilment_service._root_mo_filter(),
+        or_(ManufacturingOrder.id.in_(select(up.c.id)), wo_hit),
+    )
+
+
 @router.get("", response_model=PaginatedSalesOrderResponse)
 async def get_sales_orders(
     status: Optional[str] = None,
@@ -436,7 +465,24 @@ async def get_sales_orders(
             )
             .exists()
         )
-        cond = or_(SalesOrder.po_number.ilike(like), SalesOrder.customer_po_ref.ilike(like), has_item)
+        has_line = (
+            select(SalesOrderLine.id)
+            .outerjoin(Color, Color.id == SalesOrderLine.color_id)
+            .where(
+                SalesOrderLine.sales_order_id == SalesOrder.id,
+                or_(Color.code.ilike(like), SalesOrderLine.labdip_variant_code.ilike(like)),
+            )
+            .exists()
+        )
+        has_pr = (
+            select(ProductionRun.id)
+            .where(ProductionRun.sales_order_id == SalesOrder.id, ProductionRun.code.ilike(like))
+            .exists()
+        )
+        cond = or_(
+            SalesOrder.po_number.ilike(like), SalesOrder.customer_po_ref.ilike(like),
+            has_item, has_line, has_pr, SalesOrder.id.in_(_so_ids_by_mo_code(like)),
+        )
         query = query.filter(cond)
         count_query = count_query.filter(cond)
     if customer:

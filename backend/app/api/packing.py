@@ -635,6 +635,14 @@ async def list_packing_orders(
             SalesOrder.po_number.ilike(like),
             SalesOrder.customer_name.ilike(like),
             SalesOrder.customer_po_ref.ilike(like),
+            # Its cartons, and the bulk lots packed into them — a packer holding
+            # either finds the order it belongs to.
+            PackingOrder.id.in_(select(Batch.packing_order_id).where(Batch.batch_number.ilike(like))),
+            PackingOrder.id.in_(
+                select(PackingCompletion.packing_order_id)
+                .join(Batch, Batch.id == PackingCompletion.source_batch_id)
+                .where(Batch.batch_number.ilike(like))
+            ),
         )
         def _joined(q):
             return (q.outerjoin(Item, PackingOrder.item_id == Item.id)

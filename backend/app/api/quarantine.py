@@ -515,14 +515,16 @@ async def list_quarantine_stock(
 
     if search:
         needle = search.strip().lower()
+
+        def _hit(*vals) -> bool:
+            return any(needle in (v or "").lower() for v in vals)
+
         items = [
             g for g in items
-            if needle in (g.mo_code or "").lower()
-            or needle in (g.sales_order_code or "").lower()
-            or needle in (g.production_run_code or "").lower()
-            or needle in (g.item_code or "").lower()
-            or needle in (g.item_name or "").lower()
-            or any(needle in (l.batch_number or "").lower() for l in g.lots)
+            if _hit(g.mo_code, g.sales_order_code, g.production_run_code, g.item_code, g.item_name,
+                    g.color_code, g.labdip_variant_code)
+            or any(_hit(l.batch_number, l.item_code, l.color_code, l.labdip_variant_code, l.wo_code,
+                        l.claimed_by_order_code) for l in g.lots)
         ]
     if status:
         wanted = status.strip().upper()
