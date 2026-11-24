@@ -31,7 +31,7 @@ import { LotChips } from '../shared/LotChips';
 import { WorkingDaysSection, HolidayCalendarSection, useNationalHolidays } from '../shared/productionCalendar';
 import LotLabelPrintModal from './LotLabelPrintModal';
 import BeamPrepModal, { BeamPrep, BeamPrepBeam } from './BeamPrepModal';
-import TuningNameModal from './machineMonitor/TuningNameModal';
+import TunerPicker, { useOperatorNames } from './machineMonitor/TunerPicker';
 
 // Measurement accents from the shared five-family palette — see DESIGN.md's one
 // semantic layer rule; the weaving grid resolves the same three.
@@ -417,10 +417,10 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
     const stepLabel = (s: string | null): string =>
         s === 'DRAW_IN' ? t('draw_in') : s === 'TUNING' ? t('tuning') : s === 'STAGED' ? t('staged') : t('idle');
 
-    // Tuning asks who is tuning first; the name feeds the Loom Tuning report.
-    const [askTuner, setAskTuner] = useState(false);
+    // Who is tuning, picked beside the Tuning button — feeds the Loom Tuning report.
+    const [tuner, setTuner] = useState('');
+    const operatorNames = useOperatorNames(isOpen && canStart);
     const setPrep = async (step: string | null, tunerName?: string) => {
-        if (step === 'TUNING' && !tunerName) { setAskTuner(true); return; }
         setPrepBusy(true);
         try {
             const res = await authFetch(`${apiBase}/work-centers/${wcId}/loom-prep`, {
@@ -915,13 +915,17 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                     {loom?.prep_status_by ? ` · ${loom.prep_status_by}` : ''}
                                     {loom?.prep_status_at ? ` · ${fmtDate(loom.prep_status_at)}` : ''}
                                 </span>
+                                {canStart && nextLoomStep === 'TUNING' && (
+                                    <TunerPicker names={operatorNames} value={tuner} onChange={setTuner} style={{ width: 200 }} />
+                                )}
                                 {canStart && nextLoomStep && (
                                     <XPActionButton
                                         tone={nextLoomStep === 'TUNING' ? 'warning' : 'primary'}
                                         icon={nextLoomStep === 'TUNING' ? 'bi-sliders' : 'bi-arrows-collapse-vertical'}
                                         label={stepLabel(nextLoomStep)}
-                                        disabled={prepBusy}
-                                        onClick={() => setPrep(nextLoomStep)}
+                                        disabled={prepBusy || (nextLoomStep === 'TUNING' && !tuner)}
+                                        title={nextLoomStep === 'TUNING' && !tuner ? t('tuning_who') : undefined}
+                                        onClick={() => setPrep(nextLoomStep, nextLoomStep === 'TUNING' ? tuner : undefined)}
                                     />
                                 )}
                                 {canStart && loomStatus !== 'STAGED' && (
@@ -1471,10 +1475,6 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
 
             </div>
         </ModalWrapper>
-        {askTuner && (
-            <TuningNameModal loomCode={workCenter?.code || ''} onClose={() => setAskTuner(false)}
-                onConfirm={name => setPrep('TUNING', name)} />
-        )}
         {prepFor && (
             <BeamPrepModal
                 beams={[prepFor]}
