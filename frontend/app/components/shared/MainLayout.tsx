@@ -8,7 +8,7 @@ import { useData } from '../../context/DataContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { useRouter, usePathname } from 'next/navigation';
 import { useTheme } from '../../context/ThemeContext';
-import { useIsMobile } from '../../hooks/useIsMobile';
+import { useIsMobile } from '@bryanadamg/terras-ui/components/MobileShell';
 import AppLoadBar from './AppLoadBar';
 import { BootSidebar, BootHeader } from './BootShell';
 import { ListPageSkeleton } from './pageSkeletons';

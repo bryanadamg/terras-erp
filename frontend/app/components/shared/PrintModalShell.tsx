@@ -1,7 +1,7 @@
 'use client';
 import React, { useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { useIsMobile } from '../../hooks/useIsMobile';
+import { useIsMobile } from '@bryanadamg/terras-ui/components/MobileShell';
 import { useUser } from '../../context/UserContext';
 import { MODAL_Z, MODAL_REPOSITION_EVENT, WindowCloseButton } from './ModalWrapper';
 import { toLayoutPx } from '@bryanadamg/terras-ui/scale';

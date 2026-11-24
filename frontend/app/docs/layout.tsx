@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { docsSidebar, getPageBySlug } from './docsContent';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
-import { useIsMobile } from '../hooks/useIsMobile';
+import { useIsMobile } from '@bryanadamg/terras-ui/components/MobileShell';
 import { modernFont } from '../components/shared/xpTheme';
 
 // Same public, pre-auth identity as the login screen (docs is reachable without

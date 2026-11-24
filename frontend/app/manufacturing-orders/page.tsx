@@ -6,7 +6,7 @@ import { useData } from '../context/DataContext';
 import { useToast } from '../components/shared/Toast';
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useConfirm } from '../context/ConfirmContext';
-import { useIsMobile } from '../hooks/useIsMobile';
+import { useIsMobile } from '@bryanadamg/terras-ui/components/MobileShell';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { API_BASE } from '../components/shared/apiBase';
 
