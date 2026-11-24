@@ -6,6 +6,7 @@ import { useTimezone } from '../../context/TimezoneContext';
 import { isoDate } from '../shared/format';
 import { useToast } from '../shared/Toast';
 import { ShellWindow, ToolbarButton } from '../shared/shellTheme';
+import ExportExcelButton, { ExportColumn, xlsDateTime } from '../shared/ExportExcelButton';
 import { toolbar as sharedXpToolbar } from '@bryanadamg/terras-ui/styles';
 import { API_BASE } from '../shared/apiBase';
 import { lvTh, lvThead, lvRow, lvBtn, lvInput, lvLabel, lvSep, LvSectionCaption, LV_XP_FONT, LV_MODERN_FONT } from '../shared/listViewTheme';
@@ -117,23 +118,22 @@ export default function LabDipReportView() {
 
     const applyPreset = (p: Preset) => { const [f, t] = presetRange(p); setDateFrom(f); setDateTo(t); };
 
-    const exportCsv = () => {
-        const head = ['Request', 'Book', 'Customer', 'Variant', 'Item', 'Article', 'Season', 'Dipped', 'Rejected', 'Approved', 'Approved Color', 'Current Status', 'Last Activity'];
-        const esc = (v: any) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-        const body = sorted.map((r: any) => [
-            r.request_code, KIND_LABEL[r.kind] || r.kind, r.customer_name || '', r.variant_code,
-            r.item_code || '', r.customer_article_code || '', r.season || '',
-            r.dips, r.rejects, r.approvals, r.approved_color_code || '',
-            r.status, r.last_event_at ? tzDateTime(r.last_event_at) : '',
-        ].map(esc).join(','));
-        const csv = [head.map(esc).join(','), ...body].join('\r\n');
-        const url = URL.createObjectURL(new Blob([`﻿${csv}`], { type: 'text/csv;charset=utf-8;' }));
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `labdip-report_${dateFrom || 'all'}_${dateTo || 'all'}.csv`;
-        a.click();
-        URL.revokeObjectURL(url);
-    };
+    // Same columns the CSV had, now as Excel under the lab dip export grant.
+    const exportColumns: ExportColumn[] = [
+        { label: 'Request', value: r => r.request_code },
+        { label: 'Book', value: r => KIND_LABEL[r.kind] || r.kind },
+        { label: 'Customer', value: r => r.customer_name },
+        { label: 'Variant', value: r => r.variant_code },
+        { label: 'Item', value: r => r.item_code },
+        { label: 'Article', value: r => r.customer_article_code },
+        { label: 'Season', value: r => r.season },
+        { label: 'Dipped', value: r => r.dips },
+        { label: 'Rejected', value: r => r.rejects },
+        { label: 'Approved', value: r => r.approvals },
+        { label: 'Approved Color', value: r => r.approved_color_code },
+        { label: 'Current Status', value: r => r.status },
+        { label: 'Last Activity', value: r => xlsDateTime(r.last_event_at) },
+    ];
 
     // ── KPI tiles ────────────────────────────────────────────────────────────
     // Tones come from the shared five-family palette (familyTint/familyColor) — same
@@ -224,7 +224,8 @@ export default function LabDipReportView() {
                     <b>{rows.length}</b> variant rows
                 </span>
                 <ToolbarButton tone="neutral" icon="bi-arrow-clockwise" title="Reload" onClick={load}>Refresh</ToolbarButton>
-                <ToolbarButton tone="neutral" icon="bi-download" disabled={!rows.length} title="Download the variant table as CSV" onClick={exportCsv}>Export CSV</ToolbarButton>
+                <ExportExcelButton grant="lab_dip_request.export" filename={`labdip-report_${dateFrom || 'all'}_${dateTo || 'all'}`}
+                    sheet="Lab Dip Report" rows={sorted} disabled={!rows.length} columns={exportColumns} />
             </div>
         </div>
     );

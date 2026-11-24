@@ -10,3 +10,9 @@ def test_work_order_export_needs_grant_and_returns_xlsx(user_factory, client, au
     assert r.status_code == 200, r.text
     ws = load_workbook(io.BytesIO(r.content)).active
     assert ws["A1"].value == "WO Code" and ws["K1"].value == "Status"
+
+
+def test_work_queue_serves_the_whole_queue_for_export(client, auth_headers):
+    r = client.get("/api/work-queue", params={"page": 1, "size": 0}, headers=auth_headers)
+    assert r.status_code == 200, r.text
+    assert len(r.json()["items"]) == r.json()["total"]

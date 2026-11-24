@@ -32,9 +32,9 @@ async def get_work_queue(
     unreleased_only: bool = Query(False),
     # Paging is in-memory here: the queue is a computed, priority-ordered list with
     # an allocation walk over the WHOLE set (see work_queue_service), so it cannot be
-    # sliced in SQL. `allow_uncapped=False` because every row carries its full
-    # material breakdown — there is no export path that could justify serving it whole.
-    window: PageWindow = Depends(PageParams(default_size=50, max_size=200, allow_uncapped=False)),
+    # sliced in SQL. Uncapped (size=0) is the Excel export: the whole set is built
+    # for every request anyway, so serving it whole only costs the payload.
+    window: PageWindow = Depends(PageParams(default_size=50, max_size=200)),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_any_permission("work_order.view", "manufacturing_order.view")),
 ):

@@ -6,6 +6,7 @@ import { isoDate } from '../shared/format';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useToast } from '../shared/Toast';
 import { ShellWindow, ToolbarButton } from '../shared/shellTheme';
+import ExportExcelButton, { ExportColumn, xlsDateTime } from '../shared/ExportExcelButton';
 import { toolbar as sharedXpToolbar } from '@bryanadamg/terras-ui/styles';
 import { API_BASE } from '../shared/apiBase';
 import { lvTh, lvThead, lvRow, lvBtn, lvInput, lvLabel, lvSep, LvSectionCaption, LV_XP_FONT, LV_MODERN_FONT } from '../shared/listViewTheme';
@@ -120,22 +121,21 @@ export default function SampleReportView() {
 
     const applyPreset = (p: Preset) => { const [f, t] = presetRange(p); setDateFrom(f); setDateTo(t); };
 
-    const exportCsv = () => {
-        const head = ['Sample', 'Customer', 'Article', 'Category', 'Variant', 'Repeat', 'Processes', 'Sent', 'Rejected', 'Approved', 'Current Status', 'Last Activity'];
-        const esc = (v: any) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-        const body = sorted.map((r: any) => [
-            r.sample_code, r.customer_name || '', r.customer_article_code || '', r.category || '',
-            r.variant_name, r.is_repeat ? 'Yes' : 'No', r.processes, r.sent, r.rejects, r.approvals,
-            r.status, r.last_event_at ? tzDateTime(r.last_event_at) : '',
-        ].map(esc).join(','));
-        const csv = [head.map(esc).join(','), ...body].join('\r\n');
-        const url = URL.createObjectURL(new Blob([`﻿${csv}`], { type: 'text/csv;charset=utf-8;' }));
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `sample-report_${dateFrom || 'all'}_${dateTo || 'all'}.csv`;
-        a.click();
-        URL.revokeObjectURL(url);
-    };
+    // Same columns the CSV had, now as Excel under the sample export grant.
+    const exportColumns: ExportColumn[] = [
+        { label: 'Sample', value: r => r.sample_code },
+        { label: 'Customer', value: r => r.customer_name },
+        { label: 'Article', value: r => r.customer_article_code },
+        { label: 'Category', value: r => r.category },
+        { label: 'Variant', value: r => r.variant_name },
+        { label: 'Repeat', value: r => (r.is_repeat ? 'Yes' : 'No') },
+        { label: 'Processes', value: r => r.processes },
+        { label: 'Sent', value: r => r.sent },
+        { label: 'Rejected', value: r => r.rejects },
+        { label: 'Approved', value: r => r.approvals },
+        { label: 'Current Status', value: r => r.status },
+        { label: 'Last Activity', value: r => xlsDateTime(r.last_event_at) },
+    ];
 
     // ── KPI tiles ────────────────────────────────────────────────────────────
     // Tones come from the shared five-family palette (familyTint/familyColor) — a
@@ -228,7 +228,8 @@ export default function SampleReportView() {
                     <b>{rows.length}</b> variant rows
                 </span>
                 <ToolbarButton tone="neutral" icon="bi-arrow-clockwise" title="Reload" onClick={load}>Refresh</ToolbarButton>
-                <ToolbarButton tone="neutral" icon="bi-download" disabled={!rows.length} title="Download the variant table as CSV" onClick={exportCsv}>Export CSV</ToolbarButton>
+                <ExportExcelButton grant="sample_request.export" filename={`sample-report_${dateFrom || 'all'}_${dateTo || 'all'}`}
+                    sheet="Sample Report" rows={sorted} disabled={!rows.length} columns={exportColumns} />
             </div>
         </div>
     );

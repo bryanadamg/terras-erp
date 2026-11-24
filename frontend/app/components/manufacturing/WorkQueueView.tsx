@@ -7,6 +7,7 @@ import { useUser } from '../../context/UserContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { usePaginatedFetch } from '../../context/usePaginatedList';
 import { ShellWindow, SearchField } from '../shared/shellTheme';
+import ExportExcelButton from '../shared/ExportExcelButton';
 import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
 import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 import { toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
@@ -248,7 +249,7 @@ export default function WorkQueueView() {
     // panel, the overdue/undated/unreleased tallies) ride back in `meta`.
     const {
         rows, total, meta, loading, page, setPage,
-        searchInput: search, setSearch: onSearch, refetch: fetchQueue,
+        searchInput: search, setSearch: onSearch, refetch: fetchQueue, fetchAll,
     } = usePaginatedFetch<QueueRow>({
         endpoint: `${API_BASE}/work-queue`,
         authFetch,
@@ -313,6 +314,26 @@ export default function WorkQueueView() {
             <ToolbarCount right>
                 {startable} startable · {blocked} blocked · {unreleasedCount} need a work order · {total} shown
             </ToolbarCount>
+            {/* The queue's own grid, so it rides on the work order export grant. */}
+            <ExportExcelButton<QueueRow> grant="work_order.export" filename="work-queue" fetchRows={fetchAll} disabled={!total} columns={[
+                { label: 'Work Order', value: r => r.work_order_code },
+                { label: 'MO', value: r => r.mo_code },
+                { label: 'Item Code', value: r => r.item_code },
+                { label: 'Item Name', value: r => r.item_name },
+                { label: 'Combo', value: r => r.combo_label },
+                { label: 'Size', value: r => r.size_label },
+                { label: 'Color', value: r => [r.color_code, r.color_name].filter(Boolean).join(' ') || r.color_label || r.labdip_variant_code },
+                { label: 'Work Centre', value: r => r.work_center_name },
+                { label: 'Qty', value: r => r.qty },
+                { label: 'Gating Material', value: r => r.substrate_item_code },
+                { label: 'Need', value: r => r.substrate_required_qty },
+                { label: 'Have', value: r => r.substrate_available_qty },
+                { label: 'Unit', value: r => r.substrate_uom },
+                { label: 'Scheduled', value: r => r.priority_date || r.target_start_date },
+                { label: 'Overdue', value: r => (r.is_overdue ? 'Yes' : null) },
+                { label: 'Verdict', value: r => r.verdict },
+                { label: 'Detail', value: r => r.verdict_detail },
+            ]} />
             <i className="bi bi-info-circle" style={{ color: '#666', fontSize: 12 }}
                 title="Orders ready to start at each work centre. Material is allocated in scheduled order, so two orders never claim the same stock." />
         </div>
