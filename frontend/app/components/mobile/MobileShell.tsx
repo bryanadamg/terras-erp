@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter, usePathname } from 'next/navigation';
+import { MobileShell as Shell } from '@bryanadamg/terras-ui/components/MobileShell';
 import { useUser } from '../../context/UserContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { xpFont as XP_FONT, modernFont, BUTTON_RADIUS } from '../shared/xpTheme';
@@ -19,11 +20,6 @@ import LiveFeedIndicator from '../shared/LiveFeedIndicator';
 // This used to be a navy `#1a1a2e -> #3a3a5e` bar over grey tabs, which belonged
 // to no other screen in the app.
 const HEADER_GRAD  = 'var(--xp-title-blue)';   // shared with desktop chrome; dims while a window is open
-const SIDEBAR_BG   = 'var(--terras-sidebar-bg, #f6f8fc)';
-const NAV_COLOR    = 'var(--terras-sidebar-active-color, #10276b)';
-const NAV_RULE     = 'var(--terras-sidebar-item-border, #e3e8f1)';
-const ACTIVE_GRAD  = 'var(--terras-sidebar-section-bg, #1f4fd1)'; // sidebar section band
-
 const TABS = [
     { id: 'home',       label: 'Home',       icon: 'bi-house-fill',    route: '/dashboard'     },
     { id: 'scan',       label: 'Scan',       icon: 'bi-qr-code-scan',  route: '/scanner'       },
@@ -75,9 +71,8 @@ export default function MobileShell({
     const routeKey = !pathname || pathname === '/' ? 'dashboard' : pathname.substring(1).replace(/\//g, '-');
     const pageTitle = routeTitle(routeKey, t);
 
-    return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: 'var(--app-dvh)', background: MOBILE_BG, overflow: 'hidden' }}>
-
+    const header = (
+        <>
             {/* Window bar — same gradient/chrome as the desktop `.classic-header` */}
             <div style={{
                 background: HEADER_GRAD,
@@ -155,51 +150,22 @@ export default function MobileShell({
             </div>
 
             <AppLoadBar />
+        </>
+    );
 
-            {/* Scrollable Content */}
-            <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
-                {children}
-            </div>
-
-            {/* Tab bar — the phone's sidebar, in the sidebar's palette */}
-            <div style={{
-                display: 'flex',
-                background: SIDEBAR_BG,
-                borderTop: `2px solid ${NAV_COLOR}`,
-                flexShrink: 0,
-            }}>
-                {TABS.map((tab, i) => {
-                    const isActive = activeTab === tab.id;
-                    return (
-                        <button
-                            key={tab.id}
-                            onClick={() => router.push(tab.route)}
-                            style={{
-                                flex: 1,
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: 2,
-                                padding: '6px 4px 8px',
-                                minHeight: 54,
-                                border: 'none',
-                                borderRight: i < TABS.length - 1 ? `1px solid ${NAV_RULE}` : 'none',
-                                background: isActive ? ACTIVE_GRAD : 'transparent',
-                                color: isActive ? '#ffffff' : NAV_COLOR,
-                                cursor: 'pointer',
-                                fontFamily: XP_FONT,
-                                fontSize: 10,
-                                fontWeight: isActive ? 'bold' : 'normal',
-                                boxShadow: isActive ? 'inset 0 1px 0 rgba(255,255,255,0.3)' : 'none',
-                            }}
-                        >
-                            <i className={`bi ${tab.icon}`} style={{ fontSize: 20 }} aria-hidden="true" />
-                            {tab.label}
-                        </button>
-                    );
-                })}
-            </div>
-        </div>
+    return (
+        <Shell
+            header={header}
+            style={{ background: MOBILE_BG }}
+            tabs={TABS.map(tab => ({
+                key: tab.id,
+                label: tab.label,
+                icon: <i className={`bi ${tab.icon}`} style={{ fontSize: 20 }} aria-hidden="true" />,
+                active: activeTab === tab.id,
+                onClick: () => router.push(tab.route),
+            }))}
+        >
+            {children}
+        </Shell>
     );
 }

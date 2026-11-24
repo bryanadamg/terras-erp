@@ -492,8 +492,9 @@ export default function PrintDesignerView() {
 
     const customised = isCustomised(docType, printTemplates);
 
-    const paneBg = '#ece9d8';
-    const paneBorder = '1px solid #b0a898';
+    // Side panes take the redesign's warm off-white, not the XP window beige.
+    const paneBg = 'var(--terras-toolbar-bg, #f5f4ef)';
+    const paneBorder = '1px solid var(--terras-table-line, #b0a898)';
 
     // Toolbar and zoom-strip actions come from the shared primitives — this view used
     // to hand-roll both, which is how it ended up with `borderRadius: 0` buttons next
@@ -621,7 +622,7 @@ export default function PrintDesignerView() {
                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                         fontFamily: xpFont, fontSize: 10, fontWeight: 'bold',
                         textTransform: 'uppercase', letterSpacing: '0.4px',
-                        color: '#4a4436', marginBottom: 5,
+                        color: 'var(--terras-win-text-2, #4a4436)', marginBottom: 5,
                     }}>
                         <span>Sections, top to bottom</span>
                         {/* Adds after the selected section, so the menu doubles as "insert here". */}
@@ -638,7 +639,7 @@ export default function PrintDesignerView() {
                             fontFamily: xpFont, fontSize: 11,
                             padding: '3px 4px', marginBottom: 4,
                             background: selection.bandId === null ? ('#0058e6') : 'transparent',
-                            color: selection.bandId === null ? '#fff' : ('#2b2822'),
+                            color: selection.bandId === null ? '#fff' : ('var(--terras-win-text, #2b2822)'),
                             fontWeight: 'bold',
                         }}
                     >
@@ -663,7 +664,7 @@ export default function PrintDesignerView() {
                                     background: selected
                                         ? ('#0058e6')
                                         : (hovered ? ('#d6e6ff') : 'transparent'),
-                                    color: selected ? '#fff' : (hidden ? '#999' : ('#2b2822')),
+                                    color: selected ? '#fff' : (hidden ? '#999' : ('var(--terras-win-text, #2b2822)')),
                                 }}
                             >
                                 <input
@@ -706,8 +707,8 @@ export default function PrintDesignerView() {
                                         style={{
                                             fontSize: 10, lineHeight: 1, padding: '1px 3px', borderRadius: 0,
                                             cursor: i === 0 ? 'default' : 'pointer', opacity: i === 0 ? 0.35 : 1,
-                                            background: 'linear-gradient(to bottom,#fff,#d4d0c8)',
-                                            border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
+                                            background: 'var(--terras-table-bg, #fff)',
+                                            border: '1px solid', borderColor: 'var(--terras-table-line, #c0bdb5)',
                                         }}
                                     >
                                         <i className="bi bi-chevron-up" />
@@ -720,8 +721,8 @@ export default function PrintDesignerView() {
                                             fontSize: 10, lineHeight: 1, padding: '1px 3px', borderRadius: 0,
                                             cursor: i === draft.bands.length - 1 ? 'default' : 'pointer',
                                             opacity: i === draft.bands.length - 1 ? 0.35 : 1,
-                                            background: 'linear-gradient(to bottom,#fff,#d4d0c8)',
-                                            border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
+                                            background: 'var(--terras-table-bg, #fff)',
+                                            border: '1px solid', borderColor: 'var(--terras-table-line, #c0bdb5)',
                                         }}
                                     >
                                         <i className="bi bi-chevron-down" />
@@ -777,7 +778,9 @@ export default function PrintDesignerView() {
                 <div
                     ref={canvasPaneRef}
                     style={{
-                        flex: 1, minWidth: 0, background: '#808080',
+                        // Warm grey behind the paper (the app's win-bg darkened, as globals.css does elsewhere),
+                        // so the white sheet still stands out without the cold XP #808080.
+                        flex: 1, minWidth: 0, background: 'color-mix(in srgb, var(--terras-win-bg, #ece9d8) 78%, #000)',
                         overflow: 'auto', padding: 16,
                         display: 'flex', justifyContent: 'center', alignItems: 'flex-start',
                     }}
@@ -804,7 +807,8 @@ export default function PrintDesignerView() {
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 gap: 6, marginBottom: 4,
                                 fontFamily: xpFont, fontSize: 10,
-                                color: '#fff', textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+                                // Dark text: the warm-grey ground is light enough that white washed out.
+                                color: 'var(--terras-win-text, #2b2822)',
                             }}>
                                 <XPActionButton icon="bi-dash-lg" title="Zoom out"
                                     onClick={() => stepZoom(-1)} disabled={zoom <= ZOOM_MIN}
@@ -931,9 +935,9 @@ export default function PrintDesignerView() {
 
             <div style={{
                 padding: '4px 10px', borderTop: paneBorder,
-                background: 'linear-gradient(to bottom,#f4f2ea,#e3e1d6)',
+                background: 'var(--terras-toolbar-bg, #f5f4ef)',
                 fontFamily: xpFont, fontSize: 10,
-                color: dirty ? '#8a6d00' : '#666',
+                color: dirty ? 'var(--terras-status-amber, #8a6d00)' : 'var(--terras-win-text-3, #666)',
                 display: 'flex', justifyContent: 'space-between',
             }}>
                 <span>

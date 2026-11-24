@@ -7,7 +7,7 @@ import MobileDashboardView from '../components/mobile/DashboardView';
 import { useEffect, useState } from 'react';
 import { useData } from '../context/DataContext';
 import { useUser } from '../context/UserContext';
-import { useIsMobile } from '../hooks/useIsMobile';
+import { useIsMobile } from '@bryanadamg/terras-ui/components/MobileShell';
 import { useLanguage } from '../context/LanguageContext';
 
 export default function DashboardPage() {

@@ -97,14 +97,14 @@ def test_excel_export_needs_the_export_grant_and_keeps_formulas_as_text(user_fac
     from openpyxl import load_workbook
 
     body = {
-        "sheet": "Production Output", "filename": 'machine-output"\r\nX: y',
+        "grant": "production_output.export", "sheet": "Production Output", "filename": 'machine-output"\r\nX: y',
         "header": ["Machine", "Output"], "rows": [["=HYPERLINK(\"http://x\")", 4.5]],
     }
     _, viewer = user_factory(["production_output.view"], "viewer")
-    assert client.post("/api/reports/production-output/export", json=body, headers=viewer).status_code == 403
+    assert client.post("/api/export/xlsx", json=body, headers=viewer).status_code == 403
 
     _, exporter = user_factory(["production_output.export"], "exporter")
-    res = client.post("/api/reports/production-output/export", json=body, headers=exporter)
+    res = client.post("/api/export/xlsx", json=body, headers=exporter)
     assert res.status_code == 200, res.text
     assert "\r" not in res.headers["content-disposition"] and '"X' not in res.headers["content-disposition"]
     ws = load_workbook(io.BytesIO(res.content)).active
@@ -158,3 +158,8 @@ def test_per_packer_output_is_restated_in_yards_through_the_orders_g_y(client, a
     assert by_item[f"PY-{tag}"]["yards_good"] == 10
     assert by_item[f"PS-{tag}"]["yards_good"] == 10
     assert by_item[f"PP-{tag}"]["yards_good"] is None
+
+
+def test_generic_export_only_takes_an_export_grant(client, auth_headers):
+    body = {"grant": "admin.access", "sheet": "X", "filename": "x", "header": ["A"], "rows": [["1"]]}
+    assert client.post("/api/export/xlsx", json=body, headers=auth_headers).status_code == 422

@@ -4,7 +4,7 @@ import StockOnHandView from '../components/stock/StockOnHandView';
 import MobileStockView from '../components/mobile/StockView';
 import { useData } from '../context/DataContext';
 import { useItemSearch } from '../components/shared/useEntitySearch';
-import { useIsMobile } from '../hooks/useIsMobile';
+import { useIsMobile } from '@bryanadamg/terras-ui/components/MobileShell';
 import { API_BASE } from '../components/shared/apiBase';
 
 export default function StockPage() {

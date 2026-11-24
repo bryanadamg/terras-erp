@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useToast } from '../shared/Toast';
 import { STATIC_BASE as API_BASE } from '../shared/apiBase';
-import { xpBtn, XP_BTN } from '../shared/xpTheme';
+import { xpBtn, xpFont, XP_BTN } from '../shared/xpTheme';
 import { field as xpInput, BTN_TONES } from '@bryanadamg/terras-ui/styles';
 import { FieldLabel } from '@bryanadamg/terras-ui/components/Field';
 import { settingsActions, settingsGrid, settingsHint, SETTINGS_FIELD_GAP } from './settingsStyles';
-import SettingsPanel from './SettingsPanel';
+import { DetailSection } from './settingsParts';
 
 export default function CompanyProfileView({ profile, onUpdate, onUploadLogo, authFetch }: any) {
     const { showToast } = useToast();
@@ -16,7 +16,6 @@ export default function CompanyProfileView({ profile, onUpdate, onUploadLogo, au
         email: '',
         website: '',
         tax_id: '',
-        measurement_tolerance_pct: '2',
     });
     const [isSaving, setIsSaving] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
@@ -31,7 +30,6 @@ export default function CompanyProfileView({ profile, onUpdate, onUploadLogo, au
                 email: profile.email || '',
                 website: profile.website || '',
                 tax_id: profile.tax_id || '',
-                measurement_tolerance_pct: String(profile.measurement_tolerance_pct ?? 2),
             });
         }
     }, [profile]);
@@ -40,7 +38,9 @@ export default function CompanyProfileView({ profile, onUpdate, onUploadLogo, au
         e.preventDefault();
         setIsSaving(true);
         try {
-            await onUpdate({ ...editProfile, measurement_tolerance_pct: Number(editProfile.measurement_tolerance_pct) || 0 });
+            // Weighing tolerance is edited under Production Rules; the PUT is a
+            // partial update, so leaving it out here keeps it as it is.
+            await onUpdate(editProfile);
             showToast('Company profile updated!', 'success');
         } catch (e) {
             showToast('Failed to update profile', 'danger');
@@ -68,11 +68,8 @@ export default function CompanyProfileView({ profile, onUpdate, onUploadLogo, au
     const inputClass = '';
 
     return (
-        <SettingsPanel
-            icon="bi-building"
-            title="Company Profile"
-            right="Used on printed document headers"
-        >
+        <>
+        <DetailSection title={<>Company Profile <span style={{ fontWeight: 'normal', textTransform: 'none', letterSpacing: 0, color: '#888' }}>· printed on document headers</span></>}>
             <form onSubmit={handleSubmit}>
                 {/* Logo is one decision and the address block is another, so they
                     sit side by side and wrap as a unit — not as a bootstrap
@@ -135,11 +132,6 @@ export default function CompanyProfileView({ profile, onUpdate, onUploadLogo, au
                                 <FieldLabel>Tax ID / NPWP</FieldLabel>
                                 <input style={inputStyle} className={inputClass} value={editProfile.tax_id} onChange={e => setEditProfile({ ...editProfile, tax_id: e.target.value })} />
                             </div>
-                            <div>
-                                <FieldLabel>Weighing Tolerance (%)</FieldLabel>
-                                <input type="number" min={0} max={10} step={0.1} style={inputStyle} className={inputClass} value={editProfile.measurement_tolerance_pct} onChange={e => setEditProfile({ ...editProfile, measurement_tolerance_pct: e.target.value })} />
-                                <div style={settingsHint()}>How far a scale reading may differ from the book qty and still count as on target.</div>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -156,6 +148,32 @@ export default function CompanyProfileView({ profile, onUpdate, onUploadLogo, au
                     </button>
                 </div>
             </form>
-        </SettingsPanel>
+        </DetailSection>
+
+        {/* What the fields above turn into on paper, so an empty address or a
+            missing logo shows up here rather than on a customer's Surat Jalan. */}
+        <DetailSection title="Document Header Preview">
+            <div style={{
+                border: '1px solid #c8c4b6', background: '#fff', padding: '10px 14px',
+                display: 'flex', alignItems: 'center', gap: 14, fontFamily: xpFont,
+            }}>
+                <div style={{ width: 110, height: 44, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {profile?.logo_url
+                        ? <img src={`${API_BASE}${profile.logo_url}`} alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                        : <span style={{ ...settingsHint(), border: '1px dashed #b0a898', padding: '10px 8px' }}>no logo</span>}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 'bold', fontSize: 13 }}>{editProfile.name || 'Company name'}</div>
+                    <div style={{ fontSize: 10, color: '#555', whiteSpace: 'pre-line' }}>
+                        {editProfile.address || <i style={{ color: '#aaa' }}>No address yet</i>}
+                    </div>
+                    <div style={{ fontSize: 10, color: '#555' }}>
+                        {[editProfile.phone && `Tel ${editProfile.phone}`, editProfile.email, editProfile.website, editProfile.tax_id && `NPWP ${editProfile.tax_id}`].filter(Boolean).join(' · ')}
+                    </div>
+                </div>
+                <div style={{ fontWeight: 'bold', fontSize: 14, color: '#555', letterSpacing: 1 }}>SURAT JALAN</div>
+            </div>
+        </DetailSection>
+        </>
     );
 }

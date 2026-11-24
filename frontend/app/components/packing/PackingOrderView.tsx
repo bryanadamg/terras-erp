@@ -18,6 +18,7 @@ import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
 import { LV_XP_FONT, lvBtn, lvInput, lvTd, lvRow, lvSubTh, lvSubTd, lvSubRow, ExpanderCell, lvThSticky, lvPickerRow, lvSubTable, ResizableTable } from '../shared/listViewTheme';
 import { RowCheckbox } from '@bryanadamg/terras-ui/components/Table';
 import { ShellWindow, ToolbarButton, SearchField } from '../shared/shellTheme';
+import ExportExcelButton, { xlsDateTime } from '../shared/ExportExcelButton';
 import { toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
 import Pager from '../shared/Pager';
 import ModalWrapper from '../shared/ModalWrapper';
@@ -289,7 +290,7 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
     // server-side `?search=`; the footer's open/closed tallies are counted separately below.
     const {
         rows: orders, total, loading, page, setPage, refetch: reloadOrders,
-        searchInput, setSearch,
+        searchInput, setSearch, fetchAll,
     } = usePaginatedFetch<any>({
         endpoint: `${API_BASE}/packing`,
         authFetch,
@@ -725,6 +726,25 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
                 <span style={{ marginLeft: 'auto', fontSize: 11, color: '#333' }}>
                     {total.toLocaleString()} order{total !== 1 ? 's' : ''}
                 </span>
+                <ExportExcelButton grant="packing_order.export" filename="packing-orders" fetchRows={fetchAll} disabled={!total} columns={[
+                    { label: 'Code', value: po => po.code },
+                    { label: 'Item Code', value: po => po.item_code },
+                    { label: 'Item Name', value: po => po.item_name },
+                    { label: 'Combo', value: po => variantOf(po).combo },
+                    { label: 'Size', value: po => variantOf(po).size },
+                    { label: 'Color', value: po => colourOf(po) },
+                    { label: 'Sales Order', value: po => po.sales_order_code },
+                    { label: 'Status', value: po => po.status },
+                    { label: 'Target', value: po => num(po.qty_target) },
+                    { label: 'Packed', value: po => num(po.qty_packed) },
+                    { label: 'QC Reject', value: po => num(po.qty_rejected) },
+                    { label: 'UOM', value: po => po.item_uom },
+                    { label: 'Alt Target', value: po => po.qty2 },
+                    { label: 'Alt Packed', value: po => po.qty_packed_alt },
+                    { label: 'Alt Unit', value: po => po.uom2 },
+                    { label: 'Cartons', value: po => po.package_count },
+                    { label: 'Created', value: po => xlsDateTime(po.created_at) },
+                ]} />
                 {canCreate && (
                     <ToolbarButton tone="create" icon="bi-plus-lg" title="Order finished goods packed into cartons" onClick={() => setCreating(true)}>
                         New Packing Order

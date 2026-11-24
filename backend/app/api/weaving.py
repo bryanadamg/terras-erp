@@ -3,12 +3,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, cast, String, func, update, delete
 from sqlalchemy.orm import selectinload
 from typing import Optional
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from math import ceil
 import uuid
 
 from app.db.session import get_async_db
-from app.models.weaving import WeavingRun, WeavingRunPause, WorkCenterHoliday
+from app.models.weaving import WeavingRun, WeavingRunPause, WorkCenterHoliday, LoomTuning
 from app.models.routing import WorkCenter
 from app.models.manufacturing import ManufacturingOrder
 from app.models.work_order import WorkOrder
@@ -298,6 +298,12 @@ async def create_weaving_run(
     wc.prep_status = None
     wc.prep_status_at = datetime.utcnow()
     wc.prep_status_by = current_user.username
+    await db.flush()
+    await db.execute(
+        update(LoomTuning)
+        .where(LoomTuning.work_center_id == wc.id, LoomTuning.ended_at.is_(None))
+        .values(ended_at=wc.prep_status_at, weaving_run_id=run.id)
+    )
     await db.commit()
     await db.refresh(run)
 
@@ -480,11 +486,24 @@ async def set_loom_prep(
     err = weaving_service.prep_transition_error(target, current)
     if err:
         raise HTTPException(status_code=422, detail=err)
+    tuner = (payload.tuner_name or "").strip()
+    if target == weaving_service.LOOM_STATUS_TUNING and not tuner:
+        raise HTTPException(status_code=422, detail="Enter who is tuning the loom")
 
     prev_prep = wc.prep_status
     wc.prep_status = target
     wc.prep_status_at = datetime.utcnow()
     wc.prep_status_by = current_user.username
+    # Tuning history for the report. Any open row is either a mis-click being reset
+    # or a tuning abandoned when the warp came off — neither is a tuning, so drop it.
+    await db.execute(delete(LoomTuning).where(
+        LoomTuning.work_center_id == wc.id, LoomTuning.ended_at.is_(None)
+    ))
+    if target == weaving_service.LOOM_STATUS_TUNING:
+        db.add(LoomTuning(
+            work_center_id=wc.id, tuner_name=tuner[:150],
+            started_at=wc.prep_status_at, created_by=current_user.username,
+        ))
     await db.commit()
 
     new_status = await _loom_status(db, wc)
@@ -792,6 +811,52 @@ async def export_weaving_monitor(
         _rows(),
         f"weaving-monitor_{date.today()}",
     )
+
+
+async def _tuning_rows(db: AsyncSession, date_from: Optional[date], date_to: Optional[date], tz: str) -> list[dict]:
+    """Tunings started within [date_from, date_to] — the viewer's local days, while
+    started_at is stored as naive UTC — newest first."""
+    from datetime import timezone
+    from app.services.xlsx_service import zone_or_400
+    zone = zone_or_400(tz)
+
+    def _utc_midnight(d: date):
+        return datetime.combine(d, datetime.min.time(), zone).astimezone(timezone.utc).replace(tzinfo=None)
+
+    q = (
+        select(LoomTuning, WorkCenter.code, WorkCenter.name, WorkOrder.code)
+        .join(WorkCenter, LoomTuning.work_center_id == WorkCenter.id)
+        .outerjoin(WeavingRun, LoomTuning.weaving_run_id == WeavingRun.id)
+        .outerjoin(WorkOrder, WeavingRun.work_order_id == WorkOrder.id)
+        .order_by(LoomTuning.started_at.desc())
+    )
+    if date_from:
+        q = q.where(LoomTuning.started_at >= _utc_midnight(date_from))
+    if date_to:
+        q = q.where(LoomTuning.started_at < _utc_midnight(date_to + timedelta(days=1)))
+    out = []
+    for t, wc_code, wc_name, wo_code in (await db.execute(q)).all():
+        hours = (t.ended_at - t.started_at).total_seconds() / 3600 if t.ended_at else None
+        out.append({
+            "id": str(t.id), "work_center_code": wc_code, "work_center_name": wc_name,
+            "tuner_name": t.tuner_name, "started_at": t.started_at, "ended_at": t.ended_at,
+            "duration_hours": round(hours, 2) if hours is not None else None,
+            "wo_code": wo_code, "created_by": t.created_by,
+        })
+    return out
+
+
+@router.get("/weaving/tunings")
+async def list_loom_tunings(
+    date_from: Optional[date] = None,
+    date_to: Optional[date] = None,
+    tz: str = "Asia/Jakarta",
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(require_any_permission("weaving_monitor.view", "production_output.view")),
+):
+    """Tuning report (Production Output → Loom Tuning): who tuned which loom, from
+    when until its run started. Exported through the report's generic Excel export."""
+    return await _tuning_rows(db, date_from, date_to, tz)
 
 
 @router.get("/weaving/id-holidays")

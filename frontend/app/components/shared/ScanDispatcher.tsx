@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import { useData } from '../../context/DataContext';
 import { useUser } from '../../context/UserContext';
-import { useIsMobile } from '../../hooks/useIsMobile';
+import { useIsMobile } from '@bryanadamg/terras-ui/components/MobileShell';
 import { xpFont as XP_FONT, XPLoading } from './xpTheme';
 import { field as xpInputBase } from '@bryanadamg/terras-ui/styles';
 import { MOBILE_BG, MobilePanel, MobileScreenBar, MobileButton, MobileNotice } from '../mobile/mobileTheme';

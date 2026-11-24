@@ -15,6 +15,7 @@ import { useServerSort, ExpandedRowPanel, rowStateBg } from '@bryanadamg/terras-
 import { BTN_TONES } from '@bryanadamg/terras-ui/styles';
 import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
 import { SearchField, ToolbarButton, viewShellStyle } from '../shared/shellTheme';
+import ExportExcelButton, { xlsDateTime } from '../shared/ExportExcelButton';
 import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
 import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 import RequestDetailPanel, { getStatusStripe } from '../shared/RequestDetailPanel';
@@ -161,7 +162,7 @@ export default function LabDipRequestView({
     const { sort, toggleSort } = useServerSort({ key: 'updated', dir: -1 });
     const {
         rows: labDips, total, meta, loading, page, setPage, refetch: refetchLabDips,
-        searchInput: searchTerm, setSearch: setSearchTerm,
+        searchInput: searchTerm, setSearch: setSearchTerm, fetchAll,
     } = usePaginatedFetch<any>({
         endpoint: `${API_BASE}/lab-dips`,
         authFetch,
@@ -500,6 +501,29 @@ export default function LabDipRequestView({
                     <button className={XP_BTN} style={xpBtn()} onClick={clearFilters} title="Clear all filters">Clear</button>
                 )}
                 <ToolbarCount right>{total} item{total !== 1 ? 's' : ''}</ToolbarCount>
+                {/* One row per variant — a request's variants each carry their own status. */}
+                <ExportExcelButton<{ r: any; it: any }>
+                    grant={kind === 'YARN' ? 'yarn_lab_dip.export' : 'lab_dip_request.export'}
+                    filename={kind === 'YARN' ? 'yarn-lab-dips' : 'lab-dip-requests'}
+                    disabled={!total}
+                    fetchRows={async () => (await fetchAll()).flatMap((r: any) =>
+                        ((r.items || []).length ? r.items : [null]).map((it: any) => ({ r, it })))}
+                    columns={[
+                        { label: 'Request Code', value: x => x.r.code },
+                        { label: 'Request Date', value: x => x.r.request_date },
+                        { label: 'Customer', value: x => (x.r.customer_id ? getCustomerName(x.r.customer_id) : 'Internal') },
+                        { label: 'Season', value: x => x.r.season },
+                        { label: 'Type', value: x => x.r.request_type },
+                        { label: 'Request Status', value: x => x.r.status },
+                        { label: 'Variant Code', value: x => x.it && (x.it.variant_code || `${seqPart(x.r.code)}-${variantLetter(x.it.variant_seq ?? 0)}`) },
+                        { label: 'Item Code', value: x => x.it?.item_code },
+                        { label: 'Item Name', value: x => x.it?.item_name },
+                        { label: 'Variant Status', value: x => x.it && (x.it.status || 'PENDING') },
+                        { label: 'Colors', value: x => (x.r.dips || []).filter((d: any) => !d.lab_dip_item_id).map((d: any) => d.color_name).join(', ') },
+                        { label: 'Notes', value: x => x.r.notes },
+                        { label: 'Updated', value: x => xlsDateTime(x.r.updated_at || x.r.created_at) },
+                    ]}
+                />
                 {canCreate && (
                     <>
                         <span style={{ width: 1, height: 20, background: '#a0988c', margin: '0 2px' }} />

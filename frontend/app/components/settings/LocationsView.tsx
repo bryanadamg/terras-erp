@@ -3,6 +3,7 @@ import { useToast } from '../shared/Toast';
 import { useLanguage } from '../../context/LanguageContext';
 import { useUser } from '../../context/UserContext';
 import { ShellWindow, SearchField } from '../shared/shellTheme';
+import ExportExcelButton from '../shared/ExportExcelButton';
 import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 import { toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
 import { XPActionButton } from '../shared/xpTheme';
@@ -292,6 +293,15 @@ export default function LocationsView({
         <ToolbarCount right>
           {all.filter(l => l.location_type === 'warehouse').length} stores · {all.filter(l => l.location_type === 'bin').length} bins
         </ToolbarCount>
+        <ExportExcelButton grant="location.export" filename="locations" disabled={!all.length}
+          rows={[...all].sort((a, b) => (a.full_path || a.name).localeCompare(b.full_path || b.name))}
+          columns={[
+            { label: 'Code', value: (l: any) => l.code },
+            { label: 'Name', value: (l: any) => l.name },
+            { label: 'Type', value: (l: any) => l.location_type },
+            { label: 'Full Path', value: (l: any) => l.full_path || l.name },
+            { label: 'Quarantine', value: (l: any) => (l.is_quarantine ? 'Yes' : null) },
+          ]} />
       </div>
 
       <ColumnPanes>

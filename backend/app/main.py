@@ -39,14 +39,14 @@ from app.core.db_manager import db_manager
 from app.core.scheduler import backup_scheduler
 from app.db.base import Base
 from app.services import backup_schedule_service, event_log_service, feedback_service
-from app.api import items, locations, stock, attributes, boms, manufacturing, categories, routing, auth, uoms, sales, samples, audit, admin, dashboard, partners, purchase, settings, production_runs, work_orders, batches, dyeing_setting, preferences, lab_dips, packing, pick_lists, shipments, colors, combos, packaging_types, weaving, print_templates, production_reports, quarantine, work_queue, dyeing_monitor, feedback
+from app.api import items, locations, stock, attributes, boms, manufacturing, categories, routing, auth, uoms, sales, samples, audit, admin, dashboard, partners, purchase, settings, production_runs, work_orders, batches, dyeing_setting, preferences, lab_dips, packing, pick_lists, shipments, colors, combos, packaging_types, weaving, print_templates, production_reports, quarantine, work_queue, dyeing_monitor, feedback, export
 from app.core.ws_manager import manager, WS_CLOSE_TOKEN_EXPIRED
 from app.core.ws_events import can_receive
 from app.core.ws_metrics import metrics as ws_metrics
 from app.api.auth import ws_connection_state, get_current_admin
 
 # Keep in sync with /VERSION, frontend/package.json "version", and CHANGELOG.md on release.
-APP_VERSION = "1.10.0"
+APP_VERSION = "1.11.0"
 
 # Process start time, a proxy for "last deployed/updated" — deploy is git pull +
 # docker compose up --build, which always restarts this process.
@@ -293,6 +293,7 @@ api_router.include_router(dyeing_monitor.router)
 api_router.include_router(preferences.router)
 api_router.include_router(print_templates.router)
 api_router.include_router(production_reports.router)
+api_router.include_router(export.router)
 api_router.include_router(feedback.router)
 
 # How long a socket may sit accepted-but-unauthenticated before it is dropped.

@@ -6,6 +6,7 @@ import { Chip, XPActionButton, XP_BTN } from '../shared/xpTheme';
 import { FormSection } from '@bryanadamg/terras-ui/components/FormSection';
 import { lvInput, lvBtn, lvPrimaryBtn, lvLabel, lvSep } from '../shared/listViewTheme';
 import { ToolbarButton, SearchField } from '../shared/shellTheme';
+import ExportExcelButton from '../shared/ExportExcelButton';
 import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 import { toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
 import { ColumnPanes, ColumnPane, ColumnRow, ColumnEmpty, DetailPane, DetailHeader, DetailRow, BROWSER_TONES } from '../shared/columnBrowser';
@@ -164,11 +165,20 @@ export default function AttributesLibraryView({
                 footer={
                     <>
                         <ToolbarCount>{filtered.length} attribute{filtered.length !== 1 ? 's' : ''}</ToolbarCount>
-                        {can.create && (
-                            <span style={{ marginLeft: 'auto' }}>
+                        <span style={{ marginLeft: 'auto', display: 'inline-flex', gap: 4 }}>
+                            {/* One row per value. */}
+                            <ExportExcelButton grant="attribute.export" filename="attributes" disabled={!filtered.length}
+                                rows={filtered.flatMap((a: any) => ((a.values || []).length ? a.values : [null]).map((v: any) => ({ a, v })))}
+                                columns={[
+                                    { label: 'Attribute', value: (x: any) => x.a.name },
+                                    { label: 'Role', value: (x: any) => roleLabel(x.a.system_role) },
+                                    { label: 'Value', value: (x: any) => x.v?.value },
+                                    { label: 'Hex', value: (x: any) => x.v?.hex },
+                                ]} />
+                            {can.create && (
                                 <ToolbarButton tone="create" icon="bi-plus-lg" onClick={openCreate}>New Attribute</ToolbarButton>
-                            </span>
-                        )}
+                            )}
+                        </span>
                     </>
                 }
             >

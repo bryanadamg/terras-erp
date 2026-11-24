@@ -1,29 +1,33 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
 import SettingsRolesTab from './SettingsRolesTab';
 import SettingsUsersTab from './SettingsUsersTab';
 import { RoleLike } from './RoleFormModal';
 import { useData } from '../../context/DataContext';
+import { useUser, User } from '../../context/UserContext';
+import { useRememberedTab } from '../../hooks/useRememberedTab';
 import { API_BASE } from '../shared/apiBase';
-import { settingsStack } from './settingsStyles';
+
+type AccessSub = 'users' | 'roles';
 
 /**
- * Access Control — the roles panel and the users panel stacked in one tab.
- * They were separate tabs, which meant two copies of the same /roles +
- * /permissions fetch and a tab hop to answer "why can this user do X?". The
- * fetch now lives here and feeds both panels, and a role's user count is a
- * filter into the users panel below instead of a dead-end number.
- *
- * Both panels stay full-bleed one-per-row rather than sharing a `settingsColumns`
- * band like the other tabs: these are eight- and six-column data tables, and half
- * a screen each would squeeze the permission chips and Last Login off the end.
+ * Access Control — Users and Roles as two list/detail screens behind one
+ * switch. They used to be two full-width tables stacked in one scroll, with a
+ * role's detail expanding inline and pushing the users table off-screen. The
+ * /roles + /permissions fetch lives here and feeds both, and the selection does
+ * too, so "open this user's role" / "open this member" jump across the switch.
  */
 export default function SettingsAccessTab() {
     const { authFetch } = useData();
+    const { users } = useUser();
     const [roles, setRoles] = useState<RoleLike[]>([]);
     const [allPermissions, setAllPermissions] = useState<any[]>([]);
-    const [roleFilter, setRoleFilter] = useState<string | null>(null);
+    const [sub, setSub] = useRememberedTab<AccessSub>('settings.access', 'users', ['users', 'roles']);
+    const [roleId, setRoleId] = useState<string | null>(null);
+    const [userId, setUserId] = useState<string | null>(null);
+    const [roleDraft, setRoleDraft] = useState<RoleLike | null>(null);
 
     const loadAuthData = useCallback(() => {
         const authHeaders = { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` };
@@ -38,21 +42,48 @@ export default function SettingsAccessTab() {
 
     useEffect(() => { loadAuthData(); }, [loadAuthData]);
 
+    const openRole = (id: string) => { setRoleId(id); setSub('roles'); };
+
+    // Role + direct grants become a new role; scope carries over from the old role.
+    const createRoleFrom = (u: User) => {
+        const base = roles.find(r => r.id === u.role?.id);
+        const byId = new Map([...(base?.permissions || []), ...(u.permissions || [])].map(p => [p.id, p]));
+        setRoleDraft({ ...base, id: '', name: `${u.full_name || u.username}'s access`, description: null, permissions: [...byId.values()] });
+        setSub('roles');
+    };
+
     return (
-        <div style={settingsStack}>
-            <SettingsRolesTab
-                roles={roles}
-                allPermissions={allPermissions}
-                reload={loadAuthData}
-                roleFilter={roleFilter}
-                onFilterUsers={(roleId) => setRoleFilter(prev => prev === roleId ? null : roleId)}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, height: '100%', minHeight: 0 }}>
+            <FilterChipBar
+                ariaLabel="Access control section"
+                options={[
+                    { value: 'users', label: <><i className="bi bi-people-fill" style={{ marginRight: 4 }} />Users</>, count: users.length },
+                    { value: 'roles', label: <><i className="bi bi-diagram-3" style={{ marginRight: 4 }} />Roles</>, count: roles.length },
+                ]}
+                value={sub}
+                onChange={v => setSub(v as AccessSub)}
+                style={{ alignSelf: 'flex-start' }}
             />
-            <SettingsUsersTab
-                roles={roles}
-                allPermissions={allPermissions}
-                roleFilter={roleFilter}
-                onClearRoleFilter={() => setRoleFilter(null)}
-            />
+            {sub === 'roles' ? (
+                <SettingsRolesTab
+                    roles={roles}
+                    allPermissions={allPermissions}
+                    reload={loadAuthData}
+                    selectedId={roleId}
+                    onSelect={setRoleId}
+                    draft={roleDraft}
+                    onDraftOpened={() => setRoleDraft(null)}
+                />
+            ) : (
+                <SettingsUsersTab
+                    roles={roles}
+                    allPermissions={allPermissions}
+                    selectedId={userId}
+                    onSelect={setUserId}
+                    onOpenRole={openRole}
+                    onCreateRoleFrom={createRoleFrom}
+                />
+            )}
         </div>
     );
 }

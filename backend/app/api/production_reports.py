@@ -24,7 +24,6 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
-from pydantic import BaseModel, Field
 from sqlalchemy import select, func, and_, case
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -40,7 +39,6 @@ from app.models.sales import SalesOrder
 from app.models.work_order import WorkOrder
 from app.api.auth import require_permission
 from app.services import packing_service, work_center_service
-from app.services.xlsx_service import xlsx_response
 
 router = APIRouter()
 
@@ -1003,6 +1001,7 @@ def _beam_prep_rows(rows_raw) -> tuple[list[dict], dict]:
             "mount_id": str(r.mount_id),
             "beam_number": r.beam_number,
             "item_code": r.item_code,
+            "item_name": r.item_name,
             "work_center_code": r.wc_code,
             "wo_code": r.wo_code,
             "prep_type": r.prep_type,
@@ -1066,6 +1065,7 @@ async def beam_prep_output_report(
             User.full_name.label("full_name"),
             Batch.batch_number.label("beam_number"),
             Item.code.label("item_code"),
+            Item.name.label("item_name"),
             func.coalesce(WorkCenter.code, WorkCenter.name).label("wc_code"),
             WorkOrder.code.label("wo_code"),
         )
@@ -1085,25 +1085,3 @@ async def beam_prep_output_report(
         "rows": rows,
         "totals": totals,
     }
-
-
-class ProductionOutputExport(BaseModel):
-    sheet: str = Field(max_length=64)
-    filename: str = Field(max_length=128)
-    header: list[str]
-    rows: list[list[str | float | int | None]]
-
-
-@router.post("/reports/production-output/export")
-async def export_production_output(
-    payload: ProductionOutputExport,
-    current_user: User = Depends(require_permission("production_output.export")),
-):
-    """The report grid as an .xlsx, laid out by the client's own column definitions.
-
-    Each grouping (machine / group / WO / packing / operator) renders a
-    different column set with client-side formatting; rebuilding those here would
-    let the file drift from the screen. So the client posts exactly the rows it
-    shows and this only renders them — gated on the export grant, same as before.
-    """
-    return xlsx_response(payload.sheet, payload.header, payload.rows, payload.filename)

@@ -15,6 +15,7 @@ import { usePaginatedFetch } from '../../context/usePaginatedList';
 import { lvBtn, lvInput, lvTh, lvTd, lvLabel, lvThead, LV_STICKY_THEAD, lvZebra, ResizableTable } from '../shared/listViewTheme';
 import { useRowSelection, RowCheckbox, SelectAllCheckbox } from '@bryanadamg/terras-ui/components/Table';
 import { ShellWindow, SearchField, ToolbarButton } from '../shared/shellTheme';
+import ExportExcelButton from '../shared/ExportExcelButton';
 import { toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
 import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 import { API_BASE } from '../shared/apiBase';
@@ -64,7 +65,7 @@ export default function PartnersView({ type }: PartnersViewProps) {
     // applied by the backend; the hook resets to page 1 whenever either changes.
     const {
         rows: pagedPartners, total, meta, loading,
-        page, setPage, search: searchTerm, searchInput, setSearch, refetch,
+        page, setPage, search: searchTerm, searchInput, setSearch, refetch, fetchAll,
     } = usePaginatedFetch<Partner>({
         endpoint: `${API_BASE}/partners`,
         authFetch,
@@ -196,8 +197,18 @@ export default function PartnersView({ type }: PartnersViewProps) {
                     <ToolbarCount>
                         {total} {typeLabel}{total !== 1 ? 's' : ''}
                     </ToolbarCount>
+                    <span style={{ marginLeft: 'auto' }} />
+                    <ExportExcelButton<Partner> grant={`${permPrefix}.export`} filename={`${permPrefix}s`} fetchRows={fetchAll} disabled={!total} columns={[
+                        { label: 'Name', value: p => p.name },
+                        { label: 'Contact Person', value: p => p.contact_person },
+                        { label: 'Phone', value: p => p.phone },
+                        { label: 'Fax', value: p => p.fax },
+                        { label: 'Email', value: p => p.email },
+                        { label: 'Address', value: p => p.address },
+                        { label: 'Status', value: p => (p.active ? 'Active' : 'Inactive') },
+                    ]} />
                     {canCreate && (
-                        <ToolbarButton tone="create" icon="bi-plus-lg" style={{ marginLeft: 'auto' }} onClick={() => setIsCreateOpen(true)}>
+                        <ToolbarButton tone="create" icon="bi-plus-lg" onClick={() => setIsCreateOpen(true)}>
                             Add {typeLabel}
                         </ToolbarButton>
                     )}

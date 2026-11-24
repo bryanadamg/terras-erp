@@ -3,6 +3,7 @@ import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import ManufacturingSearchBar from './ManufacturingSearchBar';
 import { ToolbarButton } from '../shared/shellTheme';
+import ExportExcelButton, { fetchAllRows, xlsDateTime } from '../shared/ExportExcelButton';
 import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
 import Pager from '../shared/Pager';
 import { useToast } from '../shared/Toast';
@@ -110,7 +111,7 @@ export default function ProductionRunsTab({
 }: any) {
     const { showToast } = useToast();
     const router = useRouter();
-    const { authFetch, loading: dataLoading } = useData();
+    const { authFetch, loading: dataLoading, pagination } = useData();
     const canPrint = useUser().hasPermission('production_run.print');
 
     // Skeleton sizing: measure one real row so the placeholders shown on the next
@@ -263,6 +264,27 @@ export default function ProductionRunsTab({
                     showCount={filtersActive}
                     actions={
                         <>
+                            {/* Every run under the committed search and filters, not just this page. */}
+                            <ExportExcelButton grant="production_run.export" filename="production-runs"
+                                fetchRows={() => fetchAllRows(authFetch, `${API_BASE}/production-runs`, {
+                                    search: pagination?.prSearch,
+                                    has_sales_order: prSoFilter ? (prSoFilter === 'with' ? 'true' : 'false') : '',
+                                    progress: prProgressFilter,
+                                })}
+                                columns={[
+                                    { label: 'Code', value: (pr: any) => pr.code },
+                                    { label: 'Sales Order', value: (pr: any) => pr.sales_order_code },
+                                    { label: 'Style', value: (pr: any) => (pr.bom_entries?.length
+                                        ? pr.bom_entries.map((e: any) => e.bom?.item_name || e.bom?.item_code).filter(Boolean).join(' / ')
+                                        : pr.bom?.item_name || pr.bom?.item_code) },
+                                    { label: 'BOM', value: (pr: any) => (pr.bom_entries?.length
+                                        ? pr.bom_entries.map((e: any) => e.bom?.code).filter(Boolean).join(' / ')
+                                        : pr.bom?.code) },
+                                    { label: 'MOs', value: (pr: any) => (pr.manufacturing_orders || []).length },
+                                    { label: 'MOs Done', value: (pr: any) => (pr.manufacturing_orders || []).filter((m: any) => ['COMPLETED', 'DELIVERED'].includes(m.status)).length },
+                                    { label: 'Status', value: (pr: any) => pr.status },
+                                    { label: 'Due Date', value: (pr: any) => xlsDateTime(pr.target_end_date) },
+                                ]} />
                             {canManage && (
                                 <ToolbarButton tone="launch" icon="bi-collection-play" onClick={onNewProductionRun}>New Production Run</ToolbarButton>
                             )}

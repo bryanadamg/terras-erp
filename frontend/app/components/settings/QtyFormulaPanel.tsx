@@ -5,14 +5,14 @@
  *
  * The fields and the tester live in `shared/QtyFormulaEditor` because the same
  * editor opens from the gear beside Apply in the Production Run modal; this file
- * is only the Settings chrome around it (panel header, Reset action, Save row).
+ * is only the Settings chrome around it (section caption, Reset action, Save row).
  */
 
 import { useUser } from '../../context/UserContext';
 import { xpBtn, XP_BTN } from '../shared/xpTheme';
 import { BTN_TONES } from '@bryanadamg/terras-ui/styles';
 import { QtyFormulaEditorFields, useQtyFormulaEditor } from '../shared/QtyFormulaEditor';
-import SettingsPanel from './SettingsPanel';
+import { DetailSection } from './settingsParts';
 import { settingsActions, settingsHint } from './settingsStyles';
 
 export default function QtyFormulaPanel() {
@@ -21,8 +21,7 @@ export default function QtyFormulaPanel() {
     const editor = useQtyFormulaEditor();
 
     return (
-        <SettingsPanel
-            icon="bi-calculator"
+        <DetailSection
             title="Production Quantity Formula"
             right={canEdit ? (
                 <button
@@ -56,6 +55,6 @@ export default function QtyFormulaPanel() {
                     </button>
                 </div>
             )}
-        </SettingsPanel>
+        </DetailSection>
     );
 }

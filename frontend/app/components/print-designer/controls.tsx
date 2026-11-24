@@ -27,7 +27,7 @@ export function Row({ label, children, title }: {
                 width: 74, flexShrink: 0,
                 fontFamily: xpFont,
                 fontSize: 11,
-                color: '#2b2822',
+                color: 'var(--terras-win-text, #2b2822)',
             }}>
                 {label}
             </div>
@@ -98,7 +98,7 @@ export function CheckField({ checked, onChange, label }: {
             display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer',
             fontFamily: xpFont,
             fontSize: 11,
-            color: '#2b2822',
+            color: 'var(--terras-win-text, #2b2822)',
             marginBottom: 3,
         }}>
             <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} />
@@ -146,8 +146,8 @@ export function InspectorGroup({ title, children, right, collapsible }: {
                     fontFamily: xpFont,
                     fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase',
                     letterSpacing: '0.4px',
-                    color: '#4a4436',
-                    borderBottom: '1px solid #c0bdb5',
+                    color: 'var(--terras-win-text-2, #4a4436)',
+                    borderBottom: '1px solid var(--terras-table-line, #c0bdb5)',
                     paddingBottom: 2, marginBottom: shown ? 5 : 0,
                     cursor: collapsible ? 'pointer' : undefined,
                 }}
@@ -182,9 +182,9 @@ export function ListRowControls({ onUp, onDown, onRemove, canUp, canDown }: {
                 fontFamily: xpFont, fontSize: 10, lineHeight: 1,
                 padding: '1px 3px', cursor: disabled ? 'default' : 'pointer',
                 opacity: disabled ? 0.35 : 1, borderRadius: 0,
-                background: 'linear-gradient(to bottom,#fff,#d4d0c8)',
+                background: 'var(--terras-table-bg, #fff)',
                 border: '1px solid',
-                borderColor: danger ? '#c00000' : ('#dfdfdf #808080 #808080 #dfdfdf'),
+                borderColor: danger ? '#c00000' : ('var(--terras-table-line, #c0bdb5)'),
                 color: danger ? '#c00000' : '#000',
             }}
         >

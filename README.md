@@ -46,7 +46,7 @@ Every screen updates live over a WebSocket event bus, without a refresh.
 
 The interface is a Windows-XP-styled Classic theme with an adjustable interface scale, full English/Indonesian localization, and role-based access control down to individual permission codes.
 
-Shared UI primitives — buttons, chips, status chips, tooltips, form sections, table helpers, skeletons, the login screen and pager — come from **terras-ui** (v1), a separate package published to GitHub Packages. The ERP pages are thin adapters over it, so look there before restyling a control here.
+Shared UI primitives — buttons, chips, status chips, tooltips, form sections, table helpers, skeletons, the login screen and pager — come from **terras-ui** (v1), a separate package installed from its public GitHub repo (`github:bryanadamg/terras-ui#semver:^1.6.0`). The ERP pages are thin adapters over it, so look there before restyling a control here.
 
 ---
 
@@ -54,10 +54,9 @@ Shared UI primitives — buttons, chips, status chips, tooltips, form sections, 
 
 ### Prerequisites
 
-Copy `.env.example` to `.env` at the repo root and fill it in. Two values have no default:
+Copy `.env.example` to `.env` at the repo root and fill it in. One value has no default:
 
 - `SECRET_KEY` — the API refuses to start without it (`python -c "import secrets; print(secrets.token_urlsafe(64))"`).
-- `NODE_AUTH_TOKEN` — a GitHub token with `read:packages`, so `npm ci` can fetch `@bryanadamg/terras-ui` from GitHub Packages (see `frontend/.npmrc`). The frontend image build passes it in as a build secret; without it the install fails with 401/404.
 
 `INITIAL_ADMIN_PASSWORD` is optional but recommended (see First sign-in below). `FEEDBACK_GITHUB_TOKEN` is optional too — leave it empty and the in-app feedback button reports that it isn't configured.
 
@@ -98,7 +97,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 # Backend (from /backend)
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
-# Frontend (from /frontend; NODE_AUTH_TOKEN must be exported for npm install)
+# Frontend (from /frontend)
 npm install
 npm run dev    # http://localhost:3000
 ```

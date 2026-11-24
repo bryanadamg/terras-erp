@@ -359,8 +359,8 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                             style={{
                                 fontFamily: xpFont, fontSize: 10, lineHeight: 1,
                                 padding: '1px 4px', cursor: 'pointer', borderRadius: 3,
-                                background: 'linear-gradient(to bottom,#fff,#d4d0c8)',
-                                border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
+                                background: 'var(--terras-table-bg, #fff)',
+                                border: '1px solid', borderColor: 'var(--terras-table-line, #c0bdb5)',
                             }}
                         >
                             <i className="bi bi-plus" /> Add
@@ -379,7 +379,7 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                                         fontFamily: xpFont, fontSize: 11,
                                         padding: '2px 3px', marginBottom: 1,
                                         background: selected ? ('#0058e6') : 'transparent',
-                                        color: selected ? '#fff' : ('#2b2822'),
+                                        color: selected ? '#fff' : ('var(--terras-win-text, #2b2822)'),
                                     }}
                                 >
                                     <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -498,8 +498,8 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                                         style={{
                                             fontFamily: xpFont, fontSize: 10, lineHeight: 1,
                                             padding: '1px 4px', cursor: 'pointer', borderRadius: 3,
-                                            background: 'linear-gradient(to bottom,#fff,#d4d0c8)',
-                                            border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
+                                            background: 'var(--terras-table-bg, #fff)',
+                                            border: '1px solid', borderColor: 'var(--terras-table-line, #c0bdb5)',
                                         }}
                                     >
                                         <i className="bi bi-plus" /> Field
@@ -550,8 +550,8 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                             style={{
                                 fontFamily: xpFont, fontSize: 10, lineHeight: 1,
                                 padding: '1px 4px', cursor: 'pointer', borderRadius: 3,
-                                background: 'linear-gradient(to bottom,#fff,#d4d0c8)',
-                                border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
+                                background: 'var(--terras-table-bg, #fff)',
+                                border: '1px solid', borderColor: 'var(--terras-table-line, #c0bdb5)',
                             }}
                         >
                             <i className="bi bi-plus" /> Add
@@ -569,7 +569,7 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                                     fontFamily: xpFont, fontSize: 11,
                                     padding: '2px 3px', marginBottom: 1,
                                     background: selected ? ('#0058e6') : 'transparent',
-                                    color: selected ? '#fff' : ('#2b2822'),
+                                    color: selected ? '#fff' : ('var(--terras-win-text, #2b2822)'),
                                 }}
                             >
                                 <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -727,7 +727,7 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                                     fontFamily: xpFont, fontSize: 11,
                                     padding: '2px 3px', marginBottom: 1,
                                     background: selected ? ('#0058e6') : 'transparent',
-                                    color: selected ? '#fff' : ('#2b2822'),
+                                    color: selected ? '#fff' : ('var(--terras-win-text, #2b2822)'),
                                 }}
                             >
                                 <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -763,9 +763,9 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                                         fontFamily: xpFont, fontSize: 10,
                                         padding: '1px 4px', marginRight: 3, marginBottom: 3, cursor: 'pointer',
                                         borderRadius: 0,
-                                        background: 'linear-gradient(to bottom,#fff,#d4d0c8)',
+                                        background: 'var(--terras-table-bg, #fff)',
                                         border: '1px solid',
-                                        borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
+                                        borderColor: 'var(--terras-table-line, #c0bdb5)',
                                     }}
                                 >
                                     <i className="bi bi-plus" /> {a.label}
@@ -959,8 +959,8 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                                     style={{
                                         fontFamily: xpFont, fontSize: 10, lineHeight: 1,
                                         padding: '1px 4px', cursor: 'pointer', borderRadius: 3,
-                                        background: 'linear-gradient(to bottom,#fff,#d4d0c8)',
-                                        border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
+                                        background: 'var(--terras-table-bg, #fff)',
+                                        border: '1px solid', borderColor: 'var(--terras-table-line, #c0bdb5)',
                                     }}
                                 >
                                     <i className="bi bi-plus" /> Add
@@ -1056,8 +1056,8 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                             style={{
                                 fontFamily: xpFont, fontSize: 10, lineHeight: 1,
                                 padding: '1px 4px', cursor: 'pointer', borderRadius: 3,
-                                background: 'linear-gradient(to bottom,#fff,#d4d0c8)',
-                                border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
+                                background: 'var(--terras-table-bg, #fff)',
+                                border: '1px solid', borderColor: 'var(--terras-table-line, #c0bdb5)',
                             }}
                         >
                             <i className="bi bi-plus" /> Add
@@ -1108,8 +1108,8 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                                     style={{
                                         fontFamily: xpFont, fontSize: 10,
                                         padding: '1px 4px', cursor: 'pointer', borderRadius: 3,
-                                        background: 'linear-gradient(to bottom,#fff,#d4d0c8)',
-                                        border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
+                                        background: 'var(--terras-table-bg, #fff)',
+                                        border: '1px solid', borderColor: 'var(--terras-table-line, #c0bdb5)',
                                     }}
                                 >
                                     <i className="bi bi-plus" /> Line under
@@ -1142,8 +1142,8 @@ export default function InspectorPanel({ layout, docType, selection, onChange, o
                         style={{
                             fontFamily: xpFont, fontSize: 10,
                             padding: '1px 4px', cursor: 'pointer', borderRadius: 3,
-                            background: 'linear-gradient(to bottom,#fff,#d4d0c8)',
-                            border: '1px solid', borderColor: '#dfdfdf #808080 #808080 #dfdfdf',
+                            background: 'var(--terras-table-bg, #fff)',
+                            border: '1px solid', borderColor: 'var(--terras-table-line, #c0bdb5)',
                         }}
                     >
                         <i className="bi bi-plus" /> Add line

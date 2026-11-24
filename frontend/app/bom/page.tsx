@@ -25,7 +25,7 @@ export default function BOMPage() {
         rows: bomList, total: bomTotal, loading: bomLoading,
         page: bomPage, setPage: setBomPage,
         searchInput: bomSearch, setSearch: handleBomSearch,
-        refetch: fetchBomList,
+        refetch: fetchBomList, fetchAll: fetchAllBoms,
     } = usePaginatedFetch<any>({
         endpoint: `${API_BASE}/boms/summary`,
         authFetch,
@@ -151,6 +151,7 @@ export default function BOMPage() {
 
     return (
         <BOMView
+            fetchAllBoms={fetchAllBoms}
             items={items}
             attributes={attributes}
             sizes={sizes}

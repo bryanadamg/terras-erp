@@ -5,6 +5,7 @@ import { useUser } from '../../context/UserContext';
 import ModalWrapper from '../shared/ModalWrapper';
 import { StatusChip, CodeChip, XP_BTN, useFloatingMenu, MenuTriggerButton, FloatingMenu } from '../shared/xpTheme';
 import { SearchField, ToolbarButton, viewShellStyle } from '../shared/shellTheme';
+import ExportExcelButton from '../shared/ExportExcelButton';
 import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 import {
     LV_XP_FONT, lvInput, lvBtn, lvPrimaryBtn, lvLabel, lvTh, lvTd, lvSep, lvRow, lvThead, TableEmpty,
@@ -109,6 +110,14 @@ export default function PackagingTypesView({ types, loading, onCreate, onEdit, o
                         ? `${types.length} type${types.length !== 1 ? 's' : ''}`
                         : `${filtered.length} of ${types.length} types`}
                 </ToolbarCount>
+                <ExportExcelButton grant="packaging_type.export" filename="packaging-types" rows={filtered} disabled={!filtered.length} columns={[
+                    { label: 'Code', value: (t: any) => t.code },
+                    { label: 'Name', value: (t: any) => t.name },
+                    { label: 'Tare (kg)', value: (t: any) => t.tare_kg },
+                    { label: 'Custom Tare', value: (t: any) => (t.is_custom ? 'Yes' : null) },
+                    { label: 'Order', value: (t: any) => t.sort_order },
+                    { label: 'Status', value: (t: any) => (t.active === false ? 'Inactive' : 'Active') },
+                ]} />
                 {canManage && (
                     <>
                         <span style={lvSep()} />

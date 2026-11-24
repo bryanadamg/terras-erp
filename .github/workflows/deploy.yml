@@ -20,13 +20,7 @@ jobs:
     steps:
       - name: Deploy to bie-temp
         uses: appleboy/ssh-action@v1.2.5
-        env:
-          # Frontend npm ci pulls @bryanadamg/terras-ui from GitHub Packages.
-          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
         with:
-          # Forward the token into the host's shell so the compose build secret
-          # can read it; it is never written to disk by the deploy.
-          envs: NODE_AUTH_TOKEN
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
@@ -39,8 +33,7 @@ jobs:
             set -eu
             cd /home/bie-admin/terras-erp
             git pull --ff-only origin main
-            # The deploy user is in the docker group, so no sudo (which would
-            # strip NODE_AUTH_TOKEN).
+            # The deploy user is in the docker group, so no sudo.
             # `up --build` never re-pulls: registry images (db/redis) and
             # build bases (python/node) would stay at whatever was first pulled.
             docker compose pull --ignore-buildable

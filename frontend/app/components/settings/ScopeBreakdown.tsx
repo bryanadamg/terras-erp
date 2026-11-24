@@ -1,9 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { xpFont, CHIP_RADIUS } from '../shared/xpTheme';
-import { ExpandedRowPanel, ExpandedRowPanelBody } from '@bryanadamg/terras-ui/components/Table';
 import { PermissionSectionTable, PermissionSectionRow } from '../shared/permissionChips';
+import { useData } from '../../context/DataContext';
+import { RoleLike } from './RoleFormModal';
 
 /** Tint per scope kind — matches the collapsed-row chip colors so the two views read as the same object. */
 const SCOPE_TINT = {
@@ -30,52 +31,38 @@ function ScopeChip({ label, kind }: { label: string; kind: keyof typeof SCOPE_TI
 }
 
 /**
- * The expanded scope detail on a role row — the counterpart to `PermissionBreakdown`.
- * Collapsed view shows a restriction count; this fills in what's actually restricted,
- * through the same `PermissionSectionTable` card the permission grid uses.
+ * What a role is limited to — the counterpart to `PermissionBreakdown` in the
+ * role and user detail panes, through the same `PermissionSectionTable` card.
+ * Category/location ids resolve to their full paths here so callers pass the role.
  */
-export default function ScopeBreakdown({ workCenterTypes, categories, locations}: {
-    workCenterTypes: string[];
-    categories: string[];
-    locations: string[];
-}) {
+export default function ScopeBreakdown({ role }: { role?: RoleLike | null }) {
+    const { categories, locations } = useData();
+    const categoryName = useMemo(() => new Map<string, string>(
+        categories.map((c: any) => [c.id, (c.path_names || [c.name]).join(' / ')])), [categories]);
+    const locationName = useMemo(() => new Map<string, string>(
+        locations.map((l: any) => [l.id, l.full_path || l.name])), [locations]);
+
+    const workCenterTypes = role?.allowed_work_center_types || [];
+    const categoryLabels = (role?.allowed_categories || []).map(id => categoryName.get(id) || id);
+    const locationLabels = (role?.allowed_locations || []).map(id => locationName.get(id) || id);
+
     const rows: PermissionSectionRow[] = [];
     if (workCenterTypes.length > 0) {
-        rows.push({
-            key: 'wc',
-            label: 'Work Center Types',
-            hint: `${workCenterTypes.length}`,
-            chips: workCenterTypes.map(t => <ScopeChip key={t} label={t} kind="wc" />),
-        });
+        rows.push({ key: 'wc', label: 'Station types', chips: workCenterTypes.map(t => <ScopeChip key={t} label={t} kind="wc" />) });
     }
-    if (categories.length > 0) {
-        rows.push({
-            key: 'cat',
-            label: 'Categories',
-            hint: `${categories.length}`,
-            chips: categories.map(c => <ScopeChip key={c} label={c} kind="cat" />),
-        });
+    if (categoryLabels.length > 0) {
+        rows.push({ key: 'cat', label: 'Categories', chips: categoryLabels.map(c => <ScopeChip key={c} label={c} kind="cat" />) });
     }
-    if (locations.length > 0) {
-        rows.push({
-            key: 'loc',
-            label: 'Locations',
-            hint: `${locations.length}`,
-            chips: locations.map(l => <ScopeChip key={l} label={l} kind="loc" />),
-        });
+    if (locationLabels.length > 0) {
+        rows.push({ key: 'loc', label: 'Locations', chips: locationLabels.map(l => <ScopeChip key={l} label={l} kind="loc" />) });
     }
-    if (rows.length === 0) return null;
+    if (rows.length === 0) {
+        return (
+            <div style={{ fontFamily: xpFont, fontSize: 11, color: '#6b6558' }}>
+                Unrestricted — every station type, category and location.
+            </div>
+        );
+    }
 
-    return (
-        <ExpandedRowPanel>
-            <ExpandedRowPanelBody>
-                <PermissionSectionTable
-                    title="Scope Restrictions"
-                    rows={rows}
-                    labelWidth={140}
-                    style={{ maxWidth: 900 }}
-                />
-            </ExpandedRowPanelBody>
-        </ExpandedRowPanel>
-    );
+    return <PermissionSectionTable title="Scope Restrictions" rows={rows} labelWidth={140} />;
 }

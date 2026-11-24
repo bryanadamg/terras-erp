@@ -3,6 +3,7 @@ import dynamic from 'next/dynamic';
 import CalendarView from '../shared/CalendarView';
 import ManufacturingSearchBar from './ManufacturingSearchBar';
 import { ToolbarButton, TITLE_TONES, SearchField } from '../shared/shellTheme';
+import ExportExcelButton, { fetchAllRows, xlsDateTime } from '../shared/ExportExcelButton';
 import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
 import Pager from '../shared/Pager';
 import { Tabs } from '../shared/Tabs';
@@ -74,7 +75,7 @@ export default function ManufacturingOrdersTab({
     onPrint,
 }: any) {
     const { showToast } = useToast();
-    const { authFetch, fetchData, loading: dataLoading } = useData();
+    const { authFetch, fetchData, loading: dataLoading, pagination } = useData();
     const canPrint = useUser().hasPermission('manufacturing_order.print');
     // Close and reopen are one authority server-side (update_mo_status).
     const canClose = useUser().hasPermission('manufacturing_order.close');
@@ -1033,8 +1034,28 @@ export default function ManufacturingOrdersTab({
           )}
 
             {(() => {
-                const moActions = canManage || onPrint ? (
+                const moActions = (
                     <>
+                        {/* Every root MO under the committed search, not just this page. */}
+                        <ExportExcelButton grant="manufacturing_order.export" filename="manufacturing-orders"
+                            fetchRows={() => fetchAllRows(authFetch, `${API_BASE}/manufacturing-orders`, { search: pagination?.moSearch })}
+                            columns={[
+                                { label: 'MO Code', value: (mo: any) => mo.code },
+                                { label: 'Item Code', value: (mo: any) => getItemCode(mo.item_id) },
+                                { label: 'Item Name', value: (mo: any) => mo.item_name || getItemName(mo.item_id) },
+                                { label: 'Size', value: (mo: any) => mo.bom_size_snapshot?.label || mo.bom_size_snapshot?.size_name },
+                                { label: 'Color', value: (mo: any) => [mo.color_code, mo.color_name].filter(Boolean).join(' ') || mo.labdip_variant_code },
+                                { label: 'Sales Order', value: (mo: any) => mo.sales_order_code },
+                                { label: 'Qty', value: (mo: any) => mo.qty },
+                                { label: 'Completed', value: (mo: any) => mo.qty_completed_total },
+                                { label: 'Rejected', value: (mo: any) => mo.qty_rejected_total },
+                                { label: 'UOM', value: (mo: any) => getItemUom(mo.item_id) },
+                                { label: 'Target Start', value: (mo: any) => xlsDateTime(mo.target_start_date) },
+                                { label: 'Target End', value: (mo: any) => xlsDateTime(mo.target_end_date) },
+                                { label: 'Actual Start', value: (mo: any) => xlsDateTime(mo.actual_start_date) },
+                                { label: 'Actual End', value: (mo: any) => xlsDateTime(mo.actual_end_date) },
+                                { label: 'Status', value: (mo: any) => mo.status },
+                            ]} />
                         {canManage && (
                             <ToolbarButton tone="create" icon="bi-plus-lg" onClick={onNewMO}>New MO</ToolbarButton>
                         )}
@@ -1042,7 +1063,7 @@ export default function ManufacturingOrdersTab({
                             <ToolbarButton tone="neutral" icon="bi-printer" printable onClick={onPrint}>Print</ToolbarButton>
                         )}
                     </>
-                ) : null;
+                );
 
                 // Calendar/List picker. Lives in this tab's toolbar rather than the
                 // page's title bar: it drives only this tab, and the shared toolbar

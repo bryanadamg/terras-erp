@@ -54,6 +54,9 @@ def test_mount_requires_prep_and_report_sums_it_per_operator(client, auth_header
     row = _report_row(client, auth_headers, "name:pak udin")
     assert row["has_account"] is False
     assert (row["tying_in_ends"], row["draw_in_ends"], row["beams"]) == (3100, 0, 1)
+    # The per-mount export carries the beam type and the loom.
+    m = row["mounts"][0]
+    assert m["item_name"] == "Warp beam" and m["work_center_code"].startswith("LM-")
 
     # Supervisor correction: re-pegged to an account, as drawing-in.
     op = client.get("/api/users/operators", headers=auth_headers).json()[0]

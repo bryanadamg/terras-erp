@@ -17,56 +17,10 @@ import { xpFont } from '../shared/xpTheme';
 export const SETTINGS_GAP = 16;
 export const SETTINGS_FIELD_GAP = 10;
 
-// No measure cap on the panels: a capped column left a dead beige gutter down
-// the right of every tab, which reads as broken rather than as breathing room.
-// Panels span the tab like every other section page; field width is held in
-// check by `settingsGrid` splitting the row into more columns instead.
-
-export const settingsStack: React.CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: SETTINGS_GAP,
-};
-
-/**
- * Two (or more) columns of panels, side by side, collapsing to a stack when
- * there isn't room for them.
- *
- * Every tab used to be ONE column of full-bleed panels, which on a 1700px
- * screen gave a two-field password form 1600px of width and made the page tall
- * instead of wide — a lot of empty beige on the right of every panel and a
- * scroll to reach the save button. A measure cap was tried and rejected (see
- * the note above: it just moved the empty space into one gutter). The fix is to
- * use the width for a second column of panels.
- *
- * COLUMNS, not a grid of panels: grid rows are as tall as their tallest cell,
- * so a short panel beside a tall one leaves a hole under it. A column of cards
- * has no such row, and its ragged bottom edge is what a column of cards looks
- * like everywhere else.
- *
- * `basis` is the width below which this column stops sharing the row and wraps
- * to full width — set it from the column's widest real content (a 9-tab avatar
- * picker needs more than a pair of text inputs). `grow` splits the leftover
- * width once every basis is satisfied.
- *
- * Wide data tables (the users/roles grids, the snapshots list) stay full-bleed
- * one-per-row: half of a screen is not enough for eight columns, and squeezing
- * them is a worse trade than the empty space was.
- */
-export const settingsColumns: React.CSSProperties = {
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: SETTINGS_GAP,
-    alignItems: 'flex-start',
-};
-
-export const settingsCol = (basis: number, grow = 1): React.CSSProperties => ({
-    flex: `${grow} 1 ${basis}px`,
-    minWidth: 0,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: SETTINGS_GAP,
-});
+// Every tab is one full-height panel — a section menu or list down its left
+// edge, the selected content beside it (`MasterDetail` in settingsParts). The
+// old two-column band of free-floating panels (settingsColumns/settingsCol)
+// went with it.
 
 /**
  * Field row that reflows by available width instead of by bootstrap column

@@ -5,6 +5,7 @@ import { useUser } from '../../context/UserContext';
 import { useConfirm } from '../../context/ConfirmContext';
 import { XPActionButton } from '../shared/xpTheme';
 import { SearchField } from '../shared/shellTheme';
+import ExportExcelButton from '../shared/ExportExcelButton';
 import { toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
 import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 import {
@@ -186,6 +187,15 @@ export default function CategoriesView({
             <div style={xpToolbar({ flexShrink: 0, padding: '4px 8px' })}>
                 <SearchField value={search} onChange={setSearch} placeholder="Search categories…" width={240} />
                 <ToolbarCount right>{all.length} categor{all.length === 1 ? 'y' : 'ies'}</ToolbarCount>
+                <ExportExcelButton<Category> grant="category.export" filename="categories" disabled={!all.length}
+                    rows={[...all].sort((a, b) => (a.path_names || [a.name]).join('/').localeCompare((b.path_names || [b.name]).join('/')))}
+                    columns={[
+                        { label: 'Category', value: c => c.name },
+                        { label: 'Level', value: c => c.level },
+                        { label: 'Path', value: c => (c.path_names || [c.name]).join(' / ') },
+                        { label: 'Items', value: c => c.item_count ?? 0 },
+                        { label: 'System', value: c => (c.is_system ? 'Yes' : 'No') },
+                    ]} />
             </div>
 
             <ColumnPanes>

@@ -7,6 +7,7 @@ import { FormSection } from '@bryanadamg/terras-ui/components/FormSection';
 import { FormError } from '@bryanadamg/terras-ui/components/Field';
 import { lvInput, lvBtn, lvPrimaryBtn, lvLabel, lvSep, lvTh, lvTd, lvRow, lvThead, TableEmpty, ResizableTable } from '../shared/listViewTheme';
 import { ToolbarButton, SearchField } from '../shared/shellTheme';
+import ExportExcelButton from '../shared/ExportExcelButton';
 import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 import { FilterChipBar, type FilterChipOption } from '@bryanadamg/terras-ui/components/FilterChipBar';
 import { ColorFamilyKey, COLOR_FAMILY_META, colorFamilyOf, colorFamilyCounts, derivedColorHex } from '../shared/colorFamilies';
@@ -201,6 +202,11 @@ export default function ColorsVariantView({ values, canCreate, canEdit, canDelet
                         ? `${sorted.length} color${sorted.length !== 1 ? 's' : ''}`
                         : `${filtered.length} of ${sorted.length} colors`}
                 </ToolbarCount>
+                <ExportExcelButton grant="color_variant.export" filename="color-variants" rows={filtered} disabled={!filtered.length} columns={[
+                    { label: 'Color', value: (v: any) => v.value },
+                    { label: 'Family', value: (v: any) => COLOR_FAMILY_META[colorFamilyOf(v.value)]?.label || colorFamilyOf(v.value) },
+                    { label: 'Hex', value: (v: any) => v.hex },
+                ]} />
                 {canCreate && (
                     <>
                         <span style={lvSep()} />

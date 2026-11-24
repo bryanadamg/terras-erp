@@ -17,6 +17,7 @@ import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
 import { LV_XP_FONT, lvBtn, lvInput, lvTd, lvLabel, lvRow, lvSubTh, lvSubTd, lvSubRow, ExpanderCell, lvThSticky, lvSubTable, RowCheckboxCell, ResizableTable } from '../shared/listViewTheme';
 import { CHECK_COL_W as LV_CHECK_COL_W, SortableTh } from '@bryanadamg/terras-ui/components/Table';
 import { ShellWindow, SearchField } from '../shared/shellTheme';
+import ExportExcelButton, { xlsDateTime } from '../shared/ExportExcelButton';
 import { toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
 import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
 import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
@@ -75,7 +76,7 @@ export default function PickListView() {
     // server-side `?search=`. Otherwise unfiltered — every pick list, newest first.
     const {
         rows: pickLists, total: plTotal, loading, page: plPage, setPage: setPlPage,
-        refetch: reloadPickLists, searchInput: plSearch, setSearch: setPlSearch,
+        refetch: reloadPickLists, searchInput: plSearch, setSearch: setPlSearch, fetchAll: fetchAllPickLists,
     } = usePaginatedFetch<any>({
         endpoint: `${API_BASE}/pick-lists`,
         authFetch,
@@ -506,6 +507,16 @@ export default function PickListView() {
                 <span style={{ marginLeft: 'auto', fontSize: 11, color: '#333' }}>
                     {plTotal.toLocaleString()} pick list{plTotal !== 1 ? 's' : ''}
                 </span>
+                <ExportExcelButton grant="pick_list.export" filename="pick-lists" fetchRows={fetchAllPickLists} disabled={!plTotal} columns={[
+                    { label: 'Code', value: pl => pl.code },
+                    { label: 'Sales Order', value: pl => pl.sales_order_code },
+                    { label: 'Customer', value: pl => pl.customer_name },
+                    { label: 'Status', value: pl => pl.status },
+                    { label: 'Cartons Picked', value: pl => cartonProgress(pl) },
+                    { label: 'Surat Jalan', value: pl => pl.delivery_note_number },
+                    { label: 'Created', value: pl => xlsDateTime(pl.created_at) },
+                    { label: 'Dispatched', value: pl => xlsDateTime(pl.dispatched_at) },
+                ]} />
             </div>
             <div style={{ flex: 1, overflowY: 'auto', background: '#fff', minHeight: 0 }}>
                 <ResizableTable style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -791,6 +802,22 @@ function SOPickerBoard({ pickableSOs, loading, tzDate, canManage, onRefresh, onP
                 <ToolbarCount right>
                     {filtered.length.toLocaleString()} order{filtered.length !== 1 ? 's' : ''}
                 </ToolbarCount>
+                <ExportExcelButton grant="pick_list.export" filename="to-pick" rows={sorted} disabled={!sorted.length} columns={[
+                    { label: 'Sales Order', value: so => so.po_number },
+                    { label: 'Customer PO Ref', value: so => so.customer_po_ref },
+                    { label: 'Customer', value: so => so.customer_name },
+                    { label: 'Status', value: so => so.status },
+                    { label: 'Due Date', value: so => so.due_date },
+                    { label: 'Days to Due', value: so => so.days_to_due },
+                    { label: 'Lines Outstanding', value: so => so.lines_outstanding },
+                    { label: 'Outstanding', value: so => num(so.qty_outstanding) },
+                    { label: 'Ready', value: so => num(so.qty_ready) },
+                    { label: 'Unit', value: so => so.base_uom },
+                    { label: 'Outstanding (Alt)', value: so => so.qty_outstanding_alt },
+                    { label: 'Alt Unit', value: so => so.outstanding_alt_uom },
+                    { label: 'Cartons Ready', value: so => so.cartons_ready },
+                    { label: 'Coverage %', value: so => coveragePct(so) },
+                ]} />
             </div>
             <div style={{ flex: 1, overflowY: 'auto', background: '#fff', minHeight: 0, fontFamily: xpFont }}>
                 {loading

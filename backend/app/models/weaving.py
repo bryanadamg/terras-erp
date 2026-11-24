@@ -112,3 +112,36 @@ class WorkCenterHoliday(Base):
     )
     holiday_date: Mapped[date] = mapped_column(Date)
     note: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+
+
+class LoomTuning(Base):
+    """One tuning of a loom: who tuned it, when it began, and when the run started.
+
+    WorkCenter.prep_status only holds the loom's current step, so this is the history
+    the tuning report reads. Opened when the loom enters TUNING; closed (`ended_at`)
+    when a run starts on it. A reset out of TUNING deletes the open row — it was a
+    mis-click, not a tuning.
+    """
+    __tablename__ = "loom_tunings"
+    # One OPEN tuning per loom: entering TUNING again replaces a stale open row.
+    __table_args__ = (
+        Index(
+            "uq_loom_tunings_open",
+            "work_center_id",
+            unique=True,
+            postgresql_where=text("ended_at IS NULL"),
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    work_center_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("work_centers.id", ondelete="CASCADE"), index=True
+    )
+    tuner_name: Mapped[str] = mapped_column(String(150))
+    started_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+    ended_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    # The run whose start ended the tuning.
+    weaving_run_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("weaving_runs.id", ondelete="SET NULL"), nullable=True
+    )
+    created_by: Mapped[Optional[str]] = mapped_column(String(150), nullable=True)
