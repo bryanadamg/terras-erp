@@ -89,7 +89,7 @@ ENDPOINTS = {
         "materials[].incoming_mo_code",
     ], {}),
     "dyeing_monitor": ("/api/dyeing/monitor", {}, [
-        "mo_code", "wo_code", "item_code", "color_code", "labdip_variant_code", "batch_number", "work_center_code",
+        "mo_code", "wo_code", "item_code", "color_code", "labdip_variant_code", "work_center_code",
     ], {}),
     "packing_orders": ("/api/packing", {}, [
         "code", "item_code", "color_code", "sales_order_code", "customer_po_ref",
