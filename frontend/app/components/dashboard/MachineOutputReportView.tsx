@@ -554,6 +554,18 @@ export default function MachineOutputReportView() {
     // Excel of exactly what's on screen: the server only renders these rows, so the
     // file can't drift from the grid's per-grouping columns.
     const [exporting, setExporting] = useState(false);
+    // Warp prep exports one row per beam mount, not per operator: the floor needs
+    // the beam type and the loom each prep went to, which an operator total can't carry.
+    const prepMountSheet = () => ({
+        header: ['Date', 'Time', t('operator'), t('beam_prep_type'), t('ends'), t('beam'),
+            'Beam Item', 'Beam Type', 'Loom', 'Work Order', 'Entered By'],
+        rows: sorted.flatMap((r: any) => (r.mounts || []).map((m: any) => [
+            m.mounted_at ? tzDate(m.mounted_at) : '', m.mounted_at ? tzTime(m.mounted_at) : '',
+            r.operator_name || '', t(m.prep_type === 'DRAW_IN' ? 'prep_draw_in' : 'prep_tying_in'), m.ends ?? 0,
+            m.beam_number || '', m.item_code || '', m.item_name || '', m.work_center_code || '',
+            m.wo_code || '', m.mounted_by || '',
+        ])),
+    });
     const exportExcel = async () => {
         const cols = columns.filter(c => c.key !== 'share');
         const name = isTuning ? 'loom-tuning' : isPrep ? 'warp-prep' : isOperator ? 'packing-operator' : isPacking ? 'packing' : mode;
@@ -565,8 +577,10 @@ export default function MachineOutputReportView() {
                 body: JSON.stringify({
                     sheet: 'Production Output',
                     filename: `${name}-output_${startDate || 'all'}_${endDate || 'now'}`,
-                    header: cols.map(c => c.label),
-                    rows: sorted.map((r: any) => cols.map(c => c.xlsx(r))),
+                    ...(isPrep ? prepMountSheet() : {
+                        header: cols.map(c => c.label),
+                        rows: sorted.map((r: any) => cols.map(c => c.xlsx(r))),
+                    }),
                 }),
             });
             if (!res.ok) { showToast('Export failed', 'danger'); return; }

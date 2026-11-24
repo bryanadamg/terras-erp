@@ -1003,6 +1003,7 @@ def _beam_prep_rows(rows_raw) -> tuple[list[dict], dict]:
             "mount_id": str(r.mount_id),
             "beam_number": r.beam_number,
             "item_code": r.item_code,
+            "item_name": r.item_name,
             "work_center_code": r.wc_code,
             "wo_code": r.wo_code,
             "prep_type": r.prep_type,
@@ -1066,6 +1067,7 @@ async def beam_prep_output_report(
             User.full_name.label("full_name"),
             Batch.batch_number.label("beam_number"),
             Item.code.label("item_code"),
+            Item.name.label("item_name"),
             func.coalesce(WorkCenter.code, WorkCenter.name).label("wc_code"),
             WorkOrder.code.label("wo_code"),
         )
