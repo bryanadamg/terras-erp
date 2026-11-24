@@ -571,10 +571,11 @@ export default function MachineOutputReportView() {
         const name = isTuning ? 'loom-tuning' : isPrep ? 'warp-prep' : isOperator ? 'packing-operator' : isPacking ? 'packing' : mode;
         setExporting(true);
         try {
-            const res = await authFetch(`${API_BASE}/reports/production-output/export`, {
+            const res = await authFetch(`${API_BASE}/export/xlsx`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
+                    grant: 'production_output.export',
                     sheet: 'Production Output',
                     filename: `${name}-output_${startDate || 'all'}_${endDate || 'now'}`,
                     ...(isPrep ? prepMountSheet() : {

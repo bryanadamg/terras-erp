@@ -1,0 +1,83 @@
+'use client';
+
+// "Export Excel" for any list screen. The screen names its columns once; this
+// takes the rows (already fully loaded) or fetches them (every row matching the
+// screen's filters, not just the page), maps them through the columns and has
+// POST /export/xlsx render the file. Hidden without the screen's export grant.
+import React, { useState } from 'react';
+import { useData } from '../../context/DataContext';
+import { useUser } from '../../context/UserContext';
+import { useToast } from './Toast';
+import { ToolbarButton } from './shellTheme';
+import { API_BASE } from './apiBase';
+import { saveResponse } from './download';
+
+export type ExportCell = string | number | null | undefined;
+export interface ExportColumn<T = any> {
+    label: string;
+    value: (row: T) => ExportCell;
+}
+
+/** Every row of a paginated list endpoint under the given query (size=0 = uncapped). */
+export async function fetchAllRows(authFetch: (url: string) => Promise<Response>, endpoint: string, params: Record<string, any> = {}): Promise<any[]> {
+    const q = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+        if (v !== undefined && v !== null && v !== '' && v !== false) q.set(k, String(v));
+    });
+    q.set('page', '1');
+    q.set('size', '0');
+    const res = await authFetch(`${endpoint}${endpoint.includes('?') ? '&' : '?'}${q}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    return Array.isArray(data) ? data : (data.items || []);
+}
+
+export default function ExportExcelButton<T = any>({ grant, filename, sheet, columns, rows, fetchRows, disabled }: {
+    /** `<resource>.export` — the button is hidden without it. */
+    grant: string;
+    filename: string;
+    sheet?: string;
+    columns: ExportColumn<T>[];
+    /** Rows already fully loaded on the screen… */
+    rows?: T[];
+    /** …or how to load all of them (see fetchAllRows). */
+    fetchRows?: () => Promise<T[]>;
+    disabled?: boolean;
+}) {
+    const { authFetch } = useData() as any;
+    const { hasPermission } = useUser();
+    const { showToast } = useToast();
+    const [busy, setBusy] = useState(false);
+    if (!hasPermission(grant)) return null;
+
+    const run = async () => {
+        setBusy(true);
+        try {
+            const data = fetchRows ? await fetchRows() : (rows || []);
+            const cell = (v: ExportCell) => (v === undefined || v === '' ? null : v);
+            const res = await authFetch(`${API_BASE}/export/xlsx`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    grant,
+                    sheet: (sheet || filename).slice(0, 64),
+                    filename,
+                    header: columns.map(c => c.label),
+                    rows: data.map(r => columns.map(c => cell(c.value(r)))),
+                }),
+            });
+            if (!res.ok) { showToast('Export failed', 'danger'); return; }
+            await saveResponse(res, `${filename}.xlsx`);
+        } catch {
+            showToast('Export failed', 'danger');
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    return (
+        <ToolbarButton tone="neutral" icon="bi-file-earmark-excel" disabled={busy || disabled} onClick={run}>
+            {busy ? 'Exporting…' : 'Export Excel'}
+        </ToolbarButton>
+    );
+}
