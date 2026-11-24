@@ -15,6 +15,11 @@ on `main`:
 
 ## [Unreleased]
 
+## [1.11.1] - 2026-11-24
+
+### Changed
+- The tuner is picked from a dropdown beside the Tuning button, on the loom card and in the machine window, instead of a popup. It lists operator accounts and accepts a typed name for someone without one
+
 ## [1.11.0] - 2026-11-24
 
 ### Added
