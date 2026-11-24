@@ -124,9 +124,6 @@ jobs:
 
   frontend:
     runs-on: ubuntu-latest
-    env:
-      # @bryanadamg/terras-ui comes from GitHub Packages (see frontend/.npmrc).
-      NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
     steps:
       - uses: actions/checkout@v7
 
