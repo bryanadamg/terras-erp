@@ -19,6 +19,8 @@
 // and a third source (`/reports/beam-prep-output`):
 //   prep           — per drawing-in / tying-in operator, ends split by type, read
 //                    off the prep record stamped on every beam mount (paid per end).
+// and a fourth (`/weaving/tunings`):
+//   tuning         — one row per loom tuning: tuner, tuning start, run start.
 //
 // Every row carries its reject events (reason, operator, defect store), so the
 // expanded panel answers "what was rejected and where did it go" in one place.
@@ -68,7 +70,7 @@ const uomOf = (row: any): string => {
 // red rather than leaving it to the reader to spot in a column of numbers.
 const REJECT_ALERT_PCT = 5;
 
-type Mode = 'machine' | 'group' | 'wo' | 'packing' | 'operator' | 'prep';
+type Mode = 'machine' | 'group' | 'wo' | 'packing' | 'operator' | 'prep' | 'tuning';
 
 interface ReportColumn {
     key: string;
@@ -84,7 +86,7 @@ interface ReportColumn {
 
 export default function MachineOutputReportView() {
     const { t } = useLanguage();
-    const { formatDate: tzDate, formatTime: tzTime } = useTimezone();
+    const { formatDate: tzDate, formatTime: tzTime, timezone } = useTimezone();
     const { authFetch, subscribeLiveEvents, workCenters = [] } = useData();
     const { hasPermission } = useUser();
     const { showToast } = useToast();
@@ -117,6 +119,7 @@ export default function MachineOutputReportView() {
     const isPacking = mode === 'packing';
     const isOperator = mode === 'operator';
     const isPrep = mode === 'prep';
+    const isTuning = mode === 'tuning';
     // Both grains come off /reports/packing-output, so anything that depends on the
     // SOURCE (no work centre to scope by, no lot on a reject) tests this, and only
     // the column/row shape tests isPacking vs isOperator.
@@ -133,7 +136,12 @@ export default function MachineOutputReportView() {
             if (endDate) p.set('end_date', `${endDate}T23:59:59`);
 
             let url: string;
-            if (isPrep) {
+            if (isTuning) {
+                const q = new URLSearchParams({ tz: timezone });
+                if (startDate) q.set('date_from', startDate);
+                if (endDate) q.set('date_to', endDate);
+                url = `${API_BASE}/weaving/tunings?${q.toString()}`;
+            } else if (isPrep) {
                 url = `${API_BASE}/reports/beam-prep-output?${p.toString()}`;
             } else if (isPackingSource) {
                 // Packing is its own source — no work-centre scope applies to it.
@@ -151,8 +159,8 @@ export default function MachineOutputReportView() {
             const res = await authFetch(url);
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
-            setRows(data.rows || []);
-            setTotals(data.totals || {});
+            setRows(Array.isArray(data) ? data : (data.rows || []));
+            setTotals(Array.isArray(data) ? {} : (data.totals || {}));
         } catch (e: any) {
             setError(e.message || 'Failed to load report');
             setRows([]);
@@ -160,7 +168,7 @@ export default function MachineOutputReportView() {
         } finally {
             setLoading(false);
         }
-    }, [API_BASE, authFetch, startDate, endDate, scope, mode, isPackingSource, isOperator, isPrep, hideIdle, woStatus]);
+    }, [API_BASE, authFetch, startDate, endDate, scope, mode, isPackingSource, isOperator, isPrep, isTuning, timezone, hideIdle, woStatus]);
 
     useEffect(() => { fetchReport(); }, [fetchReport]);
     // A logged completion, reject or WO status change broadcasts 'production' — reload
@@ -205,16 +213,17 @@ export default function MachineOutputReportView() {
     // "Rejects only" is a client-side cut of the loaded rows, not another request —
     // the reject events already ship with every row.
     const visibleRows = useMemo(
-        () => (rejectsOnly && !isPrep ? rows.filter((r: any) => (r.qty_rejected || 0) > 0) : rows),
-        [rows, rejectsOnly, isPrep],
+        () => (rejectsOnly && !isPrep && !isTuning ? rows.filter((r: any) => (r.qty_rejected || 0) > 0) : rows),
+        [rows, rejectsOnly, isPrep, isTuning],
     );
 
     const rowKey = useCallback((r: any): string => {
+        if (isTuning) return String(r.id);
         if (isOperator || isPrep) return String(r.operator_key);
         if (isPacking) return String(r.packing_order_id);
         if (isWoMode) return String(r.work_order_id || `${r.work_center_id}:${r.mo_code}`);
         return String(r.work_center_id);
-    }, [isOperator, isPrep, isPacking, isWoMode]);
+    }, [isOperator, isPrep, isTuning, isPacking, isWoMode]);
 
     const sortCols = useMemo(() => ({
         name:      (r: any) => (isOperator || isPrep ? r.operator_name : isPacking ? r.po_code : isWoMode ? (r.wo_code || r.mo_code || '') : r.work_center_name) || '',
@@ -238,6 +247,11 @@ export default function MachineOutputReportView() {
         tyingIn:   (r: any) => r.tying_in_ends || 0,
         totalEnds: (r: any) => r.total_ends || 0,
         beams:     (r: any) => r.beams || 0,
+        loom:      (r: any) => r.work_center_code || '',
+        tuner:     (r: any) => r.tuner_name || '',
+        tStart:    (r: any) => r.started_at || '',
+        tEnd:      (r: any) => r.ended_at || '',
+        tHours:    (r: any) => r.duration_hours ?? -1,
     }), [isOperator, isPrep, isPacking, isWoMode]);
     const { sorted, sort, toggle } = useSortable(visibleRows, sortCols);
 
@@ -317,6 +331,29 @@ export default function MachineOutputReportView() {
             key: 'last', label: 'Last log', sortKey: 'last',
             render: r => lastLogCell(r), xlsx: r => r.last_log || '',
         };
+
+        if (isTuning) {
+            const when = (v: string | null) => (v ? `${tzDate(v)} ${tzTime(v)}` : '');
+            return [
+                {
+                    key: 'loom', label: 'Loom', sortKey: 'loom',
+                    render: r => twoLine(r.work_center_code, r.work_center_name), xlsx: r => r.work_center_code || '',
+                },
+                { key: 'tuner', label: t('tuner'), sortKey: 'tuner', render: r => <b>{r.tuner_name}</b>, xlsx: r => r.tuner_name || '' },
+                { key: 'tStart', label: t('tuning_start'), sortKey: 'tStart', render: r => when(r.started_at), xlsx: r => when(r.started_at) },
+                {
+                    key: 'tEnd', label: t('tuning_run_start'), sortKey: 'tEnd',
+                    render: r => r.ended_at ? when(r.ended_at) : <span style={{ color: '#b36b00' }}>{t('tuning_in_progress')}</span>,
+                    xlsx: r => when(r.ended_at),
+                },
+                {
+                    key: 'tHours', label: 'Hours', sortKey: 'tHours', align: 'right',
+                    render: r => r.duration_hours != null ? fmtQty(r.duration_hours) : '—', xlsx: r => r.duration_hours ?? '',
+                },
+                { key: 'wo', label: 'WO', render: r => r.wo_code || '—', xlsx: r => r.wo_code || '' },
+                { key: 'by', label: 'Entered by', render: r => r.created_by || '', xlsx: r => r.created_by || '' },
+            ];
+        }
 
         if (isPrep) {
             const endsCell = (ends: number, beams: number) => (
@@ -512,14 +549,14 @@ export default function MachineOutputReportView() {
             },
             lastLog,
         ];
-    }, [isOperator, isPrep, isPacking, isWoMode, isGroupMode, maxOutput, true, tzDate, tzTime, t]);
+    }, [isOperator, isPrep, isTuning, isPacking, isWoMode, isGroupMode, maxOutput, true, tzDate, tzTime, t]);
 
     // Excel of exactly what's on screen: the server only renders these rows, so the
     // file can't drift from the grid's per-grouping columns.
     const [exporting, setExporting] = useState(false);
     const exportExcel = async () => {
         const cols = columns.filter(c => c.key !== 'share');
-        const name = isPrep ? 'warp-prep' : isOperator ? 'packing-operator' : isPacking ? 'packing' : mode;
+        const name = isTuning ? 'loom-tuning' : isPrep ? 'warp-prep' : isOperator ? 'packing-operator' : isPacking ? 'packing' : mode;
         setExporting(true);
         try {
             const res = await authFetch(`${API_BASE}/reports/production-output/export`, {
@@ -852,9 +889,10 @@ export default function MachineOutputReportView() {
         );
     };
 
-    const emptyIcon = isPrep ? 'bi-person-gear' : isOperator ? 'bi-person-badge' : isPacking ? 'bi-box-seam' : isWoMode ? 'bi-card-checklist' : 'bi-cpu';
+    const emptyIcon = isTuning ? 'bi-sliders' : isPrep ? 'bi-person-gear' : isOperator ? 'bi-person-badge' : isPacking ? 'bi-box-seam' : isWoMode ? 'bi-card-checklist' : 'bi-cpu';
     const emptyMessage = rows.length === 0
-        ? (isPrep ? 'No beams mounted with drawing-in / tying-in recorded in this period'
+        ? (isTuning ? 'No loom tuning recorded in this period'
+            : isPrep ? 'No beams mounted with drawing-in / tying-in recorded in this period'
             : isOperator ? 'No packing logged by anyone in this period'
             : isPacking ? 'No packing logged in this period'
             : isWoMode ? 'No work order output in this period'
@@ -868,6 +906,7 @@ export default function MachineOutputReportView() {
         { value: 'packing', label: 'Packing' },
         { value: 'operator', label: 'Per Packer' },
         { value: 'prep', label: t('beam_prep_title') },
+        { value: 'tuning', label: t('tuning_report') },
     ];
 
     // Same preset row in both themes — one list, rendered by SegmentedBar.
@@ -877,6 +916,16 @@ export default function MachineOutputReportView() {
 
     // Summary tiles — mode-aware, reject % always present since that is the ask.
     const statTiles = useMemo(() => {
+        if (isTuning) {
+            const done = rows.filter((r: any) => r.duration_hours != null);
+            const avg = done.length ? done.reduce((a: number, r: any) => a + r.duration_hours, 0) / done.length : null;
+            return [
+                { label: 'Tunings', value: String(rows.length), color: '#1a3d7a', cls: 'text-primary' },
+                { label: 'Avg hours', value: avg == null ? '—' : fmtQty(avg), color: '#1a5e1a', cls: 'text-success' },
+                { label: t('tuning_in_progress'), value: String(rows.length - done.length), color: '#b36b00', cls: 'text-warning' },
+                { label: t('tuner'), value: String(new Set(rows.map((r: any) => r.tuner_name)).size), color: '#4a2a7a', cls: 'text-dark' },
+            ];
+        }
         if (isPrep) {
             const n = (v: number) => (v || 0).toLocaleString();
             return [
@@ -931,7 +980,7 @@ export default function MachineOutputReportView() {
                 ? [{ label: 'Machines', value: `${totals.active_machine_count || 0}/${totals.machine_count || 0}`, color: '#4a2a7a', cls: 'text-dark' }]
                 : [{ label: 'Reject events', value: String(totals.reject_events || 0), color: '#4a2a7a', cls: 'text-dark' }]),
         ];
-    }, [totals, isOperator, isPrep, isPacking, isMachineLevel, t]);
+    }, [totals, rows, isOperator, isPrep, isTuning, isPacking, isMachineLevel, t]);
 
     // ── Render — one tree, classic vs modern chosen per element ─────────────
     const toolbar: React.CSSProperties = sharedXpToolbar({ padding: '4px 6px', gap: '5px', flexWrap: 'nowrap', overflowX: 'auto' });
@@ -959,7 +1008,7 @@ export default function MachineOutputReportView() {
                                 allowEmpty
                                 emptyLabel="All Work Centres"
                                 style={{ width: 200 }}
-                                disabled={isPackingSource || isPrep}
+                                disabled={isPackingSource || isPrep || isTuning}
                             />
                             <div style={xpSep} />
                             <span style={lbl}>View:</span>
@@ -981,7 +1030,7 @@ export default function MachineOutputReportView() {
                                     Hide machines with no output
                                 </label>
                             )}
-                            {!isPrep && (
+                            {!isPrep && !isTuning && (
                                 <label style={{ ...lbl, display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
                                     <input type="checkbox" checked={rejectsOnly} onChange={e => setRejectsOnly(e.target.checked)} />
                                     With rejects only
@@ -1065,9 +1114,9 @@ export default function MachineOutputReportView() {
                                             <React.Fragment key={key}>
                                             <tr
                                                 style={{ background: open ? rowStateBg('expanded') : lvZebra(i), borderBottom: '1px solid #e0ddd3', cursor: 'pointer' }}
-                                                onClick={() => setExpanded(open ? null : key)}
+                                                onClick={() => !isTuning && setExpanded(open ? null : key)}
                                             >
-                                                <ExpanderCell expanded={open} onToggle={() => setExpanded(open ? null : key)} tdStyle={td} label="machine detail" />
+                                                {isTuning ? <td style={td} /> : <ExpanderCell expanded={open} onToggle={() => setExpanded(open ? null : key)} tdStyle={td} label="machine detail" />}
                                                 {columns.map((c, ci) => (
                                                     <td
                                                         key={c.key}

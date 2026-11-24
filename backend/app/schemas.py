@@ -1145,6 +1145,8 @@ class LoomBeamStatus(BaseModel):
 class LoomPrepUpdate(BaseModel):
     """Manual loom prep step. None = reset back to STAGED."""
     status: str | None = None
+    # Who is tuning the loom — required when status is TUNING (the tuning report's name).
+    tuner_name: str | None = None
 
 
 class PutawayBinOption(BaseModel):

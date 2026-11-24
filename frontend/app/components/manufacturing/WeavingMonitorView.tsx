@@ -9,6 +9,7 @@ import VariantChips from '../shared/VariantChips';
 import { useToast } from '../shared/Toast';
 import WorkCenterMonitorModal from './WorkCenterMonitorModal';
 import GroupCalendarModal from './GroupCalendarModal';
+import TuningNameModal from './machineMonitor/TuningNameModal';
 import { useMonitorSections } from './machineMonitor/useMonitorSections';
 import {
     EffBar, CardGrid, MachineCard, GroupHeader, MonitorChipBar,
@@ -120,12 +121,15 @@ export default function WeavingMonitorView() {
     } as Record<string, string>)[s] || t('idle');
 
     const [prepBusy, setPrepBusy] = useState<string | null>(null);
-    const setPrep = async (m: any, step: string | null) => {
+    // Tuning asks who is tuning first; the name feeds the Loom Tuning report.
+    const [tuningLoom, setTuningLoom] = useState<any>(null);
+    const setPrep = async (m: any, step: string | null, tunerName?: string) => {
+        if (step === 'TUNING' && !tunerName) { setTuningLoom(m); return; }
         setPrepBusy(m.id);
         try {
             const res = await authFetch(`${API_BASE}/work-centers/${m.id}/loom-prep`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: step }),
+                body: JSON.stringify({ status: step, tuner_name: tunerName ?? null }),
             });
             if (!res.ok) {
                 const d = await res.json().catch(() => null);
@@ -544,6 +548,10 @@ export default function WeavingMonitorView() {
                 {body}
             </MonitorShell>
             {modal}
+            {tuningLoom && (
+                <TuningNameModal loomCode={tuningLoom.code} onClose={() => setTuningLoom(null)}
+                    onConfirm={name => setPrep(tuningLoom, 'TUNING', name)} />
+            )}
         </>
     );
 }

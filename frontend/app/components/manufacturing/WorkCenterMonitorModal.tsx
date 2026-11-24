@@ -31,6 +31,7 @@ import { LotChips } from '../shared/LotChips';
 import { WorkingDaysSection, HolidayCalendarSection, useNationalHolidays } from '../shared/productionCalendar';
 import LotLabelPrintModal from './LotLabelPrintModal';
 import BeamPrepModal, { BeamPrep, BeamPrepBeam } from './BeamPrepModal';
+import TuningNameModal from './machineMonitor/TuningNameModal';
 
 // Measurement accents from the shared five-family palette — see DESIGN.md's one
 // semantic layer rule; the weaving grid resolves the same three.
@@ -416,12 +417,15 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
     const stepLabel = (s: string | null): string =>
         s === 'DRAW_IN' ? t('draw_in') : s === 'TUNING' ? t('tuning') : s === 'STAGED' ? t('staged') : t('idle');
 
-    const setPrep = async (step: string | null) => {
+    // Tuning asks who is tuning first; the name feeds the Loom Tuning report.
+    const [askTuner, setAskTuner] = useState(false);
+    const setPrep = async (step: string | null, tunerName?: string) => {
+        if (step === 'TUNING' && !tunerName) { setAskTuner(true); return; }
         setPrepBusy(true);
         try {
             const res = await authFetch(`${apiBase}/work-centers/${wcId}/loom-prep`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: step }),
+                body: JSON.stringify({ status: step, tuner_name: tunerName ?? null }),
             });
             if (!res.ok) {
                 const d = await res.json().catch(() => null);
@@ -1467,6 +1471,10 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
 
             </div>
         </ModalWrapper>
+        {askTuner && (
+            <TuningNameModal loomCode={workCenter?.code || ''} onClose={() => setAskTuner(false)}
+                onConfirm={name => setPrep('TUNING', name)} />
+        )}
         {prepFor && (
             <BeamPrepModal
                 beams={[prepFor]}
