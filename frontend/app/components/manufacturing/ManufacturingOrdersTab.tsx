@@ -136,9 +136,11 @@ export default function ManufacturingOrdersTab({
     // Auto-expand the matching MO when arriving via a code deep-link
     useEffect(() => {
         if (!moCodeFilter || manufacturingOrders.length === 0) return;
-        const match = manufacturingOrders.find((mo: any) =>
-            mo.code.toLowerCase().includes(moCodeFilter.toLowerCase())
-        );
+        // The server returns the ROOT for a child MO's code, so look down its tree too.
+        const q = moCodeFilter.trim().toLowerCase();
+        const hit = (mo: any): boolean =>
+            (mo.code || '').toLowerCase().includes(q) || (mo.child_mos || []).some(hit);
+        const match = manufacturingOrders.find(hit);
         if (match) setExpandedRows(prev => ({ ...prev, [match.id]: true }));
     }, [moCodeFilter, manufacturingOrders]);
 

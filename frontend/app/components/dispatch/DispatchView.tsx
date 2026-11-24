@@ -23,6 +23,7 @@ import ModalWrapper from '../shared/ModalWrapper';
 import { LotChip, LotChips, LotChipRow, lotSizeLabel, lotSizeText, lotComboLabel, lotColorLabel } from '../shared/LotChips';
 import { qtyFmt, toNum as num } from '../shared/format';
 import { API_BASE } from '../shared/apiBase';
+import { rowMatches } from '../shared/searchMatch';
 const SuratJalanPrintModal = dynamic(() => import('./SuratJalanPrintModal'), { ssr: false });
 
 
@@ -159,10 +160,7 @@ export default function DispatchView() {
     // already in memory, so there is nothing to wait for.
     const deckRows = useMemo(() => {
         if (!showDeck) return [];
-        const q = searchInput.trim().toLowerCase();
-        if (!q) return deck;
-        return deck.filter(d => [d.code, d.sales_order_code, d.customer_po_ref, d.customer_name]
-            .some(v => String(v || '').toLowerCase().includes(q)));
+        return deck.filter(d => rowMatches(d, searchInput));
     }, [deck, showDeck, searchInput]);
 
     // Keeps the pick-list rows themselves — staging posts their ids and the header
