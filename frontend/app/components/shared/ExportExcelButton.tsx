@@ -18,6 +18,17 @@ export interface ExportColumn<T = any> {
     value: (row: T) => ExportCell;
 }
 
+/** A timestamp as local "YYYY-MM-DD HH:mm" (or a date-only value as-is). The API's
+ *  naive timestamps are UTC, so one with no offset is read as UTC. */
+export function xlsDateTime(v: string | null | undefined): string | null {
+    if (!v) return null;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+    const d = new Date(/[zZ]|[+-]\d{2}:?\d{2}$/.test(v) ? v : `${v}Z`);
+    if (Number.isNaN(d.getTime())) return v;
+    const p = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
 /** Every row of a paginated list endpoint under the given query (size=0 = uncapped). */
 export async function fetchAllRows(authFetch: (url: string) => Promise<Response>, endpoint: string, params: Record<string, any> = {}): Promise<any[]> {
     const q = new URLSearchParams();

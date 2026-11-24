@@ -16,6 +16,7 @@ import Pager from '../shared/Pager';
 import { lvThead, LV_STICKY_THEAD, ExpanderCell, lvZebra, TableEmpty, Dash, ResizableTable } from '../shared/listViewTheme';
 import { useRowSelection, RowCheckbox, SelectAllCheckbox, CHECK_COL_W as LV_CHECK_COL_W, EXPANDER_COL_W as LV_EXPANDER_COL_W } from '@bryanadamg/terras-ui/components/Table';
 import { ToolbarButton, SearchField, viewShellStyle } from '../shared/shellTheme';
+import ExportExcelButton from '../shared/ExportExcelButton';
 import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
 import { toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
 import { STATIC_BASE } from '../shared/apiBase';
@@ -78,6 +79,8 @@ export default function BOMView({
     companyProfile,
     initialCreateState, onClearInitialState,
     onEnsureItems,
+    // Every BOM under the current search/filter — the Excel export.
+    fetchAllBoms,
     // Pagination props (managed by bom/page.tsx)
     bomPage = 1, bomTotal = 0, bomPageSize = 50,
     bomSearch = '', onBomSearch,
@@ -686,8 +689,24 @@ export default function BOMView({
                                 <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#003ea6', textDecoration: 'underline', fontFamily: xpFont, fontSize: '11px', padding: 0 }} onClick={sel.clear}>Clear</button>
                             </div>
                         )}
+                        <span style={{ marginLeft: 'auto' }} />
+                        {fetchAllBoms && (
+                            <ExportExcelButton grant="bom.export" filename="boms" fetchRows={fetchAllBoms} disabled={!bomTotal} columns={[
+                                { label: 'BOM Code', value: (b: any) => b.code },
+                                { label: 'Finished Good', value: (b: any) => getItemName(b.item_id, b.item_name) },
+                                { label: 'Item Code', value: (b: any) => getItemCode(b.item_id, b.item_code) },
+                                { label: 'Variant', value: (b: any) => (b.attribute_value_ids || []).map((id: string) =>
+                                    (attributes || []).flatMap((a: any) => a.values || []).find((v: any) => String(v.id) === String(id))?.value || '').filter(Boolean).join(', ') },
+                                { label: 'Machine', value: (b: any) => b.work_center_name },
+                                { label: 'Components', value: (b: any) => b.lines?.length ?? 0 },
+                                { label: 'Operations', value: (b: any) => b.operation_count ?? b.operations?.length ?? 0 },
+                                { label: 'Output Qty', value: (b: any) => Number(b.qty ?? 1) },
+                                { label: 'Sizes', value: (b: any) => (b.size_mode === 'sized' ? sizeTag(b.sizes || []) : null) },
+                                { label: 'Active', value: (b: any) => (b.active === false ? 'No' : 'Yes') },
+                            ]} />
+                        )}
                         {canManage && (
-                            <ToolbarButton tone="create" icon="bi-plus-lg" testId="create-bom-btn" style={{ marginLeft: 'auto' }} onClick={() => setIsDesignerOpen(true)}>
+                            <ToolbarButton tone="create" icon="bi-plus-lg" testId="create-bom-btn" onClick={() => setIsDesignerOpen(true)}>
                                 {t('create_recipe')}
                             </ToolbarButton>
                         )}

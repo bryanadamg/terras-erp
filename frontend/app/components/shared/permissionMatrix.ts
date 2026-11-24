@@ -117,41 +117,41 @@ export const PERMISSION_MATRIX: PermissionMatrixSection[] = [
 // that row). Resources not listed here fall back to CREATE/EDIT/DELETE/VIEW.
 export const RESOURCE_ACTIONS: Record<string, PermissionMatrixAction[]> = {
     sales_order: [CREATE, EDIT, DELETE, A('create_pr', 'Create PR'), A('print', 'Print'), A('export', 'Export Excel'), VIEW, A('close', 'Closed SO')],
-    customer: [A('create', 'Add'), EDIT, DELETE, VIEW],
-    supplier: [A('create', 'Add'), EDIT, DELETE, VIEW],
-    sample_request: [CREATE, EDIT, DELETE, A('update_status', 'Update Status'), A('print', 'Print'), VIEW],
+    customer: [A('create', 'Add'), EDIT, DELETE, A('export', 'Export Excel'), VIEW],
+    supplier: [A('create', 'Add'), EDIT, DELETE, A('export', 'Export Excel'), VIEW],
+    sample_request: [CREATE, EDIT, DELETE, A('update_status', 'Update Status'), A('print', 'Print'), A('export', 'Export Excel'), VIEW],
     purchase_order: [CREATE, EDIT, DELETE, A('receive_goods', 'Received Good'), A('print', 'Print'), A('export', 'Export Excel'), VIEW, A('close', 'Closed PO')],
 
-    item: [CREATE, EDIT, DELETE, A('import', 'Import'), VIEW],
-    attribute: [CREATE, EDIT, DELETE, VIEW],
-    category: [CREATE, EDIT, DELETE, VIEW],
-    uom: [CREATE, EDIT, DELETE, VIEW],
-    combo_library: [CREATE, EDIT, DELETE, VIEW],
+    item: [CREATE, EDIT, DELETE, A('import', 'Import'), A('export', 'Export Excel'), VIEW],
+    attribute: [CREATE, EDIT, DELETE, A('export', 'Export Excel'), VIEW],
+    category: [CREATE, EDIT, DELETE, A('export', 'Export Excel'), VIEW],
+    uom: [CREATE, EDIT, DELETE, A('export', 'Export Excel'), VIEW],
+    combo_library: [CREATE, EDIT, DELETE, A('export', 'Export Excel'), VIEW],
     // No plain DELETE: a type used by any carton is deactivated instead, because
     // deleting it would blank the box name on labels and notes already printed.
-    packaging_type: [CREATE, EDIT, A('archive', 'Delete/Deactivate'), VIEW],
+    packaging_type: [CREATE, EDIT, A('archive', 'Delete/Deactivate'), A('export', 'Export Excel'), VIEW],
 
-    lot: [CREATE, A('split', 'Split'), DELETE, A('qc_reject', 'QC Reject'), VIEW],
+    lot: [CREATE, A('split', 'Split'), DELETE, A('qc_reject', 'QC Reject'), A('export', 'Export Excel'), VIEW],
     // set_status is the release-to-packing decision, so it is its own grant
     // rather than being folded into an edit right.
-    quarantine: [A('set_status', 'Set Status'), VIEW],
+    quarantine: [A('set_status', 'Set Status'), A('export', 'Export Excel'), VIEW],
     stock_on_hand: [CREATE, A('adjust', 'Adjust'), A('move', 'Move'), VIEW],
     booking_stock: [A('export', 'Export Excel'), VIEW],
-    location: [CREATE, EDIT, DELETE, VIEW],
+    location: [CREATE, EDIT, DELETE, A('export', 'Export Excel'), VIEW],
     stock_ledger: [A('print', 'Print'), A('export', 'Export Excel'), VIEW],
 
     // log = record packed cartons on the floor; edit = the order's settings + close.
-    packing_order: [CREATE, EDIT, DELETE, A('log', 'Log Packing'), VIEW],
+    packing_order: [CREATE, EDIT, DELETE, A('log', 'Log Packing'), A('export', 'Export Excel'), VIEW],
     // scan is the picker's grant: confirm cartons without owning the list.
-    pick_list: [CREATE, EDIT, DELETE, A('scan', 'Scan Cartons'), VIEW],
+    pick_list: [CREATE, EDIT, DELETE, A('scan', 'Scan Cartons'), A('export', 'Export Excel'), VIEW],
     // verify is the four-eyes deck check — give it to a different role from the
     // one that stages (create), or the check is the same pair of eyes twice.
-    shipment: [A('create', 'Stage'), EDIT, A('verify', 'Verify'), A('dispatch', 'Dispatch'), DELETE, VIEW],
+    shipment: [A('create', 'Stage'), EDIT, A('verify', 'Verify'), A('dispatch', 'Dispatch'), DELETE, A('export', 'Export Excel'), VIEW],
 
-    bom: [CREATE, EDIT, DELETE, VIEW],
-    routing: [CREATE, EDIT, DELETE, VIEW],
-    production_run: [CREATE, EDIT, DELETE, A('print', 'Print'), VIEW],
-    manufacturing_order: [CREATE, EDIT, DELETE, A('print', 'Print'), VIEW, A('close', 'Closed Order')],
+    bom: [CREATE, EDIT, DELETE, A('export', 'Export Excel'), VIEW],
+    routing: [CREATE, EDIT, DELETE, A('export', 'Export Excel'), VIEW],
+    production_run: [CREATE, EDIT, DELETE, A('print', 'Print'), A('export', 'Export Excel'), VIEW],
+    manufacturing_order: [CREATE, EDIT, DELETE, A('print', 'Print'), A('export', 'Export Excel'), VIEW, A('close', 'Closed Order')],
     // CREATE gates both "+ Add Work Order" and "Plan Beaming" (WorkOrderPanel) —
     // it was missing from this row, so work_order.create existed in the backend
     // taxonomy with no checkbox anywhere that could grant it.
@@ -166,15 +166,15 @@ export const RESOURCE_ACTIONS: Record<string, PermissionMatrixAction[]> = {
     dye_recipe: [CREATE, EDIT, DELETE, A('print', 'Print'), VIEW],
     dye_order: [VIEW],
     setting_order: [VIEW],
-    color_code: [CREATE, EDIT, A('archive', 'Archive'), A('create_recipe', 'Create Dyeing Recipe'), VIEW],
-    color_variant: [CREATE, EDIT, DELETE],
-    lab_dip_request: [CREATE, EDIT, DELETE, A('update_status', 'Update Status'), VIEW],
-    yarn_lab_dip: [VIEW],
+    color_code: [CREATE, EDIT, A('archive', 'Archive'), A('create_recipe', 'Create Dyeing Recipe'), A('export', 'Export Excel'), VIEW],
+    color_variant: [CREATE, EDIT, DELETE, A('export', 'Export Excel')],
+    lab_dip_request: [CREATE, EDIT, DELETE, A('update_status', 'Update Status'), A('export', 'Export Excel'), VIEW],
+    yarn_lab_dip: [A('export', 'Export Excel'), VIEW],
 
     // Production Output report — Excel export is its own grant so a role can read
     // the shop-floor numbers without being able to take the data off the system.
     production_output: [A('export', 'Export Excel'), VIEW],
-    audit_log: [VIEW],
+    audit_log: [A('export', 'Export Excel'), VIEW],
     print_layout: [EDIT],
     // Settings → General: company profile, logo, qty formula. Users, roles and
     // backups stay admin.access only.

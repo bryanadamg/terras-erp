@@ -7,6 +7,7 @@ import ModalWrapper from '../shared/ModalWrapper';
 import { StatusChip, CodeChip, SwatchBox, CODE_FONT, TableSkeleton, useTableSkeletonMetrics, XP_BTN, useFloatingMenu, MenuTriggerButton, FloatingMenu } from '../shared/xpTheme';
 import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
 import { SearchField, ToolbarButton, viewShellStyle } from '../shared/shellTheme';
+import ExportExcelButton from '../shared/ExportExcelButton';
 import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
 import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 import {
@@ -196,6 +197,11 @@ export default function ComboLibraryView({
                         ? `${total.toLocaleString()} combo${total !== 1 ? 's' : ''}`
                         : `${filtered.length.toLocaleString()} of ${total.toLocaleString()} combos`}
                 </ToolbarCount>
+                <ExportExcelButton grant="combo_library.export" filename="combos" rows={filtered} disabled={!filtered.length} columns={[
+                    { label: 'Code', value: (c: any) => c.code },
+                    { label: 'Usage', value: (c: any) => c.usage_count },
+                    { label: 'Status', value: (c: any) => c.status },
+                ]} />
                 {canManage && (
                     <>
                         <span style={lvSep()} />

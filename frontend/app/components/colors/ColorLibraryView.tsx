@@ -13,6 +13,7 @@ import { FormSection } from '@bryanadamg/terras-ui/components/FormSection';
 import { FormError } from '@bryanadamg/terras-ui/components/Field';
 import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
 import { SearchField, ToolbarButton, viewShellStyle } from '../shared/shellTheme';
+import ExportExcelButton from '../shared/ExportExcelButton';
 import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
 import {
     LV_XP_FONT, lvInput, lvBtn, lvPrimaryBtn, lvLabel, lvTh, lvTd, lvSep, lvRow, lvThead, TableEmpty, ResizableTable } from '../shared/listViewTheme';
@@ -30,6 +31,8 @@ const SOURCE_FILTER_OPTIONS = [
 
 interface Props {
     colors: any[];
+    /** Every colour under the current filters — the Excel export. */
+    fetchAll?: () => Promise<any[]>;
     total: number;
     page: number;
     size: number;
@@ -65,7 +68,7 @@ const emptyForm = () => ({
 });
 
 export default function ColorLibraryView({
-    colors, total, page, size, search, statusFilter, customerFilter, variantFilter, itemSearch, sourceFilter, customers, loading,
+    colors, fetchAll, total, page, size, search, statusFilter, customerFilter, variantFilter, itemSearch, sourceFilter, customers, loading,
     onSearchChange, onStatusChange, onCustomerFilterChange, onVariantFilterChange, onItemSearchChange, onSourceFilterChange,
     onPageChange, onCreate, onEdit, onDelete, prefill, embedded,
     colorVariantValues,
@@ -243,6 +246,25 @@ export default function ColorLibraryView({
                 <span style={{ marginLeft: 'auto', fontSize: 11, color: '#333' }}>
                     {total.toLocaleString()} color{total !== 1 ? 's' : ''}
                 </span>
+                {fetchAll && (
+                    <ExportExcelButton grant="color_code.export" filename="color-codes" fetchRows={fetchAll} disabled={!total} columns={[
+                        { label: 'Code', value: c => c.code },
+                        { label: 'Name', value: c => c.name },
+                        { label: 'Color Variant', value: c => c.variant_attribute_value_label },
+                        { label: 'Colour Index', value: c => c.colour_index },
+                        { label: 'L*', value: c => c.l_star },
+                        { label: 'a*', value: c => c.a_star },
+                        { label: 'b*', value: c => c.b_star },
+                        { label: 'Hex', value: c => c.hex },
+                        { label: 'Customer', value: c => c.customer_name },
+                        { label: 'Customer Code', value: c => c.customer_color_code },
+                        { label: 'From Lab Dip', value: c => c.source_lab_dip_code },
+                        { label: 'Item Code', value: c => c.source_item_code },
+                        { label: 'Item Name', value: c => c.source_item_name },
+                        { label: 'Recipes', value: c => c.recipe_count },
+                        { label: 'Status', value: c => c.status },
+                    ]} />
+                )}
                 {canCreate && (
                     <>
                         <span style={lvSep()} />

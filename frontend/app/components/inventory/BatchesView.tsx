@@ -17,6 +17,7 @@ import { useSortable, ExpandedRowPanel, rowStateBg } from '@bryanadamg/terras-ui
 import { field as xpInputBase, BTN_TONES } from '@bryanadamg/terras-ui/styles';
 import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
 import { ToolbarButton, SearchField, pageFillStyle } from '../shared/shellTheme';
+import ExportExcelButton, { xlsDateTime } from '../shared/ExportExcelButton';
 import { bevel as sharedXpBevel } from '@bryanadamg/terras-ui/styles';
 import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
 
@@ -222,7 +223,7 @@ export default function BatchesView({ items, locations, categories, workCenters,
   // race guard all come from the shared hook (context/usePaginatedList.ts).
   const {
     rows: batches, total, loading, page, setPage,
-    searchInput, setSearch, refetch: fetchBatches,
+    searchInput, setSearch, refetch: fetchBatches, fetchAll,
   } = usePaginatedFetch<Batch>({
     endpoint: `${apiBase}/batches/paginated`,
     authFetch,
@@ -1129,6 +1130,27 @@ export default function BatchesView({ items, locations, categories, workCenters,
               onChange={v => setStatusFilter(v as '' | 'active' | 'depleted')}
             />
             <span style={{ display: 'inline-flex', gap: 4, marginLeft: 'auto' }}>
+              <ExportExcelButton<Batch> grant="lot.export" filename="lots" fetchRows={fetchAll} disabled={!total} columns={[
+                { label: 'Lot Number', value: b => b.batch_number },
+                { label: 'Item Code', value: b => batchItemCode(b) },
+                { label: 'Item Name', value: b => b.item_name },
+                { label: 'Size', value: b => b.bom_size_snapshot?.label || b.bom_size_snapshot?.size_name },
+                { label: 'Variant', value: b => (b.variant_attributes || []).map(a => a.value).join(', ') },
+                { label: 'Color', value: b => [b.color_code, b.color_name].filter(Boolean).join(' ') || b.labdip_variant_code },
+                { label: 'Ends', value: b => b.ends },
+                { label: 'Quality', value: b => b.quality_status },
+                { label: 'Vendor Lot', value: b => b.vendor_lot },
+                { label: 'PO', value: b => b.po_number },
+                { label: 'WO', value: b => b.wo_code },
+                { label: 'MO', value: b => b.mo_code },
+                { label: 'Production Run', value: b => b.production_run_code },
+                { label: 'Sales Order', value: b => b.sales_order_code },
+                { label: 'Location', value: b => (b.location_path || []).join(' / ') || b.location_name },
+                { label: 'Remaining', value: b => b.remaining },
+                { label: 'Notes', value: b => b.notes },
+                { label: 'Created', value: b => xlsDateTime(b.created_at) },
+                { label: 'Created By', value: b => b.created_by },
+              ]} />
               <ToolbarButton tone="neutral" icon="bi-arrow-clockwise" onClick={fetchBatches}>Refresh</ToolbarButton>
               {canCreate && <ToolbarButton tone="create" icon="bi-plus" onClick={() => setIsCreateOpen(true)}>New Lot</ToolbarButton>}
             </span>

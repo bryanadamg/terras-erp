@@ -8,6 +8,7 @@ import { useUser } from '../../context/UserContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useToast } from '../shared/Toast';
 import { ShellWindow, SearchField } from '../shared/shellTheme';
+import ExportExcelButton from '../shared/ExportExcelButton';
 import { toolbar as sharedXpToolbar } from '@bryanadamg/terras-ui/styles';
 import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 import { FilterChipBar, type FilterChipOption } from '@bryanadamg/terras-ui/components/FilterChipBar';
@@ -183,7 +184,7 @@ export default function QuarantinePackingView() {
     // as params, and changing either one restarts at page 1 on its own.
     const {
         rows: groups, total, meta, loading, error, page, setPage,
-        search, searchInput, setSearch: setSearchInput, refetch,
+        search, searchInput, setSearch: setSearchInput, refetch, fetchAll,
     } = usePaginatedFetch<Group>({
         endpoint: `${API_BASE}/quarantine`,
         authFetch,
@@ -879,6 +880,22 @@ export default function QuarantinePackingView() {
             <ToolbarCount right>
                 {total.toLocaleString()} MO group{total === 1 ? '' : 's'}
             </ToolbarCount>
+            <ExportExcelButton<Group> grant="quarantine.export" filename="quarantine" fetchRows={fetchAll} disabled={!total} columns={[
+                { label: 'Item Code', value: g => g.item_code },
+                { label: 'Item Name', value: g => g.item_name },
+                { label: 'MO', value: g => g.mo_code },
+                { label: 'Production Run', value: g => g.production_run_code },
+                { label: 'Sales Order', value: g => g.sales_order_code },
+                { label: 'Color', value: g => [g.color_code, g.color_name].filter(Boolean).join(' ') },
+                { label: 'Variant', value: g => g.labdip_variant_code },
+                { label: 'Size', value: g => g.size_label },
+                { label: 'Lots', value: g => g.lot_count },
+                { label: 'Qty Held', value: g => g.qty_total },
+                { label: 'Released', value: g => g.qty_released },
+                { label: 'Claimed', value: g => g.qty_claimed },
+                { label: 'UOM', value: g => g.uom },
+                { label: 'Status', value: g => g.rollup_status },
+            ]} />
             <i className="bi bi-info-circle" style={{ color: '#666', fontSize: 12 }}
                 title="Stock held in quarantine, grouped by MO. Only lots set to OK can be packed." />
         </div>

@@ -67,7 +67,7 @@ export default function ColorsPage() {
     // two text boxes itself, so `search`/`item_search` arrive already settled and
     // ride in as plain params rather than through the hook's own search box.
     const {
-        rows: colors, total, loading, page, setPage, refetch: fetchColors,
+        rows: colors, total, loading, page, setPage, refetch: fetchColors, fetchAll: fetchAllColors,
     } = usePaginatedFetch<any>({
         endpoint: `${API_BASE}/colors`,
         authFetch,
@@ -183,6 +183,7 @@ export default function ColorsPage() {
                 {tab === 'codes' && canViewCodes ? (
                     <ColorLibraryView
                         colors={colors}
+                        fetchAll={fetchAllColors}
                         total={total}
                         page={page}
                         size={PAGE_SIZE}

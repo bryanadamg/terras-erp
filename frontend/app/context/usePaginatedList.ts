@@ -204,7 +204,7 @@ export function usePaginatedFetch<T = any>({
      */
     const fetchAll = useCallback(async (): Promise<T[]> => {
         const res = await authFetch(`${endpoint}?${buildQuery(1, 0)}`);
-        if (!res.ok) return [];
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const d = await res.json();
         return d.items || [];
     }, [authFetch, endpoint, buildQuery]);

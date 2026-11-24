@@ -14,6 +14,7 @@ import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
 import { LV_XP_FONT, lvBtn, lvInput, lvTd, lvLabel, lvRow, lvSubTh, lvSubTd, lvSubTable, EMPTY_DASH, lvTh, lvThead, ResizableTable } from '../shared/listViewTheme';
 import { useRowSelection, RowCheckbox, SelectAllCheckbox, CHECK_COL_W as LV_CHECK_COL_W } from '@bryanadamg/terras-ui/components/Table';
 import { ShellWindow, SearchField } from '../shared/shellTheme';
+import ExportExcelButton, { xlsDateTime } from '../shared/ExportExcelButton';
 import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
 import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 import { toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
@@ -130,7 +131,7 @@ export default function DispatchView() {
     // changing it restarts at page 1 on its own.
     const {
         rows: shipments, total, loading, page, setPage,
-        searchInput, setSearch: setSearchInput, refetch: loadShipments,
+        searchInput, setSearch: setSearchInput, refetch: loadShipments, fetchAll,
     } = usePaginatedFetch<any>({
         endpoint: `${API_BASE}/shipments`,
         authFetch,
@@ -288,6 +289,26 @@ export default function DispatchView() {
                 <ToolbarCount right>
                     {statusFilter === DECK_FILTER ? `${deckRows.length} on deck` : `${total} shipment(s)`}
                 </ToolbarCount>
+                <ExportExcelButton grant="shipment.export" filename="shipments" fetchRows={fetchAll}
+                    disabled={!total || statusFilter === DECK_FILTER} columns={[
+                    { label: 'Surat Jalan', value: s => s.delivery_note_number },
+                    { label: 'Code', value: s => s.code },
+                    { label: 'Customer', value: s => s.customer_name },
+                    { label: 'Customer PO Ref', value: s => s.customer_po_ref },
+                    { label: 'Status', value: s => s.status },
+                    { label: 'Delivery Date', value: s => s.delivery_date },
+                    { label: 'Carrier', value: s => s.carrier },
+                    { label: 'Vehicle', value: s => s.vehicle_plate },
+                    { label: 'Driver', value: s => s.driver },
+                    { label: 'Cartons', value: s => s.carton_count },
+                    { label: 'Staged By', value: s => s.staged_by_name },
+                    { label: 'Staged At', value: s => xlsDateTime(s.staged_at) },
+                    { label: 'Checked By', value: s => s.verified_by_name },
+                    { label: 'Checked At', value: s => xlsDateTime(s.verified_at) },
+                    { label: 'Discrepancy', value: s => (s.verified_with_discrepancy ? 'Yes' : null) },
+                    { label: 'Check Notes', value: s => s.verification_notes },
+                    { label: 'Dispatched', value: s => xlsDateTime(s.dispatched_at) },
+                ]} />
             </div>
 
             {/* Contextual strip — only on screen with a live selection, so the resting
