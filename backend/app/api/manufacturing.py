@@ -509,8 +509,8 @@ async def get_manufacturing_orders(
 
     if search and search.strip():
         like = f"%{search.strip()}%"
-        id_query = (
-            id_query
+        match_query = (
+            select(ManufacturingOrder.id)
             .outerjoin(Item, Item.id == ManufacturingOrder.item_id)
             .outerjoin(BOM, BOM.id == ManufacturingOrder.bom_id)
             .filter(or_(
@@ -520,6 +520,16 @@ async def get_manufacturing_orders(
                 BOM.code.ilike(like),
             ))
         )
+        if all_levels:
+            id_query = id_query.filter(ManufacturingOrder.id.in_(match_query))
+        else:
+            # The list shows roots only, but a child MO's code (scanned off its SPK
+            # Produksi, or a Work Queue link) must still land on it — so match every
+            # level and show the root(s) each hit hangs under.
+            hits = [r[0] for r in (await db.execute(match_query)).all()]
+            roots = await resolve_root_mos(db, hits)
+            root_ids = {uuid.UUID(rid) for rs in roots.values() for rid, _ in rs}
+            id_query = id_query.filter(ManufacturingOrder.id.in_(root_ids))
 
     count_result = await db.execute(select(func.count()).select_from(id_query.subquery()))
     total = count_result.scalar()
