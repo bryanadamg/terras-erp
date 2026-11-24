@@ -4,6 +4,7 @@ from fastapi.responses import HTMLResponse, ORJSONResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+from urllib.parse import parse_qsl, urlencode
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
@@ -212,6 +213,25 @@ async def bad_input_handler(request: Request, exc: DBAPIError):
     if "invalid input" in str(exc.orig) or getattr(exc.orig, "pgcode", None) == "22P02":
         return JSONResponse(status_code=422, content={"detail": "Malformed id or value in the request"})
     raise exc
+
+
+class TrimSearchParam:
+    """Strip the `search` query param before any route reads it.
+
+    Every list screen's search box lands on a `search` param, and a code scanned,
+    pasted from a PDF or typed off a label arrives with a stray space often enough
+    that `ilike '% PO-123 %'` silently finding nothing was the norm on most screens.
+    One pass here instead of a .strip() in each of ~25 endpoints."""
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http" and b"search=" in scope.get("query_string", b""):
+            pairs = parse_qsl(scope["query_string"].decode("latin-1"), keep_blank_values=True)
+            pairs = [(k, v.strip() if k == "search" else v) for k, v in pairs]
+            scope = {**scope, "query_string": urlencode(pairs).encode("latin-1")}
+        await self.app(scope, receive, send)
 
 
 class CatchAllErrors:
@@ -483,6 +503,7 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 origins = os.getenv("BACKEND_CORS_ORIGINS", "http://localhost:3000,http://localhost:3030").split(",")
 
+app.add_middleware(TrimSearchParam)
 app.add_middleware(CatchAllErrors)
 app.add_middleware(
     CORSMiddleware,
