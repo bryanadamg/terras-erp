@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, cast
+from sqlalchemy import select, func, cast, String
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import selectinload, joinedload, aliased
 from app.db.session import get_async_db
@@ -19,6 +19,7 @@ from app.models.production_run import ProductionRun
 from app.models.sales import SalesOrder
 from app.models.goods_receipt import GoodsReceipt, GoodsReceiptLine
 from app.models.purchase import PurchaseOrder
+from app.models.stock_ledger import StockLedger
 from app.schemas import BatchCreate, BatchReject, BatchSplit, BatchDispose, BatchReassign, BatchSizeChange, BatchResponse, BatchTraceResponse, BatchConsumptionResponse, BatchTraceBackNode, PaginatedBatchResponse
 from app.api.auth import get_current_user, require_permission, require_any_permission
 from app.models.auth import User
@@ -745,13 +746,40 @@ async def list_batches_paginated(
             .outerjoin(ProductionRun, ProductionRun.id == ManufacturingOrder.production_run_id)
             .outerjoin(s_mo_so, s_mo_so.id == ManufacturingOrder.sales_order_id)
             .outerjoin(s_pr_so, s_pr_so.id == ProductionRun.sales_order_id)
+            .outerjoin(Color, Color.id == ManufacturingOrder.color_id)
             .filter(
                 WorkOrder.code.ilike(pattern)
                 | ManufacturingOrder.code.ilike(pattern)
                 | ProductionRun.code.ilike(pattern)
                 | s_mo_so.po_number.ilike(pattern)
                 | s_pr_so.po_number.ilike(pattern)
+                | Color.code.ilike(pattern)
+                | Color.customer_color_code.ilike(pattern)
+                | ManufacturingOrder.labdip_variant_code.ilike(pattern)
             )
+        )
+        # A lot with no producing MO (packed carton, received lot) shows the shade
+        # folded into its stock key as `c:<uuid>` (_resolve_variants_from_stock_key).
+        key_color_lots = (
+            select(cast(StockBalance.batch_key, PG_UUID(as_uuid=True)))
+            .join(Color, StockBalance.variant_key.like(func.concat("%c:", cast(Color.id, String))))
+            .filter(StockBalance.batch_key != "",
+                    Color.code.ilike(pattern) | Color.customer_color_code.ilike(pattern))
+        )
+        # Received lots show the PO they came in on (_resolve_gr_origins).
+        po_lots = (
+            select(GoodsReceiptLine.batch_id)
+            .join(GoodsReceipt, GoodsReceipt.id == GoodsReceiptLine.receipt_id)
+            .join(PurchaseOrder, PurchaseOrder.id == GoodsReceipt.po_id)
+            .filter(PurchaseOrder.po_number.ilike(pattern))
+        )
+        # The WO a lot is staged to (reserved_wo_code). ponytail: any Staging row
+        # counts, so a lot once staged to that WO and since freed still matches;
+        # replicate staging_service._claims in SQL if that ever confuses anyone.
+        staged_lots = (
+            select(StockLedger.batch_id)
+            .filter(StockLedger.reference_type == "Staging",
+                    StockLedger.reference_id.in_(select(cast(WorkOrder.id, String)).filter(WorkOrder.code.ilike(pattern))))
         )
         filters.append(
             Batch.id.in_(
@@ -765,6 +793,9 @@ async def list_batches_paginated(
                 )
             )
             | Batch.source_wo_id.in_(origin_wo_ids)
+            | Batch.id.in_(key_color_lots)
+            | Batch.id.in_(po_lots)
+            | Batch.id.in_(staged_lots)
         )
 
     count_query = select(func.count()).select_from(Batch)

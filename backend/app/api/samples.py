@@ -241,6 +241,13 @@ def _sample_conditions(
             func.lower(SampleRequest.code).like(like),
             func.lower(SampleRequest.project).like(like),
             func.lower(SampleRequest.customer_article_code).like(like),
+            func.lower(SampleRequest.internal_article_code).like(like),
+            # The item a variant was converted into (colors[].item_code).
+            SampleRequest.id.in_(
+                select(SampleColor.sample_request_id)
+                .join(ItemModel, ItemModel.source_color_id == SampleColor.id)
+                .where(func.lower(ItemModel.code).like(like))
+            ),
         ))
     if status and status != "ALL":
         conds.append(SampleRequest.status == status)

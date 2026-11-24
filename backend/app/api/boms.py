@@ -430,7 +430,7 @@ async def get_boms_summary(
     """Paginated lightweight BOM list for the BOM page.
 
     Returns full headers + lines + sizes, but collapses `operations` to a count.
-    Supports server-side search (code or item name) and root_only filtering.
+    Supports server-side search (BOM code, item code/name, component item code) and root_only filtering.
     Other domains (manufacturing/MES/sales) still use `/boms`.
     """
     # Sub-BOMs: item_ids that appear as components in any BOM line
@@ -439,17 +439,19 @@ async def get_boms_summary(
     # Build WHERE conditions
     where = []
     if search:
+        # BOM code, produced item code/name, or a component's item code ("which
+        # BOMs use yarn X"). IN-subqueries so count and page need no join.
+        like = f"%{search}%"
+        item_ids = select(Item.id).where(or_(Item.code.ilike(like), Item.name.ilike(like)))
         where.append(or_(
-            BOM.code.ilike(f"%{search}%"),
-            Item.name.ilike(f"%{search}%"),
+            BOM.code.ilike(like),
+            BOM.item_id.in_(item_ids),
+            BOM.id.in_(select(BOMLine.bom_id).join(Item, Item.id == BOMLine.item_id).where(Item.code.ilike(like))),
         ))
     if root_only:
         where.append(BOM.item_id.not_in(sub_item_ids_sq))
 
-    # Count (join Item only when search requires it)
     count_q = select(func.count(BOM.id))
-    if search:
-        count_q = count_q.join(Item, BOM.item_id == Item.id)
     if where:
         count_q = count_q.where(*where)
     total: int = (await db.execute(count_q)).scalar_one()
@@ -462,8 +464,6 @@ async def get_boms_summary(
         selectinload(BOM.lines).joinedload(BOMLine.item),
         selectinload(BOM.sizes).joinedload(BOMSize.size),
     )
-    if search:
-        query = query.join(Item, BOM.item_id == Item.id)
     if where:
         query = query.where(*where)
     result = await db.execute(window.apply(query.order_by(BOM.created_at.desc())))
