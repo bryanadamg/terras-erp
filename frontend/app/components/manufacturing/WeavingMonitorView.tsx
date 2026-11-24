@@ -9,7 +9,7 @@ import VariantChips from '../shared/VariantChips';
 import { useToast } from '../shared/Toast';
 import WorkCenterMonitorModal from './WorkCenterMonitorModal';
 import GroupCalendarModal from './GroupCalendarModal';
-import TuningNameModal from './machineMonitor/TuningNameModal';
+import TunerPicker, { useOperatorNames } from './machineMonitor/TunerPicker';
 import { useMonitorSections } from './machineMonitor/useMonitorSections';
 import {
     EffBar, CardGrid, MachineCard, GroupHeader, MonitorChipBar,
@@ -121,10 +121,11 @@ export default function WeavingMonitorView() {
     } as Record<string, string>)[s] || t('idle');
 
     const [prepBusy, setPrepBusy] = useState<string | null>(null);
-    // Tuning asks who is tuning first; the name feeds the Loom Tuning report.
-    const [tuningLoom, setTuningLoom] = useState<any>(null);
+    // Who is tuning, picked on the card beside the Tuning button, per loom — the
+    // name feeds the Loom Tuning report. Kept up here: PrepRow is redeclared every render.
+    const [tuners, setTuners] = useState<Record<string, string>>({});
+    const operatorNames = useOperatorNames(canPrep);
     const setPrep = async (m: any, step: string | null, tunerName?: string) => {
-        if (step === 'TUNING' && !tunerName) { setTuningLoom(m); return; }
         setPrepBusy(m.id);
         try {
             const res = await authFetch(`${API_BASE}/work-centers/${m.id}/loom-prep`, {
@@ -427,13 +428,18 @@ export default function WeavingMonitorView() {
         const stop = (fn: () => void) => (e: React.MouseEvent) => { e.stopPropagation(); fn(); };
         return (
             <div style={{ marginTop: 5, paddingTop: 5, borderTop: `1px solid ${border}`, display: 'flex', gap: 4, alignItems: 'center' }}>
+                {next === 'TUNING' && (
+                    <TunerPicker names={operatorNames} value={tuners[m.id] || ''} style={{ flex: 1 }}
+                        onChange={name => setTuners(prev => ({ ...prev, [m.id]: name }))} />
+                )}
                 {next && (
                     <XPActionButton
                         tone={next === 'TUNING' ? 'warning' : 'primary'}
                         icon={next === 'TUNING' ? 'bi-sliders' : 'bi-arrows-collapse-vertical'}
                         label={next === 'TUNING' ? t('tuning') : t('draw_in')}
-                        disabled={busy}
-                        onClick={stop(() => setPrep(m, next))}
+                        disabled={busy || (next === 'TUNING' && !tuners[m.id])}
+                        title={next === 'TUNING' && !tuners[m.id] ? t('tuning_who') : undefined}
+                        onClick={stop(() => setPrep(m, next, next === 'TUNING' ? tuners[m.id] : undefined))}
                     />
                 )}
                 {status !== 'STAGED' && (
@@ -548,10 +554,6 @@ export default function WeavingMonitorView() {
                 {body}
             </MonitorShell>
             {modal}
-            {tuningLoom && (
-                <TuningNameModal loomCode={tuningLoom.code} onClose={() => setTuningLoom(null)}
-                    onConfirm={name => setPrep(tuningLoom, 'TUNING', name)} />
-            )}
         </>
     );
 }
