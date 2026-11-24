@@ -15,6 +15,26 @@ on `main`:
 
 ## [Unreleased]
 
+## [1.11.0] - 2026-11-24
+
+### Added
+- Most list screens can be exported to Excel, each under its own Export Excel permission: work orders (every step matching the screen's filters), items, lots, BOMs, manufacturing orders, production runs, sample requests, customers, suppliers, packing orders, pick lists, shipments, lab dips, quarantine, colours, combos, attributes, categories, units, locations, packaging types, work centers, operations, the work queue and the audit log
+- Drawing-in / tying-in can be exported one row per beam mount, with its beam type and loom
+- When a loom enters Tuning, the app asks who is tuning. Production Output reports each tuning's tuner, start time and run start, with Excel export
+- Access control is split into Users and Roles tabs, each with a list and a detail pane. Users with no role, with direct grants, or with grants their role already covers are flagged
+- Roles can be duplicated, users can be assigned from a role, and a new role can be created from a user's grants
+
+### Changed
+- The lab dip and sample reports export to Excel instead of CSV, under their export permissions
+- General and My Account settings are merged into one tab with You and Company sections. The profile card has an avatar picker, a collapsible password change, and display settings that apply instantly
+- Weighing tolerance moves to Production Rules, and the Company section shows a live preview of the document header
+- Database settings are split into sections: an overview, grouped live-event counters and a separate danger zone. Backups show their schedule as one sentence and snapshots as a timeline with the next run on top
+- Access control and database settings show their list and detail in one panel instead of separate boxes
+- The print layout designer uses the theme's warm neutrals instead of XP beige and grey
+
+### Fixed
+- Access control search boxes no longer stretch, the empty "Other" coverage pill is hidden, and the assign-user picker has a maximum width
+
 ## [1.10.0] - 2026-11-23
 
 ### Added
