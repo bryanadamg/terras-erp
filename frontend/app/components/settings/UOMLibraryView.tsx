@@ -7,6 +7,7 @@ import { Chip, XPActionButton, XP_BTN } from '../shared/xpTheme';
 import { FormSection } from '@bryanadamg/terras-ui/components/FormSection';
 import { FormError } from '@bryanadamg/terras-ui/components/Field';
 import { ToolbarButton, SearchField } from '../shared/shellTheme';
+import ExportExcelButton from '../shared/ExportExcelButton';
 import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 import { toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
 import {
@@ -173,11 +174,16 @@ export default function UOMLibraryView({ uoms, can, onCreateUOM, onDeleteUOM, on
                 footer={
                     <>
                         <ToolbarCount>{filtered.length} unit{filtered.length !== 1 ? 's' : ''}</ToolbarCount>
-                        {can.create && (
-                            <span style={{ marginLeft: 'auto' }}>
+                        <span style={{ marginLeft: 'auto', display: 'inline-flex', gap: 4 }}>
+                            <ExportExcelButton grant="uom.export" filename="units" rows={filtered} disabled={!filtered.length} columns={[
+                                { label: 'Unit', value: (u: any) => u.name },
+                                { label: 'System', value: (u: any) => (u.is_system ? 'Yes' : 'No') },
+                                { label: 'Conversions', value: (u: any) => (u.factors || []).map((f: any) => `${num(f.value)} ${f.to_uom_name}`).join(' · ') },
+                            ]} />
+                            {can.create && (
                                 <ToolbarButton tone="create" icon="bi-plus-lg" onClick={openCreate}>New UOM</ToolbarButton>
-                            </span>
-                        )}
+                            )}
+                        </span>
                     </>
                 }
             >

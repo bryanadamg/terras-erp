@@ -6,6 +6,7 @@ import { useUser } from '../../context/UserContext';
 import { useRememberedTab } from '../../hooks/useRememberedTab';
 import TreeSelect, { buildLocationPickerTree, TreeSelectOption } from '../shared/TreeSelect';
 import { ShellWindow, SearchField, ToolbarButton } from '../shared/shellTheme';
+import ExportExcelButton from '../shared/ExportExcelButton';
 import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 import { Tabs, TabDef } from '../shared/Tabs';
 import Pager from '../shared/Pager';
@@ -292,6 +293,7 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
   const isSearchingWC = wcSearch.trim().length > 0;
   const allWCRows = buildTree(wcList);
   const wcById = new Map(wcList.map((w: any) => [String(w.id), w]));
+  const locNameById = new Map<string, string>((locations || []).map((l: any) => [String(l.id), l.full_path || l.name]));
   // A row shows only when EVERY container above it is expanded — with three levels a
   // machine can be hidden by its group, its type, or both.
   const ancestorsVisible = (wc: any): boolean => {
@@ -426,6 +428,20 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
               <ToolbarCount right>
                   {filteredWCRows.length.toLocaleString()} station{filteredWCRows.length !== 1 ? 's' : ''}
               </ToolbarCount>
+              {/* The whole tree (or the search hits) — collapsed groups still export. */}
+              <ExportExcelButton grant="routing.export" filename="work-centers"
+                  rows={isSearchingWC ? filteredWCRows : allWCRows} disabled={!allWCRows.length}
+                  columns={[
+                      { label: 'Code', value: (r: any) => r.wc.code },
+                      { label: 'Name', value: (r: any) => r.wc.name },
+                      { label: 'Level', value: (r: any) => r.level },
+                      { label: 'Type', value: (r: any) => r.wc.center_type },
+                      { label: 'Parent', value: (r: any) => (wcById.get(String(r.wc.parent_id)) as any)?.code },
+                      { label: 'Input Location', value: (r: any) => locNameById.get(String(r.wc.input_location_id)) },
+                      { label: 'Output Location', value: (r: any) => locNameById.get(String(r.wc.output_location_id)) },
+                      { label: 'Reject Location', value: (r: any) => locNameById.get(String(r.wc.reject_location_id)) },
+                      { label: 'Beam Slots', value: (r: any) => r.wc.beam_slots },
+                  ]} />
               {canManage && (
                   <>
                       <span style={lvSep()} />
@@ -580,6 +596,10 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
               <ToolbarCount right>
                   {filteredOp.length.toLocaleString()} operation{filteredOp.length !== 1 ? 's' : ''}
               </ToolbarCount>
+              <ExportExcelButton grant="routing.export" filename="operations" rows={filteredOp} disabled={!filteredOp.length} columns={[
+                  { label: 'Code', value: (op: any) => op.code },
+                  { label: 'Operation', value: (op: any) => op.name },
+              ]} />
           </div>
 
           {/* Table */}
