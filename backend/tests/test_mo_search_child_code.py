@@ -64,3 +64,31 @@ def test_shared_component_found_by_root_code_and_its_shade_finds_the_run(client,
     res = client.get(f"/api/production-runs?search={shade}", headers=auth_headers)
     assert res.status_code == 200, res.text
     assert [p["id"] for p in res.json()["items"]] == [pr_id]
+
+
+def test_scanned_work_order_card_id_finds_root_mo(client, auth_headers, async_db_session):
+    """An SPK Produksi QR holds the WO's id (not a code). Scanned into the MO search,
+    it must land on the root MO — also when the WO belongs to a child MO."""
+    from app.models.manufacturing import ManufacturingOrder
+    from app.models.work_order import WorkOrder
+    from tests.test_dyeing_output_lot import _setup_dyeing_wo
+
+    root_id, root_wo_id, _runs = _setup_dyeing_wo(client, auth_headers, async_db_session, runs=0)
+    tag = uuid.uuid4().hex[:6]
+
+    async def _seed():
+        root = await async_db_session.get(ManufacturingOrder, uuid.UUID(root_id))
+        child = ManufacturingOrder(code=f"MO-CHILD-{tag}", bom_id=root.bom_id, item_id=root.item_id, qty=1,
+                                   parent_mo_id=root.id)
+        async_db_session.add(child)
+        await async_db_session.flush()
+        wo = WorkOrder(manufacturing_order_id=child.id, name="Child step", code=f"WO-CHILD-{tag}")
+        async_db_session.add(wo)
+        await async_db_session.flush()
+        return str(wo.id)
+    child_wo_id = client.portal.call(_seed)
+
+    for wo_id in (root_wo_id, child_wo_id):
+        res = client.get(f"/api/manufacturing-orders?search={wo_id}", headers=auth_headers)
+        assert res.status_code == 200, res.text
+        assert [m["id"] for m in res.json()["items"]] == [root_id], wo_id

@@ -130,7 +130,16 @@ def mo_search_ids(like: str):
     joins, so the count and page queries built on it stay one row per MO."""
     MO = ManufacturingOrder
     lots = _ids(Batch.id).where(Batch.batch_number.ilike(like))
+    # A work order card (SPK Produksi) QR holds the WO's id, not its code — a
+    # barcode scanner typing it into the search box must land on that WO's MO.
+    try:
+        scanned = uuid.UUID(like.strip("%"))
+        by_id = [MO.id == scanned,
+                 MO.id.in_(_ids(WorkOrderModel.manufacturing_order_id).where(WorkOrderModel.id == scanned))]
+    except ValueError:
+        by_id = []
     return select(MO.id).correlate(None).where(or_(
+        *by_id,
         MO.code.ilike(like),
         MO.labdip_variant_code.ilike(like),
         MO.item_id.in_(_ids(Item.id).where(or_(Item.code.ilike(like), Item.name.ilike(like)))),
