@@ -1341,9 +1341,13 @@ export default function BOMDesigner({
                                 <span style={{ fontSize: 16, color: 'var(--terras-chip-blue-text, #0d2a6e)' }}><i className={`bi ${selectedNodeId === 'root' ? 'bi-box-seam' : 'bi-nut'}`} /></span>
                                 <div style={{ flex: 1 }}>
                                     <div style={{ fontWeight: 'bold', fontSize: 12, color: 'var(--terras-chip-blue-text, #0d2a6e)' }}>
-                                        {getItemName(selectedNode.item_code) || 'Select an item'}
+                                        {getItemName(selectedNode.item_code) || 'New BOM'}
                                     </div>
-                                    <CodeChip code={selectedNode.item_code || '—'} tier={2} style={{ display: 'block' }} />
+                                    {/* No item yet: this strip is only a title, so point at the real picker —
+                                        a "Select an item" heading here read as a broken picker on the floor. */}
+                                    {selectedNode.item_code
+                                        ? <CodeChip code={selectedNode.item_code} tier={2} style={{ display: 'block' }} />
+                                        : <div style={{ fontSize: 10, color: '#666', fontStyle: 'italic' }}>Choose the Finished Item in BOM Header below ↓</div>}
                                 </div>
                                 <div style={{ display: 'flex', gap: 4 }}>
                                     {selectedShared && (
