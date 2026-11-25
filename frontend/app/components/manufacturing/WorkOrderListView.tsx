@@ -187,6 +187,11 @@ export default function WorkOrderListView({
         if (!v) return '—';
         return tzFmt(v, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }, 'id-ID');
     };
+    // Overdue = still open and its target end day is before today (in the app's timezone).
+    const dayKey = (v: any) => new Date(v).toLocaleDateString('en-CA', { timeZone: timezone });
+    const isOverdue = (wo: FlatWO) =>
+        !!wo.target_end_date && ['PENDING', 'IN_PROGRESS'].includes(wo.status) &&
+        dayKey(wo.target_end_date) < dayKey(Date.now());
 
     const { showToast } = useToast();
     // Excel: every step matching the screen's filters, not just this page.
@@ -1021,7 +1026,10 @@ export default function WorkOrderListView({
                                                     })() : <span style={{ color: '#bbb' }}>—</span>}
                                                 </td>
                                                 <td style={{ ...tdBase, fontSize: 10}}>{fmtDate(wo.target_start_date)}</td>
-                                                <td style={{ ...tdBase, fontSize: 10}}>{fmtDate(wo.target_end_date)}</td>
+                                                <td style={{ ...tdBase, fontSize: 10, ...(isOverdue(wo) && { color: '#c00000', fontWeight: 700 }) }}
+                                                    title={isOverdue(wo) ? 'Overdue — target end has passed' : undefined}>
+                                                    {fmtDate(wo.target_end_date)}{isOverdue(wo) && ' ⚠'}
+                                                </td>
                                                 <td style={{ ...tdBase, fontSize: 10}}>{fmtDateTime(wo.actual_start_date)}</td>
                                                 <td style={{ ...tdBase, fontSize: 10}}>{fmtDateTime(wo.actual_end_date)}</td>
                                                 <td style={{ ...tdBase, fontSize: 10}}>{fmtDateTime(wo.created_at)}</td>
