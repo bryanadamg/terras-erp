@@ -1385,7 +1385,10 @@ export default function BOMDesigner({
                             }}>
 
                                 {/* BOM Header groupbox */}
-                                <TintCard title="BOM Header">
+                                {/* flexShrink 0: the card clips (overflow hidden), so in this
+                                    scrolling column it would otherwise shrink to nothing once
+                                    the body outgrows the dialog — hiding the Finished Item picker. */}
+                                <TintCard title="BOM Header" style={{ flexShrink: 0 }}>
                                     <div style={{ padding: '0 8px 8px' }}>
                                     {/* Row 1: Code + Item + Batch + Tolerance */}
                                     <div style={{ display: 'flex', gap: 6, marginBottom: 6, flexWrap: 'wrap' }}>
