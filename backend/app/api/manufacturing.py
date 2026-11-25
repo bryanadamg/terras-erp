@@ -812,8 +812,22 @@ async def export_work_orders(
         search=search, component_item_id=component_item_id, unprinted=unprinted, wo_id="", order_by="",
         window=PageWindow(page=1, size=0, offset=0, limit=None), db=db, current_user=current_user,
     )
+    # Material per the MO's BOM, as snapshotted when the MO was cut — e.g. the
+    # yarn a Beaming step winds, so the sheet reads without opening each MO.
+    mo_ids = {uuid.UUID(wo.mo_id) for wo in data["items"]}
+    materials: dict[str, list[str]] = defaultdict(list)
+    if mo_ids:
+        res = await db.execute(
+            select(MOPlannedComponent.mo_id, Item.name)
+            .join(Item, Item.id == MOPlannedComponent.item_id)
+            .where(MOPlannedComponent.mo_id.in_(mo_ids))
+            .distinct().order_by(MOPlannedComponent.mo_id, Item.name)
+        )
+        for mo_id, name in res.all():
+            materials[str(mo_id)].append(name)
     rows = [[
         wo.code, wo.name, wo.mo_code, ", ".join(wo.root_mo_codes) or None, wo.item_name,
+        ", ".join(materials.get(wo.mo_id, [])) or None,
         wo.combo_label, " ".join(x for x in (wo.color_code, wo.color_name) if x) or wo.color_label or wo.labdip_variant_code,
         wo.size_label, wo.work_center_name, wo.work_center_type, wo.status,
         wo.qty, wo.qty_completed_total, wo.qty_rejected_total,
@@ -823,7 +837,7 @@ async def export_work_orders(
     ] for wo in data["items"]]
     return xlsx_response(
         "Work Orders",
-        ["WO Code", "Step", "MO", "Root MO", "Item", "Combo", "Color", "Size", "Work Center", "Type",
+        ["WO Code", "Step", "MO", "Root MO", "Item", "Material", "Combo", "Color", "Size", "Work Center", "Type",
          "Status", "Qty", "Completed", "Rejected", "Target Start", "Target End",
          "Actual Start", "Actual End", "Created", "Notes"],
         rows,
