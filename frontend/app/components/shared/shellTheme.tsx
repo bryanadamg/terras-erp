@@ -66,20 +66,26 @@ export function SearchField({
     style?: React.CSSProperties;
 }) {
     return (
-        <UISearchField
-            value={value}
-            onChange={onChange}
-            placeholder={placeholder}
-            width={width}
-            grow={grow}
-            // The package takes the icon as a NODE (it ships no icon set); this app
-            // draws with bootstrap-icons, so the class string stays the prop the 36
-            // call sites pass and the element is built here.
-            icon={icon ? <i className={`bi ${icon}`} /> : undefined}
-            title={title}
-            autoFocus={autoFocus}
-            style={style}
-        />
+        // A barcode gun types the code then Enter. Selecting the text on Enter lets
+        // the next scan replace it instead of appending ("CODE1CODE2" finds nothing).
+        // display: contents keeps the field a direct flex child of the toolbar.
+        <span style={{ display: 'contents' }}
+            onKeyDown={e => { if (e.key === 'Enter' && e.target instanceof HTMLInputElement) e.target.select(); }}>
+            <UISearchField
+                value={value}
+                onChange={onChange}
+                placeholder={placeholder}
+                width={width}
+                grow={grow}
+                // The package takes the icon as a NODE (it ships no icon set); this app
+                // draws with bootstrap-icons, so the class string stays the prop the 36
+                // call sites pass and the element is built here.
+                icon={icon ? <i className={`bi ${icon}`} /> : undefined}
+                title={title}
+                autoFocus={autoFocus}
+                style={style}
+            />
+        </span>
     );
 }
 
