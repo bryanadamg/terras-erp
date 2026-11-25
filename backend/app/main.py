@@ -221,7 +221,12 @@ class TrimSearchParam:
     Every list screen's search box lands on a `search` param, and a code scanned,
     pasted from a PDF or typed off a label arrives with a stray space often enough
     that `ilike '% PO-123 %'` silently finding nothing was the norm on most screens.
-    One pass here instead of a .strip() in each of ~25 endpoints."""
+    One pass here instead of a .strip() in each of ~25 endpoints.
+
+    Same for a scanned work order card (SPK Produksi): its QR holds the WO's id, not
+    a code, so a scan is swapped for that WO's code here — every list that finds a
+    WO code (MO, Work Queue, Dyeing Monitor, Batches, Stock, Quarantine, ...) then
+    finds the card too, without each endpoint parsing UUIDs."""
 
     def __init__(self, app):
         self.app = app
@@ -229,9 +234,29 @@ class TrimSearchParam:
     async def __call__(self, scope, receive, send):
         if scope["type"] == "http" and b"search=" in scope.get("query_string", b""):
             pairs = parse_qsl(scope["query_string"].decode("latin-1"), keep_blank_values=True)
-            pairs = [(k, v.strip() if k == "search" else v) for k, v in pairs]
+            pairs = [(k, (await _scanned_wo_code(v.strip()) or v.strip()) if k == "search" else v)
+                     for k, v in pairs]
             scope = {**scope, "query_string": urlencode(pairs).encode("latin-1")}
         await self.app(scope, receive, send)
+
+
+async def _scanned_wo_code(value: str):
+    """The code of the work order whose id is `value`, or None (not a UUID, no such
+    WO, or a pre-numbering WO with no code — the WO list still matches its id)."""
+    try:
+        wo_id = uuid.UUID(value)
+    except ValueError:
+        return None
+    from app.db.session import get_async_db
+    from app.models.work_order import WorkOrder
+    from sqlalchemy import select
+    # Through the dependency (and its test override), so tests see their own rows.
+    gen = app.dependency_overrides.get(get_async_db, get_async_db)()
+    try:
+        db = await gen.__anext__()
+        return (await db.execute(select(WorkOrder.code).where(WorkOrder.id == wo_id))).scalar()
+    finally:
+        await gen.aclose()
 
 
 class CatchAllErrors:

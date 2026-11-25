@@ -92,3 +92,9 @@ def test_scanned_work_order_card_id_finds_root_mo(client, auth_headers, async_db
         res = client.get(f"/api/manufacturing-orders?search={wo_id}", headers=auth_headers)
         assert res.status_code == 200, res.text
         assert [m["id"] for m in res.json()["items"]] == [root_id], wo_id
+
+    # Swapped for the WO code before routing, so a list that matches WO codes
+    # (not ids) finds the card too.
+    res = client.get(f"/api/work-queue?center_type=DYEING&search={root_wo_id}", headers=auth_headers)
+    assert res.status_code == 200, res.text
+    assert [r["work_order_id"] for r in res.json()["items"]] == [root_wo_id]
