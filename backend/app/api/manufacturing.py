@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, or_, inspect, case
+from sqlalchemy import select, func, or_, inspect, case, union_all
 from sqlalchemy.orm import selectinload, joinedload, attributes as sa_attributes
 from collections import defaultdict
 from app.db.session import get_async_db
@@ -116,6 +116,53 @@ def get_mo_options():
         joinedload(ManufacturingOrder.planned_putaway_location).joinedload(Location.parent),
     ]
     return options
+
+def _ids(col):
+    """`select(col)`, uncorrelated — so it stays a plain IN-list wherever it lands,
+    even under a query that already joins the same table."""
+    return select(col).correlate(None)
+
+
+def mo_search_ids(like: str):
+    """Ids of every MO (any level) whose own row shows a code matching `like`: its
+    code, item, BOM, shade (Color Library code or pending lab-dip variant), sales
+    order, production run, work orders, and the lots it produced. IN-lists, not
+    joins, so the count and page queries built on it stay one row per MO."""
+    MO = ManufacturingOrder
+    lots = _ids(Batch.id).where(Batch.batch_number.ilike(like))
+    return select(MO.id).correlate(None).where(or_(
+        MO.code.ilike(like),
+        MO.labdip_variant_code.ilike(like),
+        MO.item_id.in_(_ids(Item.id).where(or_(Item.code.ilike(like), Item.name.ilike(like)))),
+        MO.bom_id.in_(_ids(BOM.id).where(BOM.code.ilike(like))),
+        MO.color_id.in_(_ids(Color.id).where(Color.code.ilike(like))),
+        MO.sales_order_id.in_(_ids(SalesOrder.id).where(SalesOrder.po_number.ilike(like))),
+        MO.production_run_id.in_(_ids(ProductionRun.id).where(ProductionRun.code.ilike(like))),
+        MO.id.in_(_ids(WorkOrderModel.manufacturing_order_id).where(WorkOrderModel.code.ilike(like))),
+        MO.id.in_(_ids(MOCompletion.mo_id).where(MOCompletion.output_batch_id.in_(lots))),
+        MO.id.in_(_ids(BatchConsumption.manufacturing_order_id).where(BatchConsumption.output_batch_id.in_(lots))),
+    ))
+
+
+def mo_ids_under_root_code(like: str):
+    """Ids of every MO hanging under a ROOT MO whose code matches `like` — the root
+    itself, its parent_mo_id descendants, and the consolidated component MOs pegged
+    to it through MODependency (which have no parent_mo_id). Same two upward links
+    resolve_root_mos follows, walked down instead."""
+    MO = ManufacturingOrder
+    roots = select(MO.id).where(
+        MO.code.ilike(like),
+        MO.parent_mo_id.is_(None),
+        ~select(MODependency.required_mo_id).where(MODependency.required_mo_id == MO.id).exists(),
+    ).cte("root_code_tree", recursive=True)
+    edges = union_all(
+        select(MO.id.label("child"), MO.parent_mo_id.label("parent")).where(MO.parent_mo_id.isnot(None)),
+        select(MODependency.required_mo_id, MODependency.dependent_mo_id),
+    ).subquery()
+    # UNION (not ALL) dedupes, which also stops a pegging cycle from recursing forever.
+    tree = roots.union(select(edges.c.child).join(roots, edges.c.parent == roots.c.id))
+    return select(tree.c.id).correlate(None)
+
 
 def populate_mo_ids(mo: ManufacturingOrder):
     """Recursively populate attribute_value_ids for MO and its children safely."""
@@ -509,17 +556,17 @@ async def get_manufacturing_orders(
 
     if search and search.strip():
         like = f"%{search.strip()}%"
-        id_query = (
-            id_query
-            .outerjoin(Item, Item.id == ManufacturingOrder.item_id)
-            .outerjoin(BOM, BOM.id == ManufacturingOrder.bom_id)
-            .filter(or_(
-                ManufacturingOrder.code.ilike(like),
-                Item.name.ilike(like),
-                Item.code.ilike(like),
-                BOM.code.ilike(like),
-            ))
-        )
+        match_query = mo_search_ids(like)
+        if all_levels:
+            id_query = id_query.filter(ManufacturingOrder.id.in_(match_query))
+        else:
+            # The list shows roots only, but a child MO's code (scanned off its SPK
+            # Produksi, or a Work Queue link) must still land on it — so match every
+            # level and show the root(s) each hit hangs under.
+            hits = [r[0] for r in (await db.execute(match_query)).all()]
+            roots = await resolve_root_mos(db, hits)
+            root_ids = {uuid.UUID(rid) for rs in roots.values() for rid, _ in rs}
+            id_query = id_query.filter(ManufacturingOrder.id.in_(root_ids))
 
     count_result = await db.execute(select(func.count()).select_from(id_query.subquery()))
     total = count_result.scalar()
@@ -876,6 +923,14 @@ async def list_work_orders_flat(
             WorkOrderModel.name.ilike(like),
             WorkOrderModel.code.ilike(like),
             ManufacturingOrder.code.ilike(like),
+            ManufacturingOrder.labdip_variant_code.ilike(like),
+            ManufacturingOrder.color_id.in_(_ids(Color.id).where(Color.code.ilike(like))),
+            ManufacturingOrder.id.in_(mo_ids_under_root_code(like)),
+            # Lots this step produced (its completion log's output batch).
+            WorkOrderModel.id.in_(
+                _ids(MOCompletion.work_order_id).join(Batch, Batch.id == MOCompletion.output_batch_id)
+                .where(Batch.batch_number.ilike(like))
+            ),
         ]
         # A work order card's QR holds the WO's id, so a scanner typing it into
         # the search box must land on that WO.
@@ -1585,7 +1640,7 @@ async def add_mo_completion(
                 db, wo_input_loc, wo.id, list(picked.keys())
             )
             if clash:
-                holder_codes = await staging_service.wo_codes(db, set(clash.values()))
+                holder_codes = await staging_service.wo_ids(db, set(clash.values()))
                 detail = "; ".join(
                     f"{getattr(picked.get(bid), 'batch_number', None) or bid} is staged to "
                     f"{holder_codes.get(holder) or 'another work order'}"

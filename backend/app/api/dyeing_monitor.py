@@ -16,6 +16,7 @@ from sqlalchemy.orm import selectinload, joinedload
 from app.db.session import get_async_db
 from app.models.attribute import AttributeValue
 from app.models.auth import User
+from app.models.color import Color
 from app.models.dyeing_setting import DyeingRun
 from app.models.item import Item
 from app.models.manufacturing import ManufacturingOrder
@@ -183,6 +184,8 @@ async def dyeing_monitor(
         return q.where(or_(
             WorkCenter.code.ilike(like), WorkCenter.name.ilike(like), WorkOrder.code.ilike(like),
             ManufacturingOrder.code.ilike(like), Item.code.ilike(like), Item.name.ilike(like),
+            ManufacturingOrder.labdip_variant_code.ilike(like),
+            ManufacturingOrder.color_id.in_(select(Color.id).correlate(None).where(Color.code.ilike(like))),
         ))
 
     run_q = _dated(_searched(

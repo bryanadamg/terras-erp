@@ -615,6 +615,45 @@ async def _unit_location(db: AsyncSession, pu: Batch):
     return result.scalar()
 
 
+def line_search(like: str):
+    """EXISTS: a line of the enclosing `PickList` shows `like` — its carton
+    number, item code, the ordered shade or the shade in the carton.
+
+    Both shades read `customer_color_code or code`, as `_decorate` and
+    `describe_variant_keys` print them. The carton's shade lives only in its
+    StockBalance `variant_key` (trailing `c:<color id>` token), so it is matched
+    there. Shared with `api/shipments.py`, whose member pick lists show the
+    same lines.
+    """
+    from app.models.color import Color
+    from app.models.item import Item
+    from app.models.stock_balance import StockBalance
+    shown_code = func.coalesce(func.nullif(Color.customer_color_code, ""), Color.code)
+    ordered_shade = select(Color.id).where(shown_code.ilike(like))
+    carton_shade = (
+        select(StockBalance.id)
+        .join(Color, cast(Color.id, String) == func.split_part(StockBalance.variant_key, "c:", 2))
+        .where(StockBalance.batch_key == cast(PickListLine.batch_id, String), shown_code.ilike(like))
+        .exists()
+    )
+    return (
+        select(PickListLine.id)
+        .outerjoin(Item, Item.id == PickListLine.item_id)
+        .outerjoin(Batch, Batch.id == PickListLine.batch_id)
+        .outerjoin(SalesOrderLine, SalesOrderLine.id == PickListLine.sales_order_line_id)
+        .where(
+            PickListLine.pick_list_id == PickList.id,
+            or_(
+                Batch.batch_number.ilike(like),
+                Item.code.ilike(like),
+                SalesOrderLine.color_id.in_(ordered_shade),
+                carton_shade,
+            ),
+        )
+        .exists()
+    )
+
+
 # --- routes ----------------------------------------------------------------
 
 @router.get("", response_model=PickListListResponse)
@@ -646,6 +685,7 @@ async def list_pick_lists(
             SalesOrder.customer_po_ref.ilike(like),
             Shipment.code.ilike(like),
             Shipment.delivery_note_number.ilike(like),
+            line_search(like),
         )
         query = query.outerjoin(PickList.sales_order).outerjoin(PickList.shipment).filter(cond)
         count_query = count_query.select_from(PickList).outerjoin(PickList.sales_order).outerjoin(PickList.shipment).filter(cond)

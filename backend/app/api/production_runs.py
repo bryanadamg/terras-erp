@@ -22,6 +22,7 @@ from app.schemas import (
 from app.models.production_run import PRBomEntry, PRBomEntrySize
 from app.models.reservation import StockReservation
 from app.models.item import Item
+from app.models.sales import SalesOrder
 from app.models.stock_balance import StockBalance
 from app.models.attribute import AttributeValue
 from app.services import stock_service, mrp_service, beam_service
@@ -294,7 +295,22 @@ async def list_production_runs(
             )
             .exists()
         )
-        conditions.append(or_(ProductionRun.code.ilike(like), entry_match, legacy_match))
+        # Every MO of the run carries production_run_id (roots, children and shared
+        # components alike), so any MO the MO list's search finds names its run.
+        from app.api.manufacturing import mo_search_ids
+        mo_match = ProductionRun.id.in_(
+            select(ManufacturingOrder.production_run_id).correlate(None)
+            .where(ManufacturingOrder.id.in_(mo_search_ids(like)))
+        )
+        labdip_match = ProductionRun.id.in_(
+            select(PRBomEntry.pr_id).correlate(None).where(PRBomEntry.labdip_variant_code.ilike(like))
+        )
+        so_match = ProductionRun.sales_order_id.in_(
+            select(SalesOrder.id).correlate(None).where(SalesOrder.po_number.ilike(like))
+        )
+        conditions.append(or_(
+            ProductionRun.code.ilike(like), entry_match, legacy_match, mo_match, labdip_match, so_match,
+        ))
 
     count_query = select(func.count()).select_from(ProductionRun)
     list_query = (

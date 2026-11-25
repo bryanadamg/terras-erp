@@ -117,10 +117,26 @@ async def get_stock_ledger(
         # "BEAM  150 - 90" even when the stored name carries a double space or a
         # non-breaking space — those render identically in HTML, so a literal
         # substring match silently returns nothing.
+        from app.models.batch import Batch
+        from app.models.color import Color
+        from app.models.manufacturing import ManufacturingOrder
         for tok in search.split():
             term = f"%{tok}%"
             item_sub = select(Item.id).where(or_(Item.name.ilike(term), Item.code.ilike(term)))
-            conditions.append(or_(StockLedger.reference_id.ilike(term), StockLedger.notes.ilike(term), StockLedger.item_id.in_(item_sub)))
+            # The row's lot (its number, supplier lot, or the pending lab-dip code of
+            # the MO that produced it) and its shade — every code the row displays.
+            lot_sub = (
+                select(Batch.id)
+                .outerjoin(WorkOrder, WorkOrder.id == Batch.source_wo_id)
+                .outerjoin(ManufacturingOrder, ManufacturingOrder.id == WorkOrder.manufacturing_order_id)
+                .where(or_(Batch.batch_number.ilike(term), Batch.vendor_lot.ilike(term),
+                           ManufacturingOrder.labdip_variant_code.ilike(term)))
+            )
+            color_sub = select(Color.id).where(or_(Color.code.ilike(term), Color.customer_color_code.ilike(term)))
+            conditions.append(or_(
+                StockLedger.reference_id.ilike(term), StockLedger.notes.ilike(term), StockLedger.item_id.in_(item_sub),
+                StockLedger.batch_id.in_(lot_sub), StockLedger.color_id.in_(color_sub),
+            ))
 
     total = (await db.execute(
         select(func.count(StockLedger.id)).where(*conditions)
@@ -797,6 +813,7 @@ async def get_stock_balance_paginated(
         conditions.append(~rejected_expr)
     if search and search.strip():
         term = f"%{search.strip()}%"
+        KeyColor = aliased(Color)
         conditions.append(or_(
             Item.name.ilike(term),
             Item.code.ilike(term),
@@ -812,6 +829,16 @@ async def get_stock_balance_paginated(
             and_(StockBalance.batch_key != "", Batch.batch_number.is_(None), StockBalance.batch_key.ilike(term)),
             ManufacturingOrder.code.ilike(term),
             WorkOrder.code.ilike(term),
+            ManufacturingOrder.labdip_variant_code.ilike(term),
+            # The shade chip: the producing MO's Color Library row, else the colour
+            # folded into the balance key as a trailing `c:<uuid>` token. Shown as
+            # customer_color_code or code (describe_variant_keys), so match both.
+            Color.code.ilike(term),
+            Color.customer_color_code.ilike(term),
+            select(KeyColor.id).where(
+                or_(KeyColor.code.ilike(term), KeyColor.customer_color_code.ilike(term)),
+                StockBalance.variant_key.like(func.concat("%c:", cast(KeyColor.id, SAString))),
+            ).exists(),
         ))
 
     def joined(stmt):
@@ -1392,7 +1419,13 @@ async def _booking_rows_filtered(db: AsyncSession, search: Optional[str], catego
 
     if search:
         term = search.strip().lower()
-        rows = [r for r in rows if term in r.item_code.lower() or term in r.item_name.lower()]
+        # Item, plus every order code the row shows: MOs consuming / producing it,
+        # POs bringing it in, sales orders reserving it.
+        rows = [r for r in rows if any(term in (c or "").lower() for c in (
+            r.item_code, r.item_name,
+            *(m.mo_code for m in r.demand_mos), *(m.mo_code for m in r.supply_mos),
+            *(p.po_number for p in r.supply_pos), *(s.so_number for s in r.reserved_sos),
+        ))]
 
     from app.models.category import Category
     item_cat: dict = {}
@@ -1421,7 +1454,7 @@ async def _booking_rows_filtered(db: AsyncSession, search: Optional[str], catego
 @router.get("/stock/availability", response_model=PaginatedBookingStockResponse)
 async def get_stock_availability(
     location_id: Optional[str] = Query(None, description="Restrict to a single location"),
-    search: Optional[str] = Query(None, description="Matches item code or name"),
+    search: Optional[str] = Query(None, description="Matches item code or name, or a demand/supply MO, supply PO or reserving sales order code"),
     category_id: Optional[str] = Query(None, description="Item category id, or comma-separated ids (a category plus its descendants)"),
     window: PageWindow = Depends(PageParams(default_size=50)),
     db: AsyncSession = Depends(get_async_db),

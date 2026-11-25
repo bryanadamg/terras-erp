@@ -29,6 +29,7 @@ import TreeSelect, { buildLocationPickerTree } from '../shared/TreeSelect';
 import { API_BASE } from '../shared/apiBase';
 import { qtyFmt } from '../shared/format';
 import { altPerUnit } from '../shared/altUnit';
+import { rowMatches } from '../shared/searchMatch';
 
 
 // ── Classic XP theme primitives (match StockOnHandView / LocationsView) ──────
@@ -760,12 +761,8 @@ function SOPickerBoard({ pickableSOs, loading, tzDate, canManage, onRefresh, onP
         [pickableSOs],
     );
     const filtered = useMemo(() => {
-        const q = search.trim().toLowerCase();
         return pickableSOs.filter((so: any) =>
-            (!readyOnly || num(so.cartons_ready) > 0)
-            && (!q || [so.po_number, so.customer_po_ref, so.customer_name,
-                ...(so.lines || []).flatMap((l: any) => [l.item_code, l.item_name])]
-                .some(v => v && String(v).toLowerCase().includes(q))));
+            (!readyOnly || num(so.cartons_ready) > 0) && rowMatches(so, search));
     }, [pickableSOs, readyOnly, search]);
     const { sorted, sort, toggle: toggleSort } = useSortable(filtered, {
         po: (so: any) => so.po_number,

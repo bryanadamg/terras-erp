@@ -172,6 +172,7 @@ function BomEntryRow({
                 <label style={xpLabel()}>Product Recipe (BOM)</label>
                 <SearchableSelect
                     options={bomChoices.map((b: any) => ({ value: b.id, label: b.item_name || b.item_code, subLabel: b.code }))}
+                    stackSubLabel
                     value={entry.bomId}
                     // A locked entry whose recipe the SO deliberately left open is
                     // still pickable here — that is the whole point of choosing the

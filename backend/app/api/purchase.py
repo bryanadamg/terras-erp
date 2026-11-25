@@ -664,13 +664,28 @@ async def get_purchase_orders(
         query = query.filter(cond)
         count_query = count_query.filter(cond)
     if search:
-        # Mirrors the view's old client-side match: PO number OR supplier name.
-        # Done as an IN-subquery rather than a join so the eager-load options on
-        # `query` and the plain count on `count_query` take the identical filter.
+        # PO number / printed code / supplier, plus any code on its lines and
+        # receipts (item, supplier surat jalan no., vendor lot). IN-subqueries
+        # rather than joins so the eager-load options on `query` and the plain
+        # count on `count_query` take the identical filter. Receipt lines always
+        # carry their PO line's item, so the PO-line item match covers both.
         like = f"%{search}%"
         cond = or_(
             PurchaseOrder.po_number.ilike(like),
+            PurchaseOrder.code.ilike(like),
             PurchaseOrder.supplier_id.in_(select(Partner.id).filter(Partner.name.ilike(like))),
+            PurchaseOrder.id.in_(
+                select(PurchaseOrderLine.purchase_order_id)
+                .join(Item, Item.id == PurchaseOrderLine.item_id)
+                .filter(Item.code.ilike(like))
+            ),
+            PurchaseOrder.id.in_(select(GoodsReceipt.po_id).filter(GoodsReceipt.delivery_note_number.ilike(like))),
+            PurchaseOrder.id.in_(
+                select(GoodsReceipt.po_id)
+                .join(GoodsReceiptLine, GoodsReceiptLine.receipt_id == GoodsReceipt.id)
+                .join(Batch, Batch.id == GoodsReceiptLine.batch_id)
+                .filter(Batch.vendor_lot.ilike(like))
+            ),
         )
         query = query.filter(cond)
         count_query = count_query.filter(cond)

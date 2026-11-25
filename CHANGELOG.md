@@ -15,6 +15,20 @@ on `main`:
 
 ## [Unreleased]
 
+## [1.12.0] - 2026-11-25
+
+### Added
+- Sales orders can be searched by the code or name of an item on their lines
+- The New Production Run recipe picker shows each BOM's full code on its own line under the item name
+
+### Fixed
+- List screens find a row by every code it shows, so a scanned SPK barcode, a Work Queue link or a deep link always lands on its row. This covers manufacturing orders, work orders, production runs, the work queue, the dyeing monitor, sales orders, pick lists, shipments, packing orders, quarantine, purchase orders, the stock ledger, on-hand, booking stock, lots, BOMs and samples, matching child MOs, work orders, output lots, sales orders, cartons, receipts, colours and component items
+- Searching manufacturing orders by a child MO's code shows the root MO it sits under
+- The To Pick board and loading deck search every code and name on a row
+- A scanned or pasted code with a stray leading or trailing space still finds its row
+- The BOM Designer's header card no longer collapses, so the Finished Item picker shows when creating a BOM
+- The BOM Automator's saved profiles, level and tip cards no longer collapse when the levels outgrow the dialog
+
 ## [1.11.1] - 2026-11-24
 
 ### Changed

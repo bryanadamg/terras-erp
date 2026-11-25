@@ -104,6 +104,7 @@ const LevelCard = memo(({
 }) => {
     return (
         <TintCard
+            style={{ flexShrink: 0 }}
             title={`Level ${lIdx + 1} · Processing`}
             right={
                 <button type="button" title={`Remove level ${lIdx + 1}`} onClick={() => onRemoveLevel(lIdx)}
@@ -338,7 +339,10 @@ const BOMAutomatorModal = memo(({ isOpen, onClose, onApply, rootAttributeSummary
                     <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6, minHeight: 0, paddingRight: 4 }}>
 
                         {/* Saved Profiles */}
-                        <TintCard title="Saved Profiles">
+                        {/* Cards in this scrolling column keep flexShrink 0: they clip
+                            (overflow hidden), so they would otherwise squash to nothing
+                            once the levels outgrow the dialog. */}
+                        <TintCard title="Saved Profiles" style={{ flexShrink: 0 }}>
                             <div style={{ padding: '0 8px 8px' }}>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginBottom: 6, minHeight: 20 }}>
                                 {profiles.length === 0 && (
@@ -423,7 +427,7 @@ const BOMAutomatorModal = memo(({ isOpen, onClose, onApply, rootAttributeSummary
                             </div>
                         </TintCard>
 
-                        <TintCard title={<><i className="bi bi-lightbulb" style={{ marginRight: 4 }} />Tip</>} tone="amber">
+                        <TintCard title={<><i className="bi bi-lightbulb" style={{ marginRight: 4 }} />Tip</>} tone="amber" style={{ flexShrink: 0 }}>
                             <div style={{ padding: '0 8px 8px', fontSize: 10, color: 'var(--terras-win-text-2, #555)', lineHeight: 1.6 }}>
                                 Each level becomes a child BOM node. Branching items at the same level are created as siblings under the parent.
                                 <div style={{ marginTop: 6 }}>

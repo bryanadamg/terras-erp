@@ -826,19 +826,17 @@ async def build_queue(
 
     if search:
         term = search.strip().lower()
+        # The cell shows the CODE and the variant labels, so search has to reach
+        # them — a filter that cannot find what is on screen reads as a bug. Same for
+        # the substrate line and the upstream order a material row is waiting on.
+        fields = (
+            "work_order_code", "mo_code", "item_code", "item_name", "color_name", "color_code",
+            "color_label", "combo_label", "size_label", "labdip_variant_code", "substrate_item_code",
+        )
         rows = [
             r for r in rows
-            if term in (r["work_order_code"] or "").lower()
-            or term in (r["mo_code"] or "").lower()
-            or term in (r["item_code"] or "").lower()
-            or term in (r["item_name"] or "").lower()
-            or term in (r["color_name"] or "").lower()
-            # The cell shows the CODE and the variant labels, so search has to reach
-            # them — a filter that cannot find what is on screen reads as a bug.
-            or term in (r["color_code"] or "").lower()
-            or term in (r["color_label"] or "").lower()
-            or term in (r["combo_label"] or "").lower()
-            or term in (r["size_label"] or "").lower()
+            if any(term in (r[f] or "").lower() for f in fields)
+            or any(term in (m.get("incoming_mo_code") or "").lower() for m in r["materials"])
         ]
 
     # Built from the SAME allocation walk the rows came from, so the panel and the

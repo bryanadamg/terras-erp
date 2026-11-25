@@ -2113,7 +2113,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
            <div
                style={xpToolbar()}
            >
-               <SearchField value={searchTerm} onChange={setSearchTerm} placeholder="Search PO#…" width={200} grow />
+               <SearchField value={searchTerm} onChange={setSearchTerm} placeholder="Search PO# or item…" width={200} grow />
                <SearchField value={customerSearch} onChange={setCustomerSearch} placeholder="Search Customer…" icon="bi-person" width={200} grow />
                <div style={xpSep}></div>
                <FilterChipBar options={STATUS_FILTERS} value={statusFilter} onChange={setStatusFilter} />

@@ -29,6 +29,7 @@ from app.models.shipment import Shipment
 from app.models.pick_list import PickList, PickListLine
 from app.models.sales import SalesOrder, SalesOrderLine
 from app.api.auth import require_permission, user_has_permission
+from app.api.pick_lists import line_search as pick_line_search
 from app.models.auth import User
 from app.services import (
     audit_service, kpi_service, so_fulfilment_service, numbering_service, dispatch_service,
@@ -337,6 +338,19 @@ async def list_shipments(
             Shipment.delivery_note_number.ilike(like),
             Shipment.customer_name.ilike(like),
             Shipment.vehicle_plate.ilike(like),
+            # Its member pick lists, as the deck shows them.
+            select(PickList.id)
+            .outerjoin(SalesOrder, SalesOrder.id == PickList.sales_order_id)
+            .where(
+                PickList.shipment_id == Shipment.id,
+                or_(
+                    PickList.code.ilike(like),
+                    SalesOrder.po_number.ilike(like),
+                    SalesOrder.customer_po_ref.ilike(like),
+                    pick_line_search(like),
+                ),
+            )
+            .exists(),
         )
         query = query.filter(cond)
         count_q = count_q.filter(cond)
