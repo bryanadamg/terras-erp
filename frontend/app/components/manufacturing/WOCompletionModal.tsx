@@ -81,8 +81,8 @@ export default function WOCompletionModal({ mo, onClose, onSaved, workOrder }: W
     // the operator sees why a bag they can see on the floor isn't selectable.
     const [reservedByItem, setReservedByItem] = useState<Record<string, any[]>>({});
     const [consumedBatches, setConsumedBatches] = useState<Record<string, string>>({});
-    // Dyeing: greige substrate arrives as many scanned lots → draw from several of
-    // them (item_id → selected batch ids). Single-lot materials keep the <select>.
+    // A material held as several lots → draw from several of them
+    // (item_id → selected batch ids). Single-lot materials keep the <select>.
     const [selectedLots, setSelectedLots] = useState<Record<string, string[]>>({});
     // item_id → "other sizes" group unfolded. Size token = case-folded size name,
     // same as netting_service; "" = unsized MO, which accepts every lot.
@@ -130,17 +130,15 @@ export default function WOCompletionModal({ mo, onClose, onSaved, workOrder }: W
         || ['WEAVING', 'TENUN', 'DYEING', 'CELUP', 'SETTING'].includes(woWcType);
     const isWeavingWO = woWcType === 'WEAVING' || woWcType === 'TENUN';
     const isDyeingWO = woWcType === 'DYEING' || woWcType === 'CELUP';
-    // Bag-fed steps: substrate arrives as many weighed, scanned bags — greige into
-    // dyeing, dyed lots into setting. Same shape on the way out, so both consume
-    // the same way. Mirrors SCAN_STAGE_WC_TYPES on the staging side.
     const isSettingWO = woWcType === 'SETTING';
-    const isBagFedWO = isDyeingWO || isSettingWO;
-    // Multi-lot consume: substrate staged as several bags (≥2 lots at the input
-    // location). One picker can't select 30 bags — use checkboxes. The checked
-    // lots are the SOURCE POOL; the qty deducted is the logged draw, not each
-    // lot's whole remaining. Single-lot materials (e.g. chemicals) keep the
-    // single <select> + BOM% deduction.
-    const isMultiLot = (itemId: string) => isBagFedWO && (batchesByItem[itemId]?.length || 0) >= 2;
+    // Multi-lot consume: a material sitting as several lots at the input location
+    // (≥2) — greige bags into dyeing, dyed lots into setting, and a covering WO's
+    // per-box lots into warping (80 cones needed, 20 per lot). One picker can't
+    // select them, so checkboxes. The checked lots are the SOURCE POOL; the qty
+    // deducted is the logged draw, not each lot's whole remaining. Single-lot
+    // materials keep the single <select> + BOM% deduction. Weaving's mounted
+    // beams never reach batchesByItem (drawn FIFO from the loom's mounts).
+    const isMultiLot = (itemId: string) => (batchesByItem[itemId]?.length || 0) >= 2;
     // Mirrors the backend's prefix choice in manufacturing.py's log-completion route.
     const lotLabel = isBeamOutput ? 'Beam' : isWeavingWO ? 'Greige' : isDyeingWO ? 'Dyed Lot' : isSettingWO ? 'Set Lot' : 'Lot';
     const lotPrefix = isBeamOutput ? 'BM' : isWeavingWO ? 'GRG' : isDyeingWO ? 'DYE' : isSettingWO ? 'SET' : 'LOT';
@@ -237,13 +235,13 @@ export default function WOCompletionModal({ mo, onClose, onSaved, workOrder }: W
             setSelectedLots(prev => {
                 const next: Record<string, string[]> = {};
                 for (const id of Object.keys(map)) {
-                    if (isBagFedWO && map[id].length >= 2) next[id] = prev[id] || stagedHere(id);
+                    if (map[id].length >= 2) next[id] = prev[id] || stagedHere(id);
                 }
                 return next;
             });
         });
         return () => { cancelled = true; };
-    }, [JSON.stringify(materialItemIds), workOrder?.id, isWeavingWO, isBagFedWO]);
+    }, [JSON.stringify(materialItemIds), workOrder?.id, isWeavingWO]);
 
     // Putaway destination is a planning decision carried by the MO — operator
     // only sees where the output goes; the backend books stock there.
@@ -370,7 +368,7 @@ export default function WOCompletionModal({ mo, onClose, onSaved, workOrder }: W
 
         setSubmitting(true);
         try {
-            // Multi-lot items (dyeing substrate) are consumed explicitly via
+            // Multi-lot items are consumed explicitly via
             // consumed_lots (the logged draw, FIFO across the selected lots) —
             // exclude them from the BOM%/actual_items path and the single-lot
             // consumed_batches so the qty is never deducted twice.
