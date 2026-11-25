@@ -15,6 +15,18 @@ on `main`:
 
 ## [Unreleased]
 
+## [1.13.0] - 2026-11-25
+
+### Added
+- The work order list flags open work orders past their target end date in red
+- The work order Excel export includes each order's BOM material
+
+### Fixed
+- Scanning a work order card's barcode finds its row in every list search, including the manufacturing order it belongs to
+- Pressing Enter in a list search box selects its text, so the next barcode scan replaces the last one instead of appending to it
+- A work order log can draw one material from several lots, so warping can consume a covering order's per-box lots
+- A new BOM's title strip points to the Finished Item picker instead of reading "Select an item"
+
 ## [1.12.0] - 2026-11-25
 
 ### Added
