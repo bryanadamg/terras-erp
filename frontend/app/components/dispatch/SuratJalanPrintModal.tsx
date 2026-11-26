@@ -78,7 +78,9 @@ export default function SuratJalanPrintModal({ shipment, attributes, companyProf
 
     const handlePrint = async () => {
         // Flush whatever the user was still typing (blur may not have fired yet
-        // for the field that had focus) before the note goes out.
+        // for the field that had focus) before the note goes out. Stamp the print
+        // first so the refresh persistDetails triggers already carries it.
+        await authFetch(`${API_BASE}/shipments/${shipment.id}/mark-printed`, { method: 'POST' }).catch(() => {});
         await persistDetails();
         const h = () => onClose();
         window.addEventListener('afterprint', h, { once: true });

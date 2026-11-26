@@ -4144,6 +4144,7 @@ class ShipmentResponse(BaseModel):
     verification_notes: str | None = None
     verified_with_discrepancy: bool = False
     dispatched_at: datetime | None = None
+    delivery_note_printed_at: datetime | None = None
     notes: str | None = None
     created_at: datetime
     created_by_name: str | None = None

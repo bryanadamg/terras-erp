@@ -564,6 +564,33 @@ async def verify_shipment(
     return _decorate(shp)
 
 
+@router.post("/{shp_id}/mark-printed", response_model=ShipmentResponse)
+async def mark_shipment_printed(
+    shp_id: uuid.UUID,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(require_permission('shipment.view')),
+):
+    """Stamps delivery_note_printed_at when the Surat Jalan is printed from the ERP."""
+    shp = await _load(db, shp_id)
+    if not shp:
+        raise HTTPException(status_code=404, detail="Shipment not found")
+    shp.delivery_note_printed_at = datetime.utcnow()
+    await db.commit()
+
+    await audit_service.log_activity(
+        db, user_id=current_user.id, action="PRINT", entity_type="Shipment",
+        entity_id=str(shp_id), details=f"Printed Surat Jalan for shipment {shp.code}",
+    )
+    try:
+        await manager.broadcast({"type": "SHIPMENT_UPDATE", "id": str(shp_id)})
+    except Exception:
+        pass
+
+    shp = await _load(db, shp_id)
+    await _decorate_cartons(db, [shp])
+    return _decorate(shp)
+
+
 @router.post("/{shp_id}/reopen", response_model=ShipmentResponse)
 async def reopen_shipment(
     shp_id: uuid.UUID,

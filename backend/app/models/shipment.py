@@ -77,6 +77,9 @@ class Shipment(Base):
     verified_with_discrepancy: Mapped[bool] = mapped_column(Boolean, default=False)
 
     dispatched_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    # Last time the Surat Jalan was printed from the ERP — lets the deck see which
+    # loads still have no paper, since staging no longer opens the print itself.
+    delivery_note_printed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
