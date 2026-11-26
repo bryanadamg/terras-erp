@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { xpFont, CODE_FONT, CHIP_RADIUS, XP_BTN, colorLabel, CodeChip, StatusChip, ProgressBar, XPEmptyState, TableSkeleton, useTableSkeletonMetrics, XPActionButton, FORM_SECTION_BLUE } from '../shared/xpTheme';
 import { rowStateBg, ExpandedRowPanel, useSortable } from '@bryanadamg/terras-ui/components/Table';
-import { field as xpInputBase } from '@bryanadamg/terras-ui/styles';
+import { field as xpInputBase, toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
 import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
 import { ExpanderCell, lvThSticky, lvTd, lvZebra, lvSubTable, lvSubTh, lvSubTd, lvSubRow, Dash, lvBtn, lvInput, ResizableTable } from '../shared/listViewTheme';
 import { SortableTh, EXPANDER_COL_W as LV_EXPANDER_COL_W } from '@bryanadamg/terras-ui/components/Table';
@@ -711,10 +711,7 @@ export default function DyeingOrdersTab({ items, authFetch }: DyeingOrdersTabPro
     const thStyle: React.CSSProperties = lvThSticky({ border: '1px solid #808080' });
     const tdBase: React.CSSProperties = { ...lvTd(), border: '1px solid #c0bdb5' };
 
-    const filterBarStyle: React.CSSProperties = {
-        background: '#d4d0c8', borderBottom: '1px solid #808080',
-        padding: '4px 8px', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap',
-    };
+    const filterBarStyle: React.CSSProperties = xpToolbar({ padding: '4px 8px', gap: 8 });
 
     const subTh = lvSubTh();
     const subTd = lvSubTd();

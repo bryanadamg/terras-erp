@@ -9,7 +9,7 @@ import ModalWrapper from '../shared/ModalWrapper';
 import { API_BASE } from '../shared/apiBase';
 import { CodeChip, xpFont, CODE_FONT, StatusChip, XP_BTN, CHIP_RADIUS, colorLabel, ProgressBar, XPEmptyState, TableSkeleton, useTableSkeletonMetrics, XPActionButton } from '../shared/xpTheme';
 import { rowStateBg, ExpandedRowPanel, useSortable } from '@bryanadamg/terras-ui/components/Table';
-import { field as xpInputBase } from '@bryanadamg/terras-ui/styles';
+import { field as xpInputBase, toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
 import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
 import { orDash, fmtQtyFixed } from '../shared/format';
 import { ExpanderCell, lvThSticky, lvTd, lvZebra, lvSubTable, lvSubTh, lvSubTd, lvSubRow, Dash, lvBtn, lvInput, ResizableTable } from '../shared/listViewTheme';
@@ -371,10 +371,7 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
     const thStyle: React.CSSProperties = lvThSticky({ border: '1px solid #808080' });
     const tdBase: React.CSSProperties = { ...lvTd(), border: '1px solid #c0bdb5' };
 
-    const filterBarStyle: React.CSSProperties = {
-        background: '#d4d0c8', borderBottom: '1px solid #808080',
-        padding: '4px 8px', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap',
-    };
+    const filterBarStyle: React.CSSProperties = xpToolbar({ padding: '4px 8px', gap: 8 });
 
     const subTh = lvSubTh();
     const subTd = lvSubTd();
