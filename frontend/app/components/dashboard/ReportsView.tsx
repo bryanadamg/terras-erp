@@ -12,7 +12,7 @@ import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
 import { LotChips, lotSizeLabel, lotColorLabel } from '../shared/LotChips';
 import TreeSelect, { buildLocationFilterTree, expandLocationFilterValue, buildCategoryTree, expandCategoryFilterValue, locationAncestorNames } from '../shared/TreeSelect';
 import Pager from '../shared/Pager';
-import { SearchField, pageFillStyle, flexFillStyle } from '../shared/shellTheme';
+import { SearchField, pageFillStyle, flexFillStyle, RefreshButton } from '../shared/shellTheme';
 import { bevel as sharedXpBevel, toolbar as sharedXpToolbar } from '@bryanadamg/terras-ui/styles';
 import { FilterChipBar, type FilterChipOption } from '@bryanadamg/terras-ui/components/FilterChipBar';
 import { SegmentedBar } from '@bryanadamg/terras-ui/components/SegmentedBar';
@@ -25,6 +25,7 @@ import { useToast } from '../shared/Toast';
 import { useConfirm } from '../../context/ConfirmContext';
 
 import { refMeta, shortRef } from './ledgerRef';
+import { ExcelButton } from '../shared/ExportExcelButton';
 const StockLedgerPrintModal = dynamic(() => import('./StockLedgerPrintModal'), { ssr: false });
 
 const PAGE_SIZE = 50;
@@ -276,8 +277,8 @@ export default function ReportsView(_props: any) {
             <SegmentedBar actions={presetActions} />
             <div style={{ flex: 1 }} />
             {hasFilters && <button className={XP_BTN} style={xpBtn({ fontSize: '10px', padding: '1px 6px' })} onClick={clearFilters} title="Clear filters"><i className="bi bi-x-lg" /></button>}
-            <button className={XP_BTN} style={xpBtn({ padding: '1px 6px' })} onClick={refetch} title="Refresh"><i className="bi bi-arrow-clockwise" /></button>
-            {canExport && <button className={XP_BTN} style={xpBtn({ padding: '1px 6px' })} onClick={handleExport} disabled={exporting || !total} title={exporting ? 'Exporting...' : 'Export Excel'}><i className={exporting ? 'bi bi-hourglass-split' : 'bi bi-file-earmark-excel'} /></button>}
+            <RefreshButton onClick={refetch} />
+            {canExport && <ExcelButton busy={exporting} disabled={!total} onClick={handleExport} />}
             {canPrint && <button className={XP_BTN} style={xpBtn({ padding: '1px 6px' })} onClick={handlePrint} disabled={printLoading} title={printLoading ? 'Loading...' : t('print')}><i className={printLoading ? 'bi bi-hourglass-split' : 'bi bi-printer'} /></button>}
         </div>;
 

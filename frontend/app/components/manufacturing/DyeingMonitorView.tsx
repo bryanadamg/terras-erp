@@ -8,7 +8,7 @@ import { ProgressBar, StatusChip, XPEmptyState, XPActionButton, TableSkeleton, C
 import { ExpandedRowPanel, rowStateBg } from '@bryanadamg/terras-ui/components/Table';
 import { field as xpInput } from '@bryanadamg/terras-ui/styles';
 import { centerTypeOfWC, isMachineWC, isTypeWC } from '../shared/workCenterTree';
-import { ShellWindow, SearchField } from '../shared/shellTheme';
+import { ShellWindow, SearchField, RefreshButton } from '../shared/shellTheme';
 import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
 import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 import { toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
@@ -24,6 +24,7 @@ import { fmtQty, fmtMinutes, orDash } from '../shared/format';
 import { API_BASE } from '../shared/apiBase';
 import { saveResponse } from '../shared/download';
 import { useTimezone } from '../../context/TimezoneContext';
+import { ExcelButton } from '../shared/ExportExcelButton';
 
 const AMBER = familyColor('amber');
 const COLS = 14;
@@ -244,11 +245,10 @@ export default function DyeingMonitorView() {
                 </span>
             )}
             <ToolbarCount right>{total}</ToolbarCount>
+            <RefreshButton onClick={load} label={t('refresh')} />
             {canExport && (
-                <XPActionButton tone="neutral" icon={exporting ? 'bi-hourglass-split' : 'bi-file-earmark-excel'}
-                    title="Export Excel" onClick={exportExcel} disabled={exporting || !total} />
+                <ExcelButton busy={exporting} disabled={!total} onClick={exportExcel} />
             )}
-            <XPActionButton tone="neutral" icon="bi-arrow-clockwise" title={t('refresh')} onClick={load} />
         </div>
     );
 

@@ -31,12 +31,12 @@ import { useData } from '../../context/DataContext';
 import { useUser } from '../../context/UserContext';
 import { useToast } from '../shared/Toast';
 import { saveResponse } from '../shared/download';
-import { xpFont, xpBtn, xpSelect, xpSep, TableBlockSkeleton, XPEmptyState, WorkCenterChip, StatusChip, ProgressBar, XP_BTN } from '../shared/xpTheme';
+import { xpFont, xpSelect, xpSep, TableBlockSkeleton, XPEmptyState, WorkCenterChip, StatusChip, ProgressBar } from '../shared/xpTheme';
 import { field as xpInput } from '@bryanadamg/terras-ui/styles';
 import { useSortable, ExpandedRowPanel, rowStateBg } from '@bryanadamg/terras-ui/components/Table';
 import TreeSelect, { TreeSelectOption } from '../shared/TreeSelect';
 import { childrenOfWC, isMachineWC, isTypeWC } from '../shared/workCenterTree';
-import { pageFillStyle, flexFillStyle } from '../shared/shellTheme';
+import { pageFillStyle, flexFillStyle, RefreshButton } from '../shared/shellTheme';
 import { bevel as sharedXpBevel, toolbar as sharedXpToolbar } from '@bryanadamg/terras-ui/styles';
 import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
 import { SegmentedBar } from '@bryanadamg/terras-ui/components/SegmentedBar';
@@ -44,6 +44,7 @@ import { lvThead, lvSubTh, lvSubTd, lvSubTable, lvSubCaption, ExpanderCell, lvZe
 import { SortableTh } from '@bryanadamg/terras-ui/components/Table';
 import { qtyFmt } from '../shared/format';
 import { STATIC_BASE } from '../shared/apiBase';
+import { ExcelButton } from '../shared/ExportExcelButton';
 
 // Machine output is weighed to the gram, so this report alone runs at 3dp.
 const fmtQty = qtyFmt(3);
@@ -1063,12 +1064,9 @@ export default function MachineOutputReportView() {
                             <SegmentedBar actions={presetActions} />
                             <div style={{ flex: 1 }} />
                             <span style={{ ...lbl, whiteSpace: 'nowrap' }}>{sorted.length} rows</span>
-                            <button className={XP_BTN} style={xpBtn({ padding: '1px 6px' })} onClick={() => fetchReport()} title="Refresh"><i className="bi bi-arrow-clockwise" /></button>
+                            <RefreshButton onClick={() => fetchReport()} />
                             {canExport && (
-                                <button className={XP_BTN} style={xpBtn()} onClick={exportExcel} disabled={exporting || !sorted.length}
-                                    title="Download the rows shown as an Excel file">
-                                    <i className="bi bi-file-earmark-excel" style={{ marginRight: 4 }} />{exporting ? 'Exporting…' : 'Export Excel'}
-                                </button>
+                                <ExcelButton busy={exporting} disabled={!sorted.length} onClick={exportExcel} title="Download the rows shown as an Excel file" />
                             )}
                         </div>
                     </>

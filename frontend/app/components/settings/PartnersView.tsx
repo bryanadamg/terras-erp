@@ -209,7 +209,7 @@ export default function PartnersView({ type }: PartnersViewProps) {
                     ]} />
                     {canCreate && (
                         <ToolbarButton tone="create" icon="bi-plus-lg" onClick={() => setIsCreateOpen(true)}>
-                            Add {typeLabel}
+                            New {typeLabel}
                         </ToolbarButton>
                     )}
                 </div>

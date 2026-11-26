@@ -14,7 +14,7 @@ import Pager from '../shared/Pager';
 import { StatusChip, useFloatingMenu, MenuTriggerButton, FloatingMenu, CodeChip, ColorSwatchChip, xpFont, TableSkeleton, useTableSkeletonMetrics, CHIP_RADIUS, FORM_SECTION_BLUE, xpBtn as xpBtnBase } from '../shared/xpTheme';
 import { TintCard } from '../shared/RequestDetailPanel';
 import { ExpandedRowPanel, rowStateBg } from '@bryanadamg/terras-ui/components/Table';
-import { field as xpInputBase } from '@bryanadamg/terras-ui/styles';
+import { field as xpInputBase, toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
 import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
 import { lvTh, lvTd, lvSep, lvLabel, lvThead, lvSubTh, lvSubTd, lvSubRow, ExpanderCell, TableEmpty, lvRow, lvSubTable } from '../shared/listViewTheme';
 import { ToolbarButton, SearchField } from '../shared/shellTheme';
@@ -617,7 +617,7 @@ export default function DyeRecipeTab({ items, attributes, authFetch, initialColo
         <>
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, ...xpPanel, border: 'none' }}>
             {/* Toolbar */}
-            <div style={{ background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)', borderBottom: '1px solid #b0a898', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>
+            <div style={xpToolbar({ padding: '4px 8px' })}>
                 <SearchField value={searchText} onChange={setSearchText} placeholder="Search code or name…" width={240} />
                 <ToolbarCount right>
                     {total.toLocaleString()} recipe{total !== 1 ? 's' : ''}

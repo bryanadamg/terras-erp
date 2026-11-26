@@ -23,6 +23,7 @@ import { useTimezone } from '../../context/TimezoneContext';
 import { API_BASE } from '../shared/apiBase';
 import { matchSubBOM } from '../shared/bomMatch';
 import { useUser } from '../../context/UserContext';
+import { toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
 const WOCompletionModal = dynamic(() => import('./WOCompletionModal'), { ssr: false });
 
 // On the selected (blue) tree row a normal chip fill would fight the highlight, so
@@ -616,7 +617,9 @@ export default function ManufacturingOrdersTab({
                             </button>
                         )}
                         {bom && <span style={{ fontSize: '10px', color: '#444' }}>BOM: <CodeChip code={bom.code} tier={2} /></span>}
-                        <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px' }}>
+                        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <PrintChip variant={selectedNode.card_printed_at ? 'green' : 'gray'} label="SPK"
+                                title={selectedNode.card_printed_at ? `SPK Produksi printed ${tzFmt(selectedNode.card_printed_at, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }, 'id-ID')}` : 'SPK Produksi not printed yet'} />
                             {canManage && selectedNode.status === 'PENDING' && (
                                 <button className="btn btn-sm btn-primary py-0 px-2" style={{ fontSize: '0.72rem' }} onClick={() => onUpdateStatus(selectedNode.id, 'IN_PROGRESS')}>
                                     <i className="bi bi-play-fill me-1"></i>Start
@@ -1088,12 +1091,7 @@ export default function ManufacturingOrdersTab({
 
                 return viewMode === 'calendar' ? (
                     <>
-                        <div className="no-print" style={{
-                            padding: '5px 8px',
-                            borderBottom: '1px solid #808080',
-                            background: '#ece9d8',
-                            display: 'flex', alignItems: 'center', gap: 6,
-                        }}>
+                        <div className="no-print" style={xpToolbar({ padding: '5px 8px' })}>
                             {viewToggle}
                             <div style={{ display: 'flex', gap: 6, marginLeft: 'auto' }}>
                                 {moActions}
@@ -1182,7 +1180,7 @@ export default function ManufacturingOrdersTab({
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 4, overflow: 'hidden' }}>
                                                 <CodeChip code={mo.code} style={{ fontWeight: 'bold', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }} />
                                                 <span style={{ marginLeft: 'auto', flexShrink: 0 }}>
-                                                    <PrintChip variant={mo.card_printed_at ? 'green' : 'gray'} label="Card"
+                                                    <PrintChip variant={mo.card_printed_at ? 'green' : 'gray'} label="SPK"
                                                         title={mo.card_printed_at ? `SPK Produksi printed ${tzFmt(mo.card_printed_at, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }, 'id-ID')}` : 'SPK Produksi not printed yet'} />
                                                 </span>
                                             </div>

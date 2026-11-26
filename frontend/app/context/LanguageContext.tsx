@@ -125,6 +125,11 @@ const translations = {
 
         // Common
         'create': 'Create',
+        'new_sales_order': 'New Sales Order',
+        'new_purchase_order': 'New Purchase Order',
+        'new_sample_request': 'New Sample Request',
+        'new_item': 'New Item',
+        'new_bom': 'New BOM',
         'save': 'Save',
         'delete': 'Delete',
         'cancel': 'Cancel',
@@ -170,7 +175,6 @@ const translations = {
         
         // BOM
         'active_boms': 'Active BOMs',
-        'create_recipe': 'Create Recipe',
         'finished_good': 'Finished Good',
         'materials': 'Materials',
         'routing_operations': 'Routing & Operations',
@@ -552,6 +556,11 @@ const translations = {
 
         // Common
         'create': 'Buat',
+        'new_sales_order': 'Pesanan Penjualan Baru',
+        'new_purchase_order': 'Pesanan Pembelian Baru',
+        'new_sample_request': 'Permintaan Sampel Baru',
+        'new_item': 'Barang Baru',
+        'new_bom': 'BOM Baru',
         'save': 'Simpan',
         'delete': 'Hapus',
         'cancel': 'Batal',
@@ -597,7 +606,6 @@ const translations = {
         
         // BOM
         'active_boms': 'Daftar Resep Aktif',
-        'create_recipe': 'Buat Resep',
         'finished_good': 'Barang Jadi',
         'materials': 'Bahan Baku',
         'routing_operations': 'Alur & Operasi',

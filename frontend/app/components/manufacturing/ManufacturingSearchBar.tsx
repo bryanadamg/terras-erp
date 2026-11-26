@@ -1,6 +1,7 @@
 import React from 'react';
 import { SearchField } from '../shared/shellTheme';
 import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
+import { toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
 
 // Shared search bar for the PR / MO list tabs. The field itself is the app-wide
 // SearchField — this component only owns the strip it sits in and the result tally.
@@ -19,12 +20,7 @@ export default function ManufacturingSearchBar({
     actions?: React.ReactNode;
 }) {
     return (
-        <div className="no-print" style={{
-            padding: '5px 8px',
-            borderBottom: '1px solid #808080',
-            background: '#ece9d8',
-            display: 'flex', alignItems: 'center', gap: 8,
-        }}>
+        <div className="no-print" style={xpToolbar({ padding: '5px 8px', gap: 8 })}>
             <SearchField value={value} onChange={onChange} placeholder={placeholder} width={320} grow />
             {filters}
             {(value || showCount) && (

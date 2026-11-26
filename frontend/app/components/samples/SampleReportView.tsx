@@ -5,7 +5,7 @@ import { useData } from '../../context/DataContext';
 import { isoDate } from '../shared/format';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useToast } from '../shared/Toast';
-import { ShellWindow, ToolbarButton } from '../shared/shellTheme';
+import { ShellWindow, RefreshButton } from '../shared/shellTheme';
 import ExportExcelButton, { ExportColumn, xlsDateTime } from '../shared/ExportExcelButton';
 import { toolbar as sharedXpToolbar } from '@bryanadamg/terras-ui/styles';
 import { API_BASE } from '../shared/apiBase';
@@ -190,7 +190,7 @@ export default function SampleReportView() {
     };
 
     const Filters = () => (
-        <div style={sharedXpToolbar({ background: '#ece9d8', padding: '5px 8px', gap: 5, flexShrink: 0 })}>
+        <div style={sharedXpToolbar({ padding: '5px 8px', gap: 5 })}>
             <span style={inlineLabel}>From</span>
             <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
                 style={lvInput({ width: 128 })} />
@@ -227,7 +227,7 @@ export default function SampleReportView() {
                 <span style={inlineLabel}>
                     <b>{rows.length}</b> variant rows
                 </span>
-                <ToolbarButton tone="neutral" icon="bi-arrow-clockwise" title="Reload" onClick={load}>Refresh</ToolbarButton>
+                <RefreshButton onClick={load} />
                 <ExportExcelButton grant="sample_request.export" filename={`sample-report_${dateFrom || 'all'}_${dateTo || 'all'}`}
                     sheet="Sample Report" rows={sorted} disabled={!rows.length} columns={exportColumns} />
             </div>

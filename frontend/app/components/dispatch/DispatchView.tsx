@@ -24,6 +24,7 @@ import { LotChip, LotChips, LotChipRow, lotSizeLabel, lotSizeText, lotComboLabel
 import { qtyFmt, toNum as num } from '../shared/format';
 import { API_BASE } from '../shared/apiBase';
 import { rowMatches } from '../shared/searchMatch';
+import { PrintChip } from '../manufacturing/WorkOrderPanel';
 const SuratJalanPrintModal = dynamic(() => import('./SuratJalanPrintModal'), { ssr: false });
 
 
@@ -432,7 +433,13 @@ export default function DispatchView() {
                                     >
                                         <td style={td} />
                                         <td style={td}><CodeChip code={shp.code} tone="accent" /></td>
-                                        <td style={td}>{shp.delivery_note_number ? <CodeChip code={shp.delivery_note_number} /> : EMPTY_DASH}</td>
+                                        <td style={td}>
+                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                                {shp.delivery_note_number ? <CodeChip code={shp.delivery_note_number} /> : EMPTY_DASH}
+                                                <PrintChip variant={shp.delivery_note_printed_at ? 'green' : 'gray'} label="SJ"
+                                                    title={shp.delivery_note_printed_at ? `Surat Jalan printed ${tzDateTime(shp.delivery_note_printed_at)}` : 'Surat Jalan not printed yet'} />
+                                            </span>
+                                        </td>
                                         <td style={td}>{shp.customer_name || EMPTY_DASH}</td>
                                         <td style={td}>{shp.vehicle_plate || EMPTY_DASH}</td>
                                         <td style={{ ...td, textAlign: 'right' }}>{shp.carton_count}</td>

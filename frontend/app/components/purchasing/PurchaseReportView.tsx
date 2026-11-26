@@ -20,8 +20,9 @@ import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
 import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 import TreeSelect, { buildLocationFilterTree, expandLocationFilterValue, buildCategoryTree, expandCategoryFilterValue } from '../shared/TreeSelect';
 import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
-import { SearchField, pageFillStyle, flexFillStyle } from '../shared/shellTheme';
+import { SearchField, ShellWindow, flexFillStyle } from '../shared/shellTheme';
 import { lvThSticky, lvTdRuled, lvZebra, ResizableTable, Dash } from '../shared/listViewTheme';
+import { ExcelButton } from '../shared/ExportExcelButton';
 
 const PurchaseReportPrintModal = dynamic(() => import('./PurchaseReportPrintModal'), { ssr: false });
 
@@ -129,7 +130,7 @@ export default function PurchaseReportView() {
     );
 
     return (
-        <div style={pageFillStyle}>
+        <ShellWindow fill="page" className="fade-in">
             {printOpen && (
                 <PurchaseReportPrintModal kind={kind} rows={rows} amount={amount}
                     periodLabel={periodLabel} filtersSummary={filtersSummary} onClose={() => setPrintOpen(false)} />
@@ -170,7 +171,7 @@ export default function PurchaseReportView() {
                 <input type="date" style={xpInput({ width: 122 })} value={dateTo} onChange={e => setDateTo(e.target.value)} />
                 <ToolbarCount>{rows.length.toLocaleString()} row{rows.length === 1 ? '' : 's'} · Rp {fmtMoney(amount)}</ToolbarCount>
                 <div style={{ flex: 1 }} />
-                {canExport && <button className={XP_BTN} style={xpBtn({ padding: '1px 6px' })} onClick={handleExport} disabled={exporting || !rows.length} title={exporting ? 'Exporting...' : 'Export Excel'}><i className={exporting ? 'bi bi-hourglass-split' : 'bi bi-file-earmark-excel'} /></button>}
+                {canExport && <ExcelButton busy={exporting} disabled={!rows.length} onClick={handleExport} />}
                 {canPrint && <button className={XP_BTN} style={xpBtn({ padding: '1px 6px' })} onClick={() => setPrintOpen(true)} disabled={!rows.length} title="Print"><i className="bi bi-printer" /></button>}
             </div>
 
@@ -215,6 +216,6 @@ export default function PurchaseReportView() {
                     </ResizableTable>
                 )}
             </div>
-        </div>
+        </ShellWindow>
     );
 }

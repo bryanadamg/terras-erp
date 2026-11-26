@@ -91,6 +91,7 @@ class BOMLineResponse(BaseModel):
     item_id: UUID
     item_code: str | None = None
     item_name: str | None = None
+    item_ends: int | None = None
     attribute_value_ids: list[UUID] = [] # We'll populate this in the API
     qty: float
     percentage: float = 0.0
@@ -525,6 +526,7 @@ class MOPlannedComponentResponse(ORMResponse):
     item_id: UUID
     item_code: str | None = None
     item_name: str | None = None
+    item_ends: int | None = None  # beam warp ends (utas), printed on the SPK material list
     percentage: float = 0.0
     qty: float = 0.0
     source_location_id: UUID | None = None
@@ -4142,6 +4144,7 @@ class ShipmentResponse(BaseModel):
     verification_notes: str | None = None
     verified_with_discrepancy: bool = False
     dispatched_at: datetime | None = None
+    delivery_note_printed_at: datetime | None = None
     notes: str | None = None
     created_at: datetime
     created_by_name: str | None = None

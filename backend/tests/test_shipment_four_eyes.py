@@ -125,3 +125,13 @@ def test_pick_lists_have_no_dispatch_route_of_their_own(picked_list, client, aut
     HTTP call, so that route is deleted, not merely unused."""
     res = client.post(f"/api/pick-lists/{picked_list.id}/dispatch", json={}, headers=auth_headers)
     assert res.status_code in (404, 405), res.text
+
+
+def test_printing_the_surat_jalan_stamps_the_shipment(picked_list, picker, client, auth_headers):
+    _, picker_headers = picker
+    shp = _stage(client, picker_headers, picked_list)
+    assert shp["delivery_note_printed_at"] is None
+
+    res = client.post(f"/api/shipments/{shp['id']}/mark-printed", headers=auth_headers)
+    assert res.status_code == 200, res.text
+    assert res.json()["delivery_note_printed_at"] is not None

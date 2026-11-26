@@ -12,7 +12,7 @@ import Pager from '../shared/Pager';
 import { StatusChip, StatusCountPill, useFloatingMenu, MenuTriggerButton, FloatingMenu, ColorSwatchChip, CodeChip, CODE_FONT, xpFont, TableSkeleton, useTableSkeletonMetrics, ChipTone, CHIP_RADIUS, XP_BTN } from '../shared/xpTheme';
 import { FormSection } from '@bryanadamg/terras-ui/components/FormSection';
 import { useServerSort, ExpandedRowPanel, rowStateBg } from '@bryanadamg/terras-ui/components/Table';
-import { BTN_TONES } from '@bryanadamg/terras-ui/styles';
+import { BTN_TONES, toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
 import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
 import { SearchField, ToolbarButton, viewShellStyle } from '../shared/shellTheme';
 import ExportExcelButton, { xlsDateTime } from '../shared/ExportExcelButton';
@@ -476,7 +476,7 @@ export default function LabDipRequestView({
     return (
         <div style={viewShellStyle('page', { fontFamily: xpFont})}>
             {/* Toolbar */}
-            <div style={{ background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)', borderBottom: '1px solid #b0a898', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const, flexShrink: 0 }}>
+            <div style={xpToolbar({ padding: '4px 8px' })}>
                 <SearchField value={searchTerm} onChange={setSearchTerm} placeholder="Search code, colour, item, variant…" width={220} />
                 <span style={{ width: 1, height: 20, background: '#a0988c', margin: '0 2px' }} />
                 <FilterChipBar options={STATUS_FILTERS} value={statusFilter} onChange={setStatusFilter} />

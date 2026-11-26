@@ -33,6 +33,7 @@ import { lvThead, lvThSticky, lvTdRuled, lvZebra, ResizableTable } from '../shar
 import { SortableTh } from '@bryanadamg/terras-ui/components/Table';
 import { API_BASE } from '../shared/apiBase';
 import { saveResponse } from '../shared/download';
+import { ExcelButton } from '../shared/ExportExcelButton';
 
 // One width per column, in render order, and the ONLY place they are declared —
 // the <colgroup> below feeds them to both themes at once (the modern one used to
@@ -2123,9 +2124,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                </ToolbarCount>
                <div style={{ display: 'flex', gap: 4, marginLeft: 'auto' }} className={undefined}>
                    {canExport && (
-                   <ToolbarButton tone="neutral" icon="bi-file-earmark-excel" disabled={exporting || !soTotal} onClick={handleExport}>
-                       {exporting ? 'Exporting…' : 'Export Excel'}
-                   </ToolbarButton>
+                   <ExcelButton busy={exporting} disabled={!soTotal} onClick={handleExport} />
                    )}
                    {canPrint && (
                    <ToolbarButton tone="neutral" icon="bi-printer" printable disabled={printLoading} onClick={handleOpenTablePrint}>
@@ -2134,7 +2133,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                    )}
                    {canManage && (
                        <ToolbarButton tone="create" icon="bi-plus-lg" onClick={() => setIsCreateOpen(true)}>
-                           {t('create')}
+                           {t('new_sales_order')}
                        </ToolbarButton>
                    )}
                </div>

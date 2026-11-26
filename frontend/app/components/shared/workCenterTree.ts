@@ -56,6 +56,26 @@ export function machinesUnderWC(workCenters: any[], rootId: string): any[] {
     return out;
 }
 
+/**
+ * Machines a WO may be logged on — its process, not the whole plant: a WEAVING WO
+ * may only be logged on a loom. Preferred scope is the subtree of the WO's own work
+ * center (a TYPE/GROUP row when the WO was cut without a machine) — that's exactly
+ * the bank the planner locked it to. Falls back to every machine of the same center
+ * type when the WO already names a machine or its row is missing.
+ * `label` names the scope actually applied, not the one that was tried first.
+ */
+export function machineScopeForWO(workCenters: any[], woWc: any, type: string): { list: any[]; label: string } {
+    const all = (workCenters || []).filter((wc: any) => isMachineWC(wc));
+    if (woWc && isContainerWC(woWc)) {
+        const under = machinesUnderWC(workCenters || [], woWc.id);
+        if (under.length) return { list: under, label: woWc.name || type };
+    }
+    if (!type) return { list: all, label: '' };
+    const matching = all.filter((wc: any) => centerTypeOfWC(workCenters || [], wc) === type);
+    // Never hand back an empty list — an unfilterable picker beats an unusable one.
+    return matching.length ? { list: matching, label: type } : { list: all, label: '' };
+}
+
 /** Picker option shape shared by SearchableSelect machine pickers. */
 type WCOption = { value: string; label: string; subLabel?: string };
 

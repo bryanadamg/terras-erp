@@ -4,7 +4,7 @@
 
 # Terras ERP
 
-**Current release: v1.0.0** (2026-10-28) — see [`CHANGELOG.md`](CHANGELOG.md).
+**Current release: v1.13.0** (2026-11-25) — see [`CHANGELOG.md`](CHANGELOG.md).
 
 <p align="center">
   <img src="marketing/terras-v1.gif" alt="Terras ERP v1.0: one sales order travels through planning, the loom, the dye bath and a carton label to a verified dispatch, then every lot traces back to its yarn" width="800" />
@@ -20,17 +20,17 @@ The stack is **FastAPI + PostgreSQL** on the backend and **Next.js + React** on 
 
 ## What it does
 
-- **Sell and source** — Sales Orders with customer POs, reservations from stock and short-close; Purchase Orders with goods receipt that records the supplier's Surat Jalan and lots.
+- **Sell and source** — Sales Orders with customer POs, reservations from stock and short-close; Purchase Orders with VAT-inclusive pricing and goods receipt that records the supplier's Surat Jalan and lots, sends each line to its own warehouse, and can be voided if entered wrong.
 - **Develop samples and colours** — Sample requests with approval notes, photos and a development report; lab-dip colour approval (fabric and yarn) against a Pantone/C.I. colour library; a combo library for multi-colour articles.
-- **Plan production** — Sales Orders drive Production Runs, which explode into Manufacturing Orders and Work Orders through a recursive, percentage-based BOM. Shared greige and sub-components across colour and size variants are consolidated into one order instead of duplicated, and material availability nets on-hand plus incoming supply by item, colour and size (Booking Stock, Work Queue).
-- **Run the shop floor** — One `/scanner` entry point reads every QR code: operators log Work Order output from a phone or tablet, packers log cartons, pickers scan cartons onto pick lists. Completions post material consumption and auto-numbered output lots; warp beams mount to the loom and draw down FIFO.
-- **Monitor machines** — Weaving and dyeing monitors show per-machine efficiency, the running order and beam/bath status, with per-machine production calendars and holidays.
+- **Plan production** — Sales Orders drive Production Runs, which explode into Manufacturing Orders and Work Orders through a recursive, percentage-based BOM. Shared greige and sub-components across colour and size variants are consolidated into one order instead of duplicated, and material availability nets on-hand plus incoming supply (open MOs and purchase order lines) by item, colour and size (Booking Stock, Work Queue).
+- **Run the shop floor** — One `/scanner` entry point reads every QR code: operators log Work Order output from a phone or tablet, packers log cartons, pickers scan cartons onto pick lists. Completions post material consumption (one material may draw from several lots) and auto-numbered output lots, opening the new lot's label to print; warp beams mount to the loom with a drawing-in / tying-in record and draw down FIFO. Every list search finds a row by any code it shows, so scanning a printed SPK, work card or label barcode lands on its row.
+- **Monitor machines** — Weaving and dyeing monitors show per-machine efficiency, the running order and beam/bath status, with per-machine production calendars and holidays, loom tuning records (who tuned, when, when it ran), and a live floor-plan dashboard of running machines and store stock.
 - **Manage dyeing and setting** — Dye recipes with wash-bath and finishing steps, dosing from the bath actually filled, and per-run records of the chemicals weighed, printed on job cards that match the factory's paper forms.
-- **Track every lot** — Stock is lot-, colour- and size-aware end to end, held in a Warehouse > Zone > Bin location tree, with a materialized balance table for instant lookups and a backward genealogy trace from any finished lot to its raw inputs.
+- **Track every lot** — Stock is lot-, colour- and size-aware end to end, held in a Warehouse > Zone > Bin location tree, with a materialized balance table for instant lookups, quantities shown in yards where they convert, reversible transfers, and a backward genealogy trace from any finished lot to its raw inputs.
 - **Enforce quality** — Reject grading routes bad output to defect stores, and quarantine locks keep unreleased material out of production and packing without blocking good material next to it.
-- **Pack, pick, and ship** — Finished goods are packed into labelled cartons, picked against sales orders, and dispatched on a shipment that carries the Surat Jalan through a four-eyes stage/verify gate before stock leaves the building.
-- **Print and report** — Every printed document (SPK, Kartu Kerja, labels, Surat Jalan, PO, SO confirmation) comes from an editable template in the Print Layouts designer. Stock Ledger and Production Output reports, Excel export, and a live KPI dashboard.
-- **Administer** — Role-based permissions down to individual codes, a full audit log of every change, database snapshots (dump plus uploaded files) with restore, and an in-app feedback button that files reports to GitHub with screenshots.
+- **Pack, pick, and ship** — Finished goods are packed into labelled cartons, picked against sales orders, and dispatched on a shipment that carries the Surat Jalan through a four-eyes stage/verify gate before stock leaves the building. The loading deck flags shipments whose Surat Jalan hasn't been printed.
+- **Print and report** — Every printed document (SPK, Kartu Kerja, labels, Surat Jalan, PO, SO confirmation) comes from an editable template in the Print Layouts designer, and the app records which documents were printed. Stock Ledger, Production Output and Purchase reports, Excel export on nearly every list (each under its own permission), and a live KPI dashboard.
+- **Administer** — Role-based permissions down to individual codes, managed in separate Users and Roles tabs that flag users with no role or with redundant grants, a full audit log of every change, database snapshots (dump plus uploaded files) with restore, and an in-app feedback button that files reports to GitHub with screenshots.
 
 Every screen updates live over a WebSocket event bus, without a refresh.
 
@@ -46,7 +46,7 @@ Every screen updates live over a WebSocket event bus, without a refresh.
 
 The interface is a Windows-XP-styled Classic theme with an adjustable interface scale, full English/Indonesian localization, and role-based access control down to individual permission codes.
 
-Shared UI primitives — buttons, chips, status chips, tooltips, form sections, table helpers, skeletons, the login screen and pager — come from **terras-ui** (v1), a separate package installed from its public GitHub repo (`github:bryanadamg/terras-ui#semver:^1.6.0`). The ERP pages are thin adapters over it, so look there before restyling a control here.
+Shared UI primitives — buttons, chips, status chips, tooltips, form sections, table helpers, skeletons, the login screen and pager — come from **terras-ui** (v1), a separate package installed from its public GitHub repo (`github:bryanadamg/terras-ui#semver:^1.8.0`). The ERP pages are thin adapters over it, so look there before restyling a control here.
 
 ---
 

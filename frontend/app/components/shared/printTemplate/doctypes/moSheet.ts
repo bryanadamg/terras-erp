@@ -208,6 +208,8 @@ function explode(d: any): Record<string, any>[] {
                 },
                 item_code: line.item_code || d.getItemCode(line.item_id),
                 item_name: name,
+                // Warp ends of a beam component; blank for yarn and everything else.
+                ends: line.item_ends ?? '',
                 attributes: attrs.join(', ') || null,
                 source: d.getLocationName(line.source_location_id || mo.source_location_id || mo.location_id) || null,
             });
@@ -223,12 +225,13 @@ const MS_MATERIALS: RowSourceDef = {
     id: 'ms_materials',
     label: 'Material (BOM explosion x order qty)',
     docTypes: [MO_SHEET_DOC],
-    seedColumns: ['req_qty', 'item', 'source'],
+    seedColumns: ['req_qty', 'item', 'ends', 'source'],
     columns: [
         { field: 'req_qty', label: 'Req. Qty' },
         { field: 'item', label: 'Component (code + name)' },
         { field: 'item_code', label: 'Item Code' },
         { field: 'item_name', label: 'Item Name' },
+        { field: 'ends', label: 'Ends', numeric: true },
         { field: 'attributes', label: 'Attributes' },
         { field: 'level', label: 'Level', numeric: true },
         { field: 'source', label: 'Source' },

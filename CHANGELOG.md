@@ -15,6 +15,18 @@ on `main`:
 
 ## [Unreleased]
 
+## [1.14.0] - 2026-11-26
+
+### Added
+- The production work order sheet prints each beam's warp ends in its material list
+- A shipment records when its Surat Jalan is printed, and the loading deck flags shipments whose Surat Jalan hasn't been printed yet
+- The manufacturing order tree shows whether the SPK Produksi was printed on every order in it, not just the root
+
+### Fixed
+- The tablet scanner lists only the machines in the work order's work center, and opens the new lot's label right after a log
+- Every list toolbar follows the theme with the same layout: the row count, a labelled Refresh button after it, and a labelled Excel export button on the right. This brings the work order, dyeing and setting order toolbars and the purchase report's window into line
+- Every page's create button reads "New <thing>" instead of "Create" or "Add"
+
 ## [1.13.0] - 2026-11-25
 
 ### Added

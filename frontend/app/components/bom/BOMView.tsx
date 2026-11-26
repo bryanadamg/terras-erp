@@ -707,7 +707,7 @@ export default function BOMView({
                         )}
                         {canManage && (
                             <ToolbarButton tone="create" icon="bi-plus-lg" testId="create-bom-btn" onClick={() => setIsDesignerOpen(true)}>
-                                {t('create_recipe')}
+                                {t('new_bom')}
                             </ToolbarButton>
                         )}
                     </div>
