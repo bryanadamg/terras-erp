@@ -18,7 +18,7 @@ import Pager from '../shared/Pager';
 import { useData } from '../../context/DataContext';
 import { XPEmptyState, TableSkeleton, useTableSkeletonMetrics, XPStatusBar, useFloatingMenu, MenuTriggerButton, FloatingMenu, XPActionButton, ProgressBar, CodeChip, CODE_FONT, xpFont, StatusChip, CHIP_RADIUS, colorLabel } from '../shared/xpTheme';
 import { useSortable, ExpandedRowPanel, rowStateBg } from '@bryanadamg/terras-ui/components/Table';
-import { field as xpInputBase } from '@bryanadamg/terras-ui/styles';
+import { field as xpInputBase, toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
 import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
 import TreeSelect, { TreeSelectOption } from '../shared/TreeSelect';
 import { lvSubTh, lvSubTd, lvSubTable, lvSubRow, ExpanderCell, lvThSticky, lvTd, lvZebra, ResizableTable } from '../shared/listViewTheme';
@@ -702,10 +702,7 @@ export default function WorkOrderListView({
 
     const containerStyle: React.CSSProperties = viewShellStyle('page', { fontFamily: xpFont });
 
-    const filterBarStyle: React.CSSProperties = {
-        background: '#d4d0c8', borderBottom: '1px solid #808080',
-        padding: '4px 8px', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap',
-    };
+    const filterBarStyle: React.CSSProperties = xpToolbar({ padding: '4px 8px', gap: 8 });
 
     // Full cell borders rather than lvTh/lvTd's single rule: 15 columns of dates
     // and quantities, where the verticals are what keep a row readable.
