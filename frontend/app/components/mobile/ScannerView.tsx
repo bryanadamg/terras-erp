@@ -7,6 +7,9 @@ import { field as xpInputBase } from '@bryanadamg/terras-ui/styles';
 import { MOBILE_BG, MobilePanel, MobileScreenBar, MobileButton, MobileNotice, MobileSearchField } from './mobileTheme';
 import { API_BASE } from '../shared/apiBase';
 import { isBeamItemRecord } from '../shared/beamItem';
+import { machineScopeForWO, toMachineOptions } from '../shared/workCenterTree';
+import { useUser } from '../../context/UserContext';
+import BagLabelPrintModal from '../manufacturing/BagLabelPrintModal';
 
 interface MobileScannerViewProps {
     manufacturingOrders: any[];
@@ -73,6 +76,9 @@ export default function MobileScannerView({
     // operator learns why a bag in the rack isn't in the list.
     const [reservedByItem, setReservedByItem]   = useState<Record<string, any[]>>({});
     const [consumedBatches, setConsumedBatches] = useState<Record<string, string>>({});
+    // The bag/beam just logged, shown as its label to print — same as the desktop log.
+    const [savedLabel, setSavedLabel]           = useState<{ bag: any; seq: number; mo: any; wo: any } | null>(null);
+    const canPrintLabel = useUser().hasPermission('work_order.print_label');
 
     const scannerRef = useRef<Html5QrcodeScanner | null>(null);
     const terminalId = useRef(Math.random().toString(36).substr(2, 6).toUpperCase());
@@ -149,7 +155,10 @@ export default function MobileScannerView({
     const findItem = (itemId: string) => (items || []).find((i: any) => i.id === itemId);
     const isBeamItem = (itemId: string) => isBeamItemRecord(findItem(itemId));
     // Lot output: WO produces a beam (Beam category / BEAM- code / BEAMING work center) or a lot-tracked item
-    const woWcType = ((workCenters || []).find((wc: any) => wc.id === scannedWO?.work_center_id)?.center_type || '').toUpperCase();
+    const woWc = (workCenters || []).find((wc: any) => wc.id === scannedWO?.work_center_id);
+    const woWcType = (woWc?.center_type || '').toUpperCase();
+    const machineOptions = toMachineOptions(machineScopeForWO(
+        workCenters || [], woWc, woWcType || String(scannedWO?.work_center_type || '').toUpperCase()).list);
     const isBeamOutput = !!scannedWO && !!scannedWOParentMO
         && (isBeamItem(scannedWOParentMO.item_id) || (scannedWOParentMO.item_code || '').startsWith('BEAM-') || woWcType === 'BEAMING');
     const isLotOutput = isBeamOutput || (!!scannedWO && !!scannedWOParentMO && !!findItem(scannedWOParentMO.item_id)?.lot_tracked);
@@ -361,6 +370,14 @@ export default function MobileScannerView({
             setBeamNumber('');
             setConsumedBatches({});
             setMaterialRows(prev => prev.map(r => ({ ...r, actual_qty: '', is_custom: false })));
+            // The entry just logged = the one this WO didn't have before. If it made a
+            // lot, go straight to its label (with its real bag number) for printing.
+            const seen = new Set((scannedWOParentMO.completions || []).map((c: any) => String(c.id)));
+            const bags = (updated.completions || [])
+                .filter((c: any) => String(c.work_order_id || '') === String(scannedWO.id) && !c.rejected && c.output_batch_number)
+                .sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+            const idx = bags.findIndex((c: any) => !seen.has(String(c.id)));
+            if (idx >= 0 && canPrintLabel) setSavedLabel({ bag: bags[idx], seq: idx + 1, mo: updated, wo: scannedWO });
             await onRefresh();
         } catch (err: any) {
             setLogError(err.message);
@@ -368,6 +385,18 @@ export default function MobileScannerView({
             setSubmittingLog(false);
         }
     };
+
+    if (savedLabel) {
+        return (
+            <BagLabelPrintModal
+                bags={[savedLabel.bag]}
+                workOrder={savedLabel.wo}
+                parentMO={savedLabel.mo}
+                seqStart={savedLabel.seq}
+                onClose={() => setSavedLabel(null)}
+            />
+        );
+    }
 
     return (
         <div style={{ background: MOBILE_BG, padding: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -541,8 +570,8 @@ export default function MobileScannerView({
                                 style={{ ...xpInput, appearance: 'auto' }}
                             >
                                 <option value="">— pilih mesin (opsional) —</option>
-                                {workCenters.map((wc: any) => (
-                                    <option key={wc.id} value={wc.id}>{wc.name}{wc.code ? ` (${wc.code})` : ''}</option>
+                                {machineOptions.map(o => (
+                                    <option key={o.value} value={o.value}>{o.label}{o.subLabel ? ` (${o.subLabel})` : ''}</option>
                                 ))}
                             </select>
                         </div>

@@ -13,7 +13,7 @@ import { field as xpInputBase, BTN_TONES } from '@bryanadamg/terras-ui/styles';
 import { LV_STICKY_THEAD, lvPickerRow } from '../shared/listViewTheme';
 import { RowCheckbox } from '@bryanadamg/terras-ui/components/Table';
 import { LotChips, lotSizeLabel } from '../shared/LotChips';
-import { centerTypeOfWC, isContainerWC, isMachineWC, machinesUnderWC, toMachineOptions } from '../shared/workCenterTree';
+import { machineScopeForWO, toMachineOptions } from '../shared/workCenterTree';
 import { rejectTitle } from '../shared/rejectDisplay';
 import { API_BASE } from '../shared/apiBase';
 import { isBeamItemRecord } from '../shared/beamItem';
@@ -445,25 +445,9 @@ export default function WOCompletionModal({ mo, onClose, onSaved, workOrder }: W
     const bagSeqById: Record<string, number> = {};
     woBags.forEach((c: any, i: number) => { bagSeqById[String(c.id)] = i + 1; });
 
-    // Machine picker is scoped to the WO's process, not the whole plant: a WEAVING WO
-    // may only be logged on a loom. Preferred scope is the subtree of the WO's own work
-    // center (a TYPE/GROUP row when the WO was cut without a machine) — that's exactly
-    // the bank the planner locked it to. Falls back to every machine of the same center
-    // type when the WO already names a machine or its row is missing.
-    // `label` rides along so the badge always names the scope actually applied, not the
-    // one that was tried first.
-    const { list: machineScope, label: machineScopeLabel } = React.useMemo(() => {
-        const all = (workCenters || []).filter((wc: any) => isMachineWC(wc));
-        const type = woWcType || String(workOrder?.work_center_type || '').toUpperCase();
-        if (woWc && isContainerWC(woWc)) {
-            const under = machinesUnderWC(workCenters || [], woWc.id);
-            if (under.length) return { list: under, label: woWc.name || type };
-        }
-        if (!type) return { list: all, label: '' };
-        const matching = all.filter((wc: any) => centerTypeOfWC(workCenters || [], wc) === type);
-        // Never hand back an empty list — an unfilterable picker beats an unusable one.
-        return matching.length ? { list: matching, label: type } : { list: all, label: '' };
-    }, [workCenters, woWc, woWcType, workOrder?.work_center_type]);
+    const { list: machineScope, label: machineScopeLabel } = React.useMemo(
+        () => machineScopeForWO(workCenters || [], woWc, woWcType || String(workOrder?.work_center_type || '').toUpperCase()),
+        [workCenters, woWc, woWcType, workOrder?.work_center_type]);
 
     const wcOptions = toMachineOptions(machineScope);
     const itemOptions = itemResults.map(itemToOption);
