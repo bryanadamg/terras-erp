@@ -1165,7 +1165,7 @@ export default function SampleRequestView({ samples, customers, onCreateSample, 
                        ]} />
                    {canManage && (
                        <ToolbarButton tone="create" icon="bi-plus-lg" onClick={openCreateModal}>
-                           {t('create')}
+                           {t('new_sample_request')}
                        </ToolbarButton>
                    )}
                </div>

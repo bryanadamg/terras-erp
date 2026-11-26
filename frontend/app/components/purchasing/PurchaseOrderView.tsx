@@ -884,7 +884,7 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                )}
                {canManage && (
                    <ToolbarButton tone="create" icon="bi-plus-lg" onClick={() => setIsCreateOpen(true)}>
-                       {t('create')}
+                       {t('new_purchase_order')}
                    </ToolbarButton>
                )}
            </div>

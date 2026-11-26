@@ -1166,7 +1166,7 @@ export default function InventoryView({
                           </span>
                       </div>
                   )}
-                  {canManage && <ToolbarButton tone="create" icon="bi-plus-lg" testId="create-item-btn" onClick={openCreateModal}>{t('create')}</ToolbarButton>}
+                  {canManage && <ToolbarButton tone="create" icon="bi-plus-lg" testId="create-item-btn" onClick={openCreateModal}>{t('new_item')}</ToolbarButton>}
                 </div>
               )}
             </div>

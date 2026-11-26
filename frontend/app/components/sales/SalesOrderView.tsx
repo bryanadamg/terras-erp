@@ -2133,7 +2133,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                    )}
                    {canManage && (
                        <ToolbarButton tone="create" icon="bi-plus-lg" onClick={() => setIsCreateOpen(true)}>
-                           {t('create')}
+                           {t('new_sales_order')}
                        </ToolbarButton>
                    )}
                </div>
