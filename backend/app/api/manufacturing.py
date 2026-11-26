@@ -226,6 +226,7 @@ def populate_mo_ids(mo: ManufacturingOrder):
             if "item" not in inspect(comp).unloaded and comp.item:
                 comp.item_code = comp.item.code
                 comp.item_name = comp.item.name
+                comp.item_ends = comp.item.ends
     else:
         sa_attributes.set_committed_value(mo, "planned_components", [])
 

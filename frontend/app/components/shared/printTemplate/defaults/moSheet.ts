@@ -91,7 +91,8 @@ const BANDS: Band[] = [
         marginBottom: 8, fontSize: BASE, ruleColor: '#fff', hideWhenEmpty: false,
         columns: [
             { field: 'req_qty', label: 'Req. Qty', width: '14%', headerAlign: 'right', bold: true, emptyText: '' },
-            { field: 'item', label: 'Component', width: '70%' },
+            { field: 'item', label: 'Component', width: '62%' },
+            { field: 'ends', label: 'Ends', width: '8%', align: 'right', headerAlign: 'right', emptyText: '' },
             { field: 'source', label: 'Source', width: '16%', align: 'center', emptyText: '' },
         ],
     },
