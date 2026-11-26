@@ -10,6 +10,7 @@ import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 import {
     LV_XP_FONT, lvInput, lvBtn, lvPrimaryBtn, lvLabel, lvTh, lvTd, lvSep, lvRow, lvThead, TableEmpty,
 } from '../shared/listViewTheme';
+import { toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
 
 // The box master the pack screens pick from: Box S/M/L/XL, Plastic Bag, Custom.
 //
@@ -103,7 +104,7 @@ export default function PackagingTypesView({ types, loading, onCreate, onEdit, o
 
     return (
         <div style={viewShellStyle('page', { fontFamily: LV_XP_FONT })}>
-            <div style={{ background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)', borderBottom: '1px solid #b0a898', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>
+            <div style={xpToolbar({ padding: '4px 8px' })}>
                 <SearchField value={search} onChange={setSearch} placeholder="Search code or name…" width={240} />
                 <ToolbarCount right>
                     {filtered.length === types.length

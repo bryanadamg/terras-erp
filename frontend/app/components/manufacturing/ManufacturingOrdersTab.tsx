@@ -23,6 +23,7 @@ import { useTimezone } from '../../context/TimezoneContext';
 import { API_BASE } from '../shared/apiBase';
 import { matchSubBOM } from '../shared/bomMatch';
 import { useUser } from '../../context/UserContext';
+import { toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
 const WOCompletionModal = dynamic(() => import('./WOCompletionModal'), { ssr: false });
 
 // On the selected (blue) tree row a normal chip fill would fight the highlight, so
@@ -1088,12 +1089,7 @@ export default function ManufacturingOrdersTab({
 
                 return viewMode === 'calendar' ? (
                     <>
-                        <div className="no-print" style={{
-                            padding: '5px 8px',
-                            borderBottom: '1px solid #808080',
-                            background: '#ece9d8',
-                            display: 'flex', alignItems: 'center', gap: 6,
-                        }}>
+                        <div className="no-print" style={xpToolbar({ padding: '5px 8px' })}>
                             {viewToggle}
                             <div style={{ display: 'flex', gap: 6, marginLeft: 'auto' }}>
                                 {moActions}

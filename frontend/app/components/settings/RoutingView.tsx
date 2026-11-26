@@ -15,6 +15,7 @@ import { XPActionButton, useFloatingMenu, MenuTriggerButton, FloatingMenu, xpFon
 import { FormSection } from '@bryanadamg/terras-ui/components/FormSection';
 import { FieldLabel } from '@bryanadamg/terras-ui/components/Field';
 import { lvBtn, lvPrimaryBtn, lvInput, lvLabel, lvTh, lvTd, lvSep, lvRow, lvThead } from '../shared/listViewTheme';
+import { toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
 
 const WC_PAGE_SIZE = 20;
 const OP_PAGE_SIZE = 20;
@@ -418,12 +419,7 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
   const renderWorkCentersTab = () => (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
           {/* Toolbar: add + search + count */}
-          <div style={{
-              background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)',
-              borderBottom: '1px solid #b0a898',
-              padding: '4px 8px',
-              display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const, flexShrink: 0,
-          }}>
+          <div style={xpToolbar({ padding: '4px 8px' })}>
               <SearchField value={wcSearch} onChange={setWcSearch} placeholder="Search work centers…" width={240} />
               <ToolbarCount right>
                   {filteredWCRows.length.toLocaleString()} station{filteredWCRows.length !== 1 ? 's' : ''}
@@ -585,12 +581,7 @@ export default function RoutingView({ workCenters, operations, locations, onCrea
           )}
 
           {/* Toolbar: search + count */}
-          <div style={{
-              background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)',
-              borderBottom: '1px solid #b0a898',
-              padding: '4px 8px',
-              display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const, flexShrink: 0,
-          }}>
+          <div style={xpToolbar({ padding: '4px 8px' })}>
               <SearchField value={opSearch} onChange={setOpSearch} placeholder="Search operations…" width={240} />
               <span style={lvSep()} />
               <ToolbarCount right>

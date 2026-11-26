@@ -17,6 +17,7 @@ import ExportExcelButton from '../shared/ExportExcelButton';
 import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
 import {
     LV_XP_FONT, lvInput, lvBtn, lvPrimaryBtn, lvLabel, lvTh, lvTd, lvSep, lvRow, lvThead, TableEmpty, ResizableTable } from '../shared/listViewTheme';
+import { toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
 
 const STATUS_FILTERS = ['ALL', 'active', 'archived'];
 
@@ -217,7 +218,7 @@ export default function ColorLibraryView({
             : viewShellStyle('page', { fontFamily: LV_XP_FONT })}>
 
             {/* Toolbar */}
-            <div style={{ background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)', borderBottom: '1px solid #b0a898', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>
+            <div style={xpToolbar({ padding: '4px 8px' })}>
                 <SearchField value={searchInput} onChange={setSearchInput} placeholder="Search code, name, Pantone, customer code…" width={260} />
                 <span style={lvSep()} />
                 <FilterChipBar

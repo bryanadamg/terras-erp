@@ -14,7 +14,7 @@ import { useData } from '../../context/DataContext';
 import { useRememberedTab } from '../../hooks/useRememberedTab';
 import { useFloatingMenu, MenuTriggerButton, FloatingMenu, XPActionButton, StatusChip, CODE_FONT, xpFont, TableSkeleton, useTableSkeletonMetrics, CHIP_RADIUS, OriginChip, VariantChip, xpBtn as xpBtnBase, XP_BTN } from '../shared/xpTheme';
 import { useSortable, ExpandedRowPanel, rowStateBg } from '@bryanadamg/terras-ui/components/Table';
-import { field as xpInputBase, BTN_TONES } from '@bryanadamg/terras-ui/styles';
+import { field as xpInputBase, BTN_TONES, toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
 import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
 import { ToolbarButton, SearchField, pageFillStyle } from '../shared/shellTheme';
 import ExportExcelButton, { xlsDateTime } from '../shared/ExportExcelButton';
@@ -1098,7 +1098,7 @@ export default function BatchesView({ items, locations, categories, workCenters,
           {/* ── Lot type tabs — classifies by the process that produced the lot ── */}
           <Tabs<string> tabs={lotTypeTabs} activeKey={lotTypeTab} onChange={handleLotTypeTabChange} />
           {/* ── Filter/search bar + actions ── */}
-          <div style={{ padding: '6px 8px', display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)', borderBottom: '1px solid #b0a898', flexShrink: 0 }}>
+          <div style={xpToolbar({ padding: '6px 8px' })}>
             <SearchField value={searchInput} onChange={setSearch} placeholder="Search lot, item, WO/MO/PR, SO..." width={240} />
             <span style={{ fontFamily: xpFont, fontSize: 11 }}>Item:</span>
             <div style={{ width: 200, flexShrink: 0 }}>

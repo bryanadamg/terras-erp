@@ -11,6 +11,7 @@ import ExportExcelButton from '../shared/ExportExcelButton';
 import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 import { FilterChipBar, type FilterChipOption } from '@bryanadamg/terras-ui/components/FilterChipBar';
 import { ColorFamilyKey, COLOR_FAMILY_META, colorFamilyOf, colorFamilyCounts, derivedColorHex } from '../shared/colorFamilies';
+import { toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
 
 interface Props {
     values: any[];                 // AttributeValue rows of the Colors variant attribute
@@ -177,14 +178,13 @@ export default function ColorsVariantView({ values, canCreate, canEdit, canDelet
         if (ok) onDelete(v.id);
     };
 
-    const rowStripe = { background: 'linear-gradient(to bottom, #f5f4ef, #e0dfd8)', borderBottom: '1px solid #b0a898' };
     const emptyMessage = search || family !== 'ALL' || missingOnly
         ? 'No colors match these filters.'
         : 'No color variants yet.';
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
-            <div style={{ ...rowStripe, padding: '4px 8px', display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
+            <div style={xpToolbar({ padding: '4px 8px', flexWrap: 'nowrap' })}>
                 <SearchField value={search} onChange={handleSearchChange} placeholder="Search color…" width={220} />
                 <span style={lvSep()} />
                 <FilterChipBar
@@ -216,7 +216,7 @@ export default function ColorsVariantView({ values, canCreate, canEdit, canDelet
             </div>
 
             {sorted.length > 0 && (
-                <div style={{ ...rowStripe, padding: '4px 8px', display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0, flexWrap: 'wrap' }}>
+                <div style={xpToolbar({ padding: '4px 8px' })}>
                     <FilterChipBar
                         flat
                         value={family}

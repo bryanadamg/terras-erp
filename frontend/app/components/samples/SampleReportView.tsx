@@ -190,7 +190,7 @@ export default function SampleReportView() {
     };
 
     const Filters = () => (
-        <div style={sharedXpToolbar({ background: '#ece9d8', padding: '5px 8px', gap: 5, flexShrink: 0 })}>
+        <div style={sharedXpToolbar({ padding: '5px 8px', gap: 5 })}>
             <span style={inlineLabel}>From</span>
             <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
                 style={lvInput({ width: 128 })} />
