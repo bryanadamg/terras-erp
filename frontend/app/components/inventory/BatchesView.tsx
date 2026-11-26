@@ -16,7 +16,7 @@ import { useFloatingMenu, MenuTriggerButton, FloatingMenu, XPActionButton, Statu
 import { useSortable, ExpandedRowPanel, rowStateBg } from '@bryanadamg/terras-ui/components/Table';
 import { field as xpInputBase, BTN_TONES, toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
 import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
-import { ToolbarButton, SearchField, pageFillStyle } from '../shared/shellTheme';
+import { ToolbarButton, SearchField, pageFillStyle, RefreshButton } from '../shared/shellTheme';
 import ExportExcelButton, { xlsDateTime } from '../shared/ExportExcelButton';
 import { bevel as sharedXpBevel } from '@bryanadamg/terras-ui/styles';
 import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
@@ -1130,6 +1130,7 @@ export default function BatchesView({ items, locations, categories, workCenters,
               onChange={v => setStatusFilter(v as '' | 'active' | 'depleted')}
             />
             <span style={{ display: 'inline-flex', gap: 4, marginLeft: 'auto' }}>
+              <RefreshButton onClick={fetchBatches} />
               <ExportExcelButton<Batch> grant="lot.export" filename="lots" fetchRows={fetchAll} disabled={!total} columns={[
                 { label: 'Lot Number', value: b => b.batch_number },
                 { label: 'Item Code', value: b => batchItemCode(b) },
@@ -1151,7 +1152,6 @@ export default function BatchesView({ items, locations, categories, workCenters,
                 { label: 'Created', value: b => xlsDateTime(b.created_at) },
                 { label: 'Created By', value: b => b.created_by },
               ]} />
-              <ToolbarButton tone="neutral" icon="bi-arrow-clockwise" onClick={fetchBatches}>Refresh</ToolbarButton>
               {canCreate && <ToolbarButton tone="create" icon="bi-plus" onClick={() => setIsCreateOpen(true)}>New Lot</ToolbarButton>}
             </span>
           </div>

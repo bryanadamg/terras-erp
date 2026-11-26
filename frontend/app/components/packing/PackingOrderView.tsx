@@ -17,7 +17,7 @@ import { BTN_TONES } from '@bryanadamg/terras-ui/styles';
 import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
 import { LV_XP_FONT, lvBtn, lvInput, lvTd, lvRow, lvSubTh, lvSubTd, lvSubRow, ExpanderCell, lvThSticky, lvPickerRow, lvSubTable, ResizableTable } from '../shared/listViewTheme';
 import { RowCheckbox } from '@bryanadamg/terras-ui/components/Table';
-import { ShellWindow, ToolbarButton, SearchField } from '../shared/shellTheme';
+import { ShellWindow, ToolbarButton, SearchField, RefreshButton } from '../shared/shellTheme';
 import ExportExcelButton, { xlsDateTime } from '../shared/ExportExcelButton';
 import { toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
 import Pager from '../shared/Pager';
@@ -722,11 +722,11 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
     return (
         <ShellWindow fill="page" className="fade-in" style={{ fontFamily: xpFont }}>
             <div style={xpToolbar()}>
-                <ToolbarButton tone="neutral" icon="bi-arrow-clockwise" onClick={loadAll}>Refresh</ToolbarButton>
-                <SearchField value={searchInput} onChange={setSearch} placeholder="Search code, item, colour, SO, customer…" width={260} style={{ marginLeft: 6 }} />
+                <SearchField value={searchInput} onChange={setSearch} placeholder="Search code, item, colour, SO, customer…" width={260} />
                 <ToolbarCount right>
                     {total.toLocaleString()} order{total !== 1 ? 's' : ''}
                 </ToolbarCount>
+                <RefreshButton onClick={loadAll} />
                 <ExportExcelButton grant="packing_order.export" filename="packing-orders" fetchRows={fetchAll} disabled={!total} columns={[
                     { label: 'Code', value: po => po.code },
                     { label: 'Item Code', value: po => po.item_code },

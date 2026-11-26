@@ -5,7 +5,7 @@ import { useData } from '../../context/DataContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { isoDate } from '../shared/format';
 import { useToast } from '../shared/Toast';
-import { ShellWindow, ToolbarButton } from '../shared/shellTheme';
+import { ShellWindow, RefreshButton } from '../shared/shellTheme';
 import ExportExcelButton, { ExportColumn, xlsDateTime } from '../shared/ExportExcelButton';
 import { toolbar as sharedXpToolbar } from '@bryanadamg/terras-ui/styles';
 import { API_BASE } from '../shared/apiBase';
@@ -223,7 +223,7 @@ export default function LabDipReportView() {
                 <span style={inlineLabel}>
                     <b>{rows.length}</b> variant rows
                 </span>
-                <ToolbarButton tone="neutral" icon="bi-arrow-clockwise" title="Reload" onClick={load}>Refresh</ToolbarButton>
+                <RefreshButton onClick={load} />
                 <ExportExcelButton grant="lab_dip_request.export" filename={`labdip-report_${dateFrom || 'all'}_${dateTo || 'all'}`}
                     sheet="Lab Dip Report" rows={sorted} disabled={!rows.length} columns={exportColumns} />
             </div>

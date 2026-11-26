@@ -16,7 +16,7 @@ import { progressToneColor } from '@bryanadamg/terras-ui/components/ProgressBar'
 import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
 import { LV_XP_FONT, lvBtn, lvInput, lvTd, lvLabel, lvRow, lvSubTh, lvSubTd, lvSubRow, ExpanderCell, lvThSticky, lvSubTable, RowCheckboxCell, ResizableTable } from '../shared/listViewTheme';
 import { CHECK_COL_W as LV_CHECK_COL_W, SortableTh } from '@bryanadamg/terras-ui/components/Table';
-import { ShellWindow, SearchField } from '../shared/shellTheme';
+import { ShellWindow, SearchField, RefreshButton } from '../shared/shellTheme';
 import ExportExcelButton, { xlsDateTime } from '../shared/ExportExcelButton';
 import { toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
 import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
@@ -501,13 +501,11 @@ export default function PickListView() {
             ) : (
             <>
             <div style={xpToolbar()}>
-                <button className={XP_BTN} style={xpBtn()} onClick={loadAll} title="Refresh">
-                    <i className="bi bi-arrow-clockwise" style={{ marginRight: 4 }} />Refresh
-                </button>
-                <SearchField value={plSearch} onChange={setPlSearch} placeholder="Search code, SO, customer, SJ…" width={240} style={{ marginLeft: 6 }} />
+                <SearchField value={plSearch} onChange={setPlSearch} placeholder="Search code, SO, customer, SJ…" width={240} />
                 <ToolbarCount right>
                     {plTotal.toLocaleString()} pick list{plTotal !== 1 ? 's' : ''}
                 </ToolbarCount>
+                <RefreshButton onClick={loadAll} />
                 <ExportExcelButton grant="pick_list.export" filename="pick-lists" fetchRows={fetchAllPickLists} disabled={!plTotal} columns={[
                     { label: 'Code', value: pl => pl.code },
                     { label: 'Sales Order', value: pl => pl.sales_order_code },

@@ -7,14 +7,14 @@ import { usePaginatedFetch } from '../../context/usePaginatedList';
 import { useUser } from '../../context/UserContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useToast } from '../shared/Toast';
-import { ShellWindow, SearchField } from '../shared/shellTheme';
+import { ShellWindow, SearchField, RefreshButton } from '../shared/shellTheme';
 import ExportExcelButton from '../shared/ExportExcelButton';
 import { toolbar as sharedXpToolbar } from '@bryanadamg/terras-ui/styles';
 import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 import { FilterChipBar, type FilterChipOption } from '@bryanadamg/terras-ui/components/FilterChipBar';
-import { lvTh, lvThead, lvTd, lvRow, lvBtn, lvInput, lvLabel, lvSep, lvSubTh, lvSubTd, lvSubTable, lvSubCaption, lvSubRow, LV_XP_FONT, LV_MODERN_FONT, ExpanderCell, ResizableTable } from '../shared/listViewTheme';
+import { lvTh, lvThead, lvTd, lvRow, lvInput, lvLabel, lvSep, lvSubTh, lvSubTd, lvSubTable, lvSubCaption, lvSubRow, LV_XP_FONT, LV_MODERN_FONT, ExpanderCell, ResizableTable } from '../shared/listViewTheme';
 import { EXPANDER_COL_W as LV_EXPANDER_COL_W, CHECK_COL_W as LV_CHECK_COL_W, RowCheckbox, SelectAllCheckbox } from '@bryanadamg/terras-ui/components/Table';
-import { StatusChip, StatusCountPill, TableSkeleton, useTableSkeletonMetrics, XPStatusBar, XPEmptyState, XPActionButton, ColorSwatchChip, CodeChip, ToggleChip, ChipTone, OriginChip, OriginChipRow, colorLabel, colorTitle, resolveColorHex, XP_BTN } from '../shared/xpTheme';
+import { StatusChip, StatusCountPill, TableSkeleton, useTableSkeletonMetrics, XPStatusBar, XPEmptyState, XPActionButton, ColorSwatchChip, CodeChip, ToggleChip, ChipTone, OriginChip, OriginChipRow, colorLabel, colorTitle, resolveColorHex } from '../shared/xpTheme';
 import { ExpandedRowPanel, rowStateBg } from '@bryanadamg/terras-ui/components/Table';
 import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
 import Pager from '../shared/Pager';
@@ -868,10 +868,6 @@ export default function QuarantinePackingView() {
             >
                 <i className="bi bi-box-seam" style={{ marginRight: 4 }} />Show packed
             </ToggleChip>
-            <div style={lvSep()} />
-            <button className={XP_BTN} style={lvBtn()} onClick={() => refetch()} title="Refresh">
-                <i className="bi bi-arrow-clockwise" style={{ marginRight: 4 }} />Refresh
-            </button>
             {!canSetStatus && (
                 <span style={{ fontFamily: LV_XP_FONT, fontSize: 10, color: '#9a6a00' }}>
                     <i className="bi bi-lock" style={{ marginRight: 4 }} />Read-only — no Set Quarantine Status permission
@@ -880,6 +876,7 @@ export default function QuarantinePackingView() {
             <ToolbarCount right>
                 {total.toLocaleString()} MO group{total === 1 ? '' : 's'}
             </ToolbarCount>
+            <RefreshButton onClick={() => refetch()} />
             <ExportExcelButton<Group> grant="quarantine.export" filename="quarantine" fetchRows={fetchAll} disabled={!total} columns={[
                 { label: 'Item Code', value: g => g.item_code },
                 { label: 'Item Name', value: g => g.item_name },

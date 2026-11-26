@@ -136,6 +136,20 @@ export function ToolbarButton({
     );
 }
 
+/** The one Refresh face: labelled, neutral, in the toolbar's right-hand group
+ *  right after the count and before Export. */
+export function RefreshButton({ onClick, busy = false, label = 'Refresh' }: {
+    onClick: () => void;
+    busy?: boolean;
+    label?: string;
+}) {
+    return (
+        <ToolbarButton tone="neutral" icon="bi-arrow-clockwise" disabled={busy} onClick={() => onClick()}>
+            {busy ? 'Refreshing…' : label}
+        </ToolbarButton>
+    );
+}
+
 export type ShellFill = 'page' | 'flex' | false;
 
 // The standing height convention for a top-level list route: fill the viewport

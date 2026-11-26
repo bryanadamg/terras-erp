@@ -1,10 +1,10 @@
 'use client';
 
 import React from 'react';
-import { xpFont, XPActionButton } from '../../shared/xpTheme';
+import { xpFont } from '../../shared/xpTheme';
 import { CardGridSkeleton, SkeletonBar } from '@bryanadamg/terras-ui/components/Skeleton';
 import { toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
-import { ShellWindow } from '../../shared/shellTheme';
+import { ShellWindow, RefreshButton } from '../../shared/shellTheme';
 
 /**
  * The window both machine monitors live in: toolbar (summary + actions), a chip bar
@@ -30,9 +30,8 @@ export const MonitorShell = ({
             <div style={xpToolbar()}>
                 <span>{summary}</span>
                 <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <RefreshButton onClick={onRefresh} label={refreshTitle} />
                     {actions}
-                    <XPActionButton tone="neutral" icon="bi-arrow-clockwise"
-                        title={refreshTitle} onClick={onRefresh} />
                 </span>
             </div>
             {(loading || hasMachines) && (

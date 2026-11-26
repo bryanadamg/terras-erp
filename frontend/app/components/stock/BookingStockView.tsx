@@ -7,7 +7,7 @@ import { usePaginatedFetch } from '../../context/usePaginatedList';
 import { xpFont, xpBtn, TableSkeleton, useTableSkeletonMetrics, CodeChip, CODE_FONT, CHIP_RADIUS, XP_BTN, VariantChip } from '../shared/xpTheme';
 import { useSortable, ExpandedRowPanel, expandedRowFrame, rowStateBg } from '@bryanadamg/terras-ui/components/Table';
 import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
-import { SearchField, pageFillStyle } from '../shared/shellTheme';
+import { SearchField, pageFillStyle, RefreshButton } from '../shared/shellTheme';
 import { bevel as sharedXpBevel, toolbar as sharedXpToolbar } from '@bryanadamg/terras-ui/styles';
 import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 import Pager from '../shared/Pager';
@@ -245,9 +245,6 @@ export default function BookingStockView() {
                     <TreeSelect options={catTree} value={categoryFilter} onChange={setCategoryFilter}
                         allowEmpty emptyLabel="All Categories" style={{ width: 170 }} />
                     <div style={xpSep} />
-                    <button style={xpBtn()} className={XP_BTN} onClick={fetchAvailability} title={'Refresh'}>
-                        <i className={'bi bi-arrow-clockwise'} style={{ marginRight: 4 }} />Refresh
-                    </button>
                     {/* Opens modeless, so the explanation can stay up while the reader
                         scrolls the table it describes. */}
                     <button style={xpBtn()} className={XP_BTN}
@@ -263,6 +260,7 @@ export default function BookingStockView() {
                         <span><i className={'bi bi-square-fill'} style={{ color: HEALTH.ok.color, ...({ marginRight: 3 }) }} />OK</span>
                     </span>
                     <ToolbarCount>{total} items</ToolbarCount>
+                    <RefreshButton onClick={fetchAvailability} />
                     {canExport && <ExcelButton busy={exporting} disabled={!total} onClick={handleExport} title="Every row matching the filter" />}
                 </div>
 

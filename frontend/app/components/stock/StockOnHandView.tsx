@@ -8,7 +8,7 @@ import { FieldLabel } from '@bryanadamg/terras-ui/components/Field';
 import { field as xpInputBase, BTN_TONES } from '@bryanadamg/terras-ui/styles';
 import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
 import { usePaginatedFetch } from '../../context/usePaginatedList';
-import { SearchField, ToolbarButton, pageFillStyle, flexFillStyle } from '../shared/shellTheme';
+import { SearchField, ToolbarButton, pageFillStyle, flexFillStyle, RefreshButton } from '../shared/shellTheme';
 import { ExcelButton } from '../shared/ExportExcelButton';
 import { bevel as sharedXpBevel, toolbar as sharedXpToolbar } from '@bryanadamg/terras-ui/styles';
 import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
@@ -1274,17 +1274,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                         </button>
                         <button className={XP_BTN} style={xpBtn()} onClick={sel.clear} title="Clear selection">Clear</button>
                     </>)}
-            <div style={xpSep} />
-            {col('col-md-2',
-                <button
-                    style={xpBtn()}
-                    className={XP_BTN}
-                    onClick={() => { refetch(); onRefresh(); }}
-                    title={'Refresh'}
-                >
-                    <i className={'bi bi-arrow-clockwise'} style={{ marginRight: 4 }} />Refresh
-                </button>
-            )}
+            {canRebuild && <div style={xpSep} />}
             {canRebuild && col('col-md-2',
                 <button
                     style={xpBtn()}
@@ -1307,6 +1297,7 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                 <div style={xpToolbar}>
                     {toolbarControls}
                     <ToolbarCount right>{total} records</ToolbarCount>
+                    <RefreshButton onClick={() => { refetch(); onRefresh(); }} />
                     <ExcelButton busy={exporting} disabled={total === 0} onClick={exportExcel} title="Every row matching the current filters" />
                     {canEntry && (
                         <ToolbarButton tone="create" icon="bi-plus-lg" title="Add stock for an item (new manual entry)" onClick={openNew}>

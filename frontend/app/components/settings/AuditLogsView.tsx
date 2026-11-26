@@ -2,11 +2,11 @@ import React, { useState, useEffect, useMemo, memo, useRef } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 import { useTimezone } from '../../context/TimezoneContext';
 import { useUser } from '../../context/UserContext';
-import { ShellWindow } from '../shared/shellTheme';
+import { ShellWindow, RefreshButton } from '../shared/shellTheme';
 import ExportExcelButton, { fetchAllRows, xlsDateTime } from '../shared/ExportExcelButton';
 import { toolbar as sharedXpToolbar } from '@bryanadamg/terras-ui/styles';
 import { lvTh, lvRow, LV_XP_FONT, LV_MODERN_FONT, lvThead, ResizableTable } from '../shared/listViewTheme';
-import { StatusChip, xpFont, xpBtn, TableSkeleton, useTableSkeletonMetrics, CHIP_RADIUS, XP_BTN } from '../shared/xpTheme';
+import { StatusChip, xpFont, TableSkeleton, useTableSkeletonMetrics, CHIP_RADIUS } from '../shared/xpTheme';
 import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
 import { useData } from '../../context/DataContext';
 import Pager from '../shared/Pager';
@@ -130,10 +130,6 @@ export default function AuditLogsView({ auditLogs, currentPage, totalItems, page
       <ShellWindow fill="page" className="fade-in">
           {(
               <div style={xpToolbar}>
-                  <button className={XP_BTN} style={xpBtn()} onClick={handleRefresh} disabled={refreshing} title="Refresh">
-                      <i className="bi bi-arrow-clockwise" style={{ marginRight: 4 }} />{refreshing ? 'Refreshing…' : 'Refresh'}
-                  </button>
-                  <div style={xpSep} />
                   <i className="bi bi-funnel" style={{ fontSize: '11px', color: '#666' }}></i>
                   <span style={{ fontFamily: xpFont, fontSize: '11px', color: '#444' }}>Entity:</span>
                   <select style={{ ...xpSelect, width: 150 }} value={filterType} onChange={e => onFilterChange(e.target.value)}>
@@ -143,6 +139,7 @@ export default function AuditLogsView({ auditLogs, currentPage, totalItems, page
                   <ToolbarCount right>
                       {totalItems} entries · click a row to expand diff
                   </ToolbarCount>
+                  <RefreshButton onClick={handleRefresh} busy={refreshing} />
                   {/* ponytail: the whole trail under the entity filter in one request; add a
                       date range here if the log grows past what one browser POST should carry. */}
                   <ExportExcelButton grant="audit_log.export" filename="audit-log" disabled={!totalItems}
