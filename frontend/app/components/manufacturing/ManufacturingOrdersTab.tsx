@@ -617,7 +617,9 @@ export default function ManufacturingOrdersTab({
                             </button>
                         )}
                         {bom && <span style={{ fontSize: '10px', color: '#444' }}>BOM: <CodeChip code={bom.code} tier={2} /></span>}
-                        <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px' }}>
+                        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <PrintChip variant={selectedNode.card_printed_at ? 'green' : 'gray'} label="SPK"
+                                title={selectedNode.card_printed_at ? `SPK Produksi printed ${tzFmt(selectedNode.card_printed_at, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }, 'id-ID')}` : 'SPK Produksi not printed yet'} />
                             {canManage && selectedNode.status === 'PENDING' && (
                                 <button className="btn btn-sm btn-primary py-0 px-2" style={{ fontSize: '0.72rem' }} onClick={() => onUpdateStatus(selectedNode.id, 'IN_PROGRESS')}>
                                     <i className="bi bi-play-fill me-1"></i>Start
@@ -1178,7 +1180,7 @@ export default function ManufacturingOrdersTab({
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 4, overflow: 'hidden' }}>
                                                 <CodeChip code={mo.code} style={{ fontWeight: 'bold', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }} />
                                                 <span style={{ marginLeft: 'auto', flexShrink: 0 }}>
-                                                    <PrintChip variant={mo.card_printed_at ? 'green' : 'gray'} label="Card"
+                                                    <PrintChip variant={mo.card_printed_at ? 'green' : 'gray'} label="SPK"
                                                         title={mo.card_printed_at ? `SPK Produksi printed ${tzFmt(mo.card_printed_at, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }, 'id-ID')}` : 'SPK Produksi not printed yet'} />
                                                 </span>
                                             </div>
