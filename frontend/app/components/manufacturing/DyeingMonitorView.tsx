@@ -24,6 +24,7 @@ import { fmtQty, fmtMinutes, orDash } from '../shared/format';
 import { API_BASE } from '../shared/apiBase';
 import { saveResponse } from '../shared/download';
 import { useTimezone } from '../../context/TimezoneContext';
+import { ExcelButton } from '../shared/ExportExcelButton';
 
 const AMBER = familyColor('amber');
 const COLS = 14;
@@ -245,8 +246,7 @@ export default function DyeingMonitorView() {
             )}
             <ToolbarCount right>{total}</ToolbarCount>
             {canExport && (
-                <XPActionButton tone="neutral" icon={exporting ? 'bi-hourglass-split' : 'bi-file-earmark-excel'}
-                    title="Export Excel" onClick={exportExcel} disabled={exporting || !total} />
+                <ExcelButton busy={exporting} disabled={!total} onClick={exportExcel} />
             )}
             <XPActionButton tone="neutral" icon="bi-arrow-clockwise" title={t('refresh')} onClick={load} />
         </div>

@@ -9,6 +9,7 @@ import { field as xpInputBase, BTN_TONES } from '@bryanadamg/terras-ui/styles';
 import { SKEL_PAGE_ROWS } from '@bryanadamg/terras-ui/components/Skeleton';
 import { usePaginatedFetch } from '../../context/usePaginatedList';
 import { SearchField, ToolbarButton, pageFillStyle, flexFillStyle } from '../shared/shellTheme';
+import { ExcelButton } from '../shared/ExportExcelButton';
 import { bevel as sharedXpBevel, toolbar as sharedXpToolbar } from '@bryanadamg/terras-ui/styles';
 import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 import { useToast } from '../shared/Toast';
@@ -1284,12 +1285,6 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                     <i className={'bi bi-arrow-clockwise'} style={{ marginRight: 4 }} />Refresh
                 </button>
             )}
-            {col('col-md-2',
-                <button style={xpBtn()} className={XP_BTN} onClick={exportExcel} disabled={exporting || total === 0}
-                    title="Download every row matching the current filters as an Excel file">
-                    <i className="bi bi-file-earmark-excel" style={{ marginRight: 4 }} />{exporting ? 'Exporting…' : 'Export Excel'}
-                </button>
-            )}
             {canRebuild && col('col-md-2',
                 <button
                     style={xpBtn()}
@@ -1299,11 +1294,6 @@ export default function StockOnHandView({ locations, attributes, categories, ite
                 >
                     <i className={'bi bi-arrow-repeat'} style={{ marginRight: 4 }} />{rebuilding ? 'Rebuilding...' : 'Rebuild'}
                 </button>
-            )}
-            {canEntry && col('col-md-2 ms-auto',
-                <ToolbarButton tone="create" icon="bi-plus-lg" style={{ marginLeft: 'auto' }} title="Add stock for an item (new manual entry)" onClick={openNew}>
-                    New Entry
-                </ToolbarButton>
             )}
         </>
     );
@@ -1316,7 +1306,13 @@ export default function StockOnHandView({ locations, attributes, categories, ite
             >
                 <div style={xpToolbar}>
                     {toolbarControls}
-                    <ToolbarCount right={!canEntry}>{total} records</ToolbarCount>
+                    <ToolbarCount right>{total} records</ToolbarCount>
+                    <ExcelButton busy={exporting} disabled={total === 0} onClick={exportExcel} title="Every row matching the current filters" />
+                    {canEntry && (
+                        <ToolbarButton tone="create" icon="bi-plus-lg" title="Add stock for an item (new manual entry)" onClick={openNew}>
+                            New Entry
+                        </ToolbarButton>
+                    )}
                 </div>
                 <div style={{ flex: 1, overflow: 'auto', background: '#ffffff', minHeight: 0 }} className={undefined}>
                     <ResizableTable style={{ width: '100%', minWidth: TABLE_MIN_WIDTH, borderCollapse: 'collapse', tableLayout: 'fixed' }} className={undefined}>

@@ -32,6 +32,7 @@ import { SearchField, ToolbarButton, pageFillStyle, viewShellStyle } from '../sh
 import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 import { API_BASE } from '../shared/apiBase';
 import { saveResponse } from '../shared/download';
+import { ExcelButton } from '../shared/ExportExcelButton';
 
 const STATUSES = ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
 
@@ -769,17 +770,15 @@ export default function WorkOrderListView({
                             <span style={{ fontSize: 10, color: '#666', marginLeft: 4 }}>Loading...</span>
                         )}
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
+                            <ToolbarCount>{filtered.length} of {flatWOs.length} steps</ToolbarCount>
+                            {canExport && (
+                                <ExcelButton busy={exporting} disabled={!total} onClick={handleExport} />
+                            )}
                             {canPrintCard && sel.count > 0 && (
                                 <ToolbarButton tone="neutral" icon="bi-printer" onClick={() => setBulkPrintOpen(true)}>
                                     Print Selected ({sel.count})
                                 </ToolbarButton>
                             )}
-                            {canExport && (
-                                <ToolbarButton tone="neutral" icon="bi-file-earmark-excel" disabled={exporting || !total} onClick={handleExport}>
-                                    {exporting ? 'Exporting…' : 'Export Excel'}
-                                </ToolbarButton>
-                            )}
-                            <ToolbarCount>{filtered.length} of {flatWOs.length} steps</ToolbarCount>
                         </div>
                     </div>
 

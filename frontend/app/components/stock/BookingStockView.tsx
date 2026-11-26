@@ -21,6 +21,7 @@ import TreeSelect, { buildCategoryTree, expandCategoryFilterValue } from '../sha
 import { useUser } from '../../context/UserContext';
 import { useToast } from '../shared/Toast';
 import { saveResponse } from '../shared/download';
+import { ExcelButton } from '../shared/ExportExcelButton';
 
 // Booking Stock: per-item material availability across all ongoing MOs.
 //   net_free = on_hand + incoming - required
@@ -255,11 +256,6 @@ export default function BookingStockView() {
                         <i className={'bi bi-info-circle'} style={{ marginRight: 4 }} />
                         {t('how_calculated') || 'How is this calculated?'}
                     </button>
-                    {canExport && (
-                        <button style={xpBtn()} className={XP_BTN} onClick={handleExport} disabled={exporting || !total} title="Export Excel (every row matching the filter)">
-                            <i className={exporting ? 'bi bi-hourglass-split' : 'bi bi-file-earmark-excel'} style={{ marginRight: 4 }} />Export
-                        </button>
-                    )}
                     {/* Legend */}
                     <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10, fontFamily: xpFont, fontSize: '10px', color: '#555' }} className={undefined}>
                         <span><i className={'bi bi-square-fill'} style={{ color: HEALTH.short.color, ...({ marginRight: 3 }) }} />Shortfall</span>
@@ -267,6 +263,7 @@ export default function BookingStockView() {
                         <span><i className={'bi bi-square-fill'} style={{ color: HEALTH.ok.color, ...({ marginRight: 3 }) }} />OK</span>
                     </span>
                     <ToolbarCount>{total} items</ToolbarCount>
+                    {canExport && <ExcelButton busy={exporting} disabled={!total} onClick={handleExport} title="Every row matching the filter" />}
                 </div>
 
 

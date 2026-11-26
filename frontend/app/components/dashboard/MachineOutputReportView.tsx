@@ -44,6 +44,7 @@ import { lvThead, lvSubTh, lvSubTd, lvSubTable, lvSubCaption, ExpanderCell, lvZe
 import { SortableTh } from '@bryanadamg/terras-ui/components/Table';
 import { qtyFmt } from '../shared/format';
 import { STATIC_BASE } from '../shared/apiBase';
+import { ExcelButton } from '../shared/ExportExcelButton';
 
 // Machine output is weighed to the gram, so this report alone runs at 3dp.
 const fmtQty = qtyFmt(3);
@@ -1065,10 +1066,7 @@ export default function MachineOutputReportView() {
                             <span style={{ ...lbl, whiteSpace: 'nowrap' }}>{sorted.length} rows</span>
                             <button className={XP_BTN} style={xpBtn({ padding: '1px 6px' })} onClick={() => fetchReport()} title="Refresh"><i className="bi bi-arrow-clockwise" /></button>
                             {canExport && (
-                                <button className={XP_BTN} style={xpBtn()} onClick={exportExcel} disabled={exporting || !sorted.length}
-                                    title="Download the rows shown as an Excel file">
-                                    <i className="bi bi-file-earmark-excel" style={{ marginRight: 4 }} />{exporting ? 'Exporting…' : 'Export Excel'}
-                                </button>
+                                <ExcelButton busy={exporting} disabled={!sorted.length} onClick={exportExcel} title="Download the rows shown as an Excel file" />
                             )}
                         </div>
                     </>

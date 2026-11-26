@@ -43,6 +43,21 @@ export async function fetchAllRows(authFetch: (url: string) => Promise<Response>
     return Array.isArray(data) ? data : (data.items || []);
 }
 
+/** The one face of every "Export Excel" button — labelled, neutral, placed in the
+ *  toolbar's right-hand action group (after the count, before create/print). */
+export function ExcelButton({ busy, disabled, onClick, title }: {
+    busy: boolean;
+    disabled?: boolean;
+    onClick: () => void;
+    title?: string;
+}) {
+    return (
+        <ToolbarButton tone="neutral" icon={busy ? 'bi-hourglass-split' : 'bi-file-earmark-excel'} disabled={busy || disabled} onClick={onClick} title={title}>
+            {busy ? 'Exporting…' : 'Export Excel'}
+        </ToolbarButton>
+    );
+}
+
 export default function ExportExcelButton<T = any>({ grant, filename, sheet, columns, rows, fetchRows, disabled }: {
     /** `<resource>.export` — the button is hidden without it. */
     grant: string;
@@ -87,8 +102,6 @@ export default function ExportExcelButton<T = any>({ grant, filename, sheet, col
     };
 
     return (
-        <ToolbarButton tone="neutral" icon="bi-file-earmark-excel" disabled={busy || disabled} onClick={run}>
-            {busy ? 'Exporting…' : 'Export Excel'}
-        </ToolbarButton>
+        <ExcelButton busy={busy} disabled={disabled} onClick={run} />
     );
 }

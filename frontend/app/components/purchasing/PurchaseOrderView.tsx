@@ -28,6 +28,7 @@ import { STATIC_BASE } from '../shared/apiBase';
 import { fmtMoney } from '../shared/format';
 import { API_BASE } from '../shared/apiBase';
 import { saveResponse } from '../shared/download';
+import { ExcelButton } from '../shared/ExportExcelButton';
 
 export default function PurchaseOrderView({ items, itemResults, onSearchItems, attributes, purchaseOrders, partners, locations, onCreatePO, onEditPO, onDeletePO, onCreateReceipt, onClosePO, onVoidReceipt, companyProfile }: any) {
   const { showToast } = useToast();
@@ -874,9 +875,7 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                </ToolbarCount>
                <div style={{ marginLeft: 'auto' }} />
                {hasPermission('purchase_order.export') && (
-                   <button className={XP_BTN} style={xpBtn({ padding: '1px 6px' })} onClick={handleListExport} disabled={listBusy || !poRowTotal} title="Export Excel (every line of the orders matching the filter)">
-                       <i className={listBusy ? 'bi bi-hourglass-split' : 'bi bi-file-earmark-excel'} />
-                   </button>
+                   <ExcelButton busy={listBusy} disabled={!poRowTotal} onClick={handleListExport} title="Every line of the orders matching the filter" />
                )}
                {hasPermission('purchase_order.print') && (
                    <button className={XP_BTN} style={xpBtn({ padding: '1px 6px' })} onClick={handleListPrint} disabled={listBusy || !poRowTotal} title="Print the orders matching the filter">

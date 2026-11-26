@@ -17,6 +17,7 @@ import {
 import { MonitorShell, MonitorGridSkeleton } from './machineMonitor/MonitorShell';
 import { API_BASE } from '../shared/apiBase';
 import { saveResponse } from '../shared/download';
+import { ExcelButton } from '../shared/ExportExcelButton';
 
 // Measurement accents come from the shared five-family palette (DESIGN.md's one
 // semantic layer) — never a per-view hex.
@@ -547,8 +548,7 @@ export default function WeavingMonitorView() {
                 hasMachines={machines.length > 0}
                 chipBar={chipBar}
                 actions={canExport && machines.length > 0 ? (
-                    <XPActionButton tone="neutral" icon={exporting ? 'bi-hourglass-split' : 'bi-file-earmark-excel'}
-                        title="Export Excel" onClick={exportExcel} disabled={exporting} />
+                    <ExcelButton busy={exporting} onClick={exportExcel} />
                 ) : null}
             >
                 {body}
