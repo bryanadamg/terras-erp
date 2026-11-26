@@ -18,6 +18,7 @@ import { SearchField } from '../shared/shellTheme';
 import { getChipStyle } from '../manufacturing/WorkOrderPanel';
 import VariantChips from '../shared/VariantChips';
 import { isMachineWC } from '../shared/workCenterTree';
+import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 
 // ── Fonts ─────────────────────────────────────────────────────────────────────
 const modernFont = 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
@@ -569,9 +570,9 @@ export default function SettingOrdersTab({ items, authFetch }: Props) {
                         Clear
                     </button>
                 )}
-                <span style={{ marginLeft: 'auto', fontSize: 10, color: '#333', whiteSpace: 'nowrap' }}>
+                <ToolbarCount right>
                     {loading ? 'Loading...' : `${woTotal} setting work order${woTotal === 1 ? '' : 's'}`}
-                </span>
+                </ToolbarCount>
             </div>
 
             {/* Table */}

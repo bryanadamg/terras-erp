@@ -505,9 +505,9 @@ export default function PickListView() {
                     <i className="bi bi-arrow-clockwise" style={{ marginRight: 4 }} />Refresh
                 </button>
                 <SearchField value={plSearch} onChange={setPlSearch} placeholder="Search code, SO, customer, SJ…" width={240} style={{ marginLeft: 6 }} />
-                <span style={{ marginLeft: 'auto', fontSize: 11, color: '#333' }}>
+                <ToolbarCount right>
                     {plTotal.toLocaleString()} pick list{plTotal !== 1 ? 's' : ''}
-                </span>
+                </ToolbarCount>
                 <ExportExcelButton grant="pick_list.export" filename="pick-lists" fetchRows={fetchAllPickLists} disabled={!plTotal} columns={[
                     { label: 'Code', value: pl => pl.code },
                     { label: 'Sales Order', value: pl => pl.sales_order_code },

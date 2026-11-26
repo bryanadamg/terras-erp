@@ -12,6 +12,7 @@ import { useData } from '../../context/DataContext';
 import Pager from '../shared/Pager';
 import { API_BASE } from '../shared/apiBase';
 import AuditChanges, { hasAuditChanges } from '../shared/AuditChanges';
+import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 
 // entity_type is a raw model name (WorkOrder, attribute_value, work_center_holiday, ...) — humanize for display.
 function formatEntityType(entityType: string): string {
@@ -139,9 +140,9 @@ export default function AuditLogsView({ auditLogs, currentPage, totalItems, page
                       {entityFilterOptions}
                   </select>
                   <div style={xpSep} />
-                  <span style={{ marginLeft: 'auto', fontFamily: xpFont, fontSize: '11px', color: '#444' }}>
-                      <b>{totalItems}</b> total entries · click a row to expand diff
-                  </span>
+                  <ToolbarCount right>
+                      {totalItems} entries · click a row to expand diff
+                  </ToolbarCount>
                   {/* ponytail: the whole trail under the entity filter in one request; add a
                       date range here if the log grows past what one browser POST should carry. */}
                   <ExportExcelButton grant="audit_log.export" filename="audit-log" disabled={!totalItems}

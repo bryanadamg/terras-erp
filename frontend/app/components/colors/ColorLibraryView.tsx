@@ -18,6 +18,7 @@ import { FilterChipBar } from '@bryanadamg/terras-ui/components/FilterChipBar';
 import {
     LV_XP_FONT, lvInput, lvBtn, lvPrimaryBtn, lvLabel, lvTh, lvTd, lvSep, lvRow, lvThead, TableEmpty, ResizableTable } from '../shared/listViewTheme';
 import { toolbar as xpToolbar } from '@bryanadamg/terras-ui/styles';
+import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 
 const STATUS_FILTERS = ['ALL', 'active', 'archived'];
 
@@ -244,9 +245,9 @@ export default function ColorLibraryView({
                 <div style={{ width: 170 }}>
                     <SearchableSelect options={SOURCE_FILTER_OPTIONS} value={sourceFilter || ''} onChange={v => onSourceFilterChange?.(v)} placeholder="All Sources" />
                 </div>
-                <span style={{ marginLeft: 'auto', fontSize: 11, color: '#333' }}>
+                <ToolbarCount right>
                     {total.toLocaleString()} color{total !== 1 ? 's' : ''}
-                </span>
+                </ToolbarCount>
                 {fetchAll && (
                     <ExportExcelButton grant="color_code.export" filename="color-codes" fetchRows={fetchAll} disabled={!total} columns={[
                         { label: 'Code', value: c => c.code },

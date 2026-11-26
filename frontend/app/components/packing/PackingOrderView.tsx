@@ -46,6 +46,7 @@ import {
 import { usePackagingTypes } from '../shared/usePackagingTypes';
 import { basePerAlt, altToBase, baseToAlt, orderBasePerAlt, formatAlt, lengthPerAlt } from '../shared/altUnit';
 import { API_BASE } from '../shared/apiBase';
+import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 const PackingCardPrintModal = dynamic(() => import('./PackingCardPrintModal'), { ssr: false });
 const PackedUnitLabelPrintModal = dynamic(() => import('./PackedUnitLabelPrintModal'), { ssr: false });
 
@@ -723,9 +724,9 @@ export default function PackingOrderView({ initialCreateState, onClearInitialSta
             <div style={xpToolbar()}>
                 <ToolbarButton tone="neutral" icon="bi-arrow-clockwise" onClick={loadAll}>Refresh</ToolbarButton>
                 <SearchField value={searchInput} onChange={setSearch} placeholder="Search code, item, colour, SO, customer…" width={260} style={{ marginLeft: 6 }} />
-                <span style={{ marginLeft: 'auto', fontSize: 11, color: '#333' }}>
+                <ToolbarCount right>
                     {total.toLocaleString()} order{total !== 1 ? 's' : ''}
-                </span>
+                </ToolbarCount>
                 <ExportExcelButton grant="packing_order.export" filename="packing-orders" fetchRows={fetchAll} disabled={!total} columns={[
                     { label: 'Code', value: po => po.code },
                     { label: 'Item Code', value: po => po.item_code },

@@ -25,6 +25,7 @@ import { useDyeRecipeSearch, recipeToOption } from '../shared/useEntitySearch';
 import SearchableSelect from '@bryanadamg/terras-ui/components/Combobox';
 import DyeRecipePrintView from './DyeRecipePrintView';
 import type { KartuCelupBath } from '../shared/printTemplate/doctypes/dyeRecipe';
+import { Count as ToolbarCount } from '@bryanadamg/terras-ui/components/Window';
 
 const modernFont = 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 
@@ -925,9 +926,9 @@ export default function DyeingOrdersTab({ items, authFetch }: DyeingOrdersTabPro
                         Clear
                     </button>
                 )}
-                <span style={{ marginLeft: 'auto', fontSize: 10, color: '#333', whiteSpace: 'nowrap' }}>
+                <ToolbarCount right>
                     {woLoading ? 'Loading...' : `${woTotal} dyeing work order${woTotal === 1 ? '' : 's'}`}
-                </span>
+                </ToolbarCount>
             </div>
 
             {/* Table */}
