@@ -49,6 +49,18 @@ function collectGroupValues(options: TreeSelectOption[], out: Set<string> = new 
   return out;
 }
 
+// Prune to nodes whose label/subLabel contains `q`, keeping each hit's ancestors
+// (for context) and its whole subtree (picking "GD FINISH GOODS" still shows its bins).
+function filterTree(options: TreeSelectOption[], q: string): TreeSelectOption[] {
+  const out: TreeSelectOption[] = [];
+  for (const o of options) {
+    if (`${o.label} ${o.subLabel ?? ''}`.toLowerCase().includes(q)) { out.push(o); continue; }
+    const kids = o.children ? filterTree(o.children, q) : [];
+    if (kids.length) out.push({ ...o, children: kids });
+  }
+  return out;
+}
+
 export default function TreeSelect({
   options,
   value,
@@ -63,6 +75,10 @@ export default function TreeSelect({
 }: Props) {
 
   const [open, setOpen] = useState(false);
+  // Long location trees (every bin of every warehouse) meant scrolling to find one.
+  const [query, setQuery] = useState('');
+  const q = query.trim().toLowerCase();
+  const shown = useMemo(() => (q ? filterTree(options, q) : options), [options, q]);
   const [expanded, setExpanded] = useState<Set<string>>(() => collectGroupValues(options));
   const ref = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -143,6 +159,7 @@ export default function TreeSelect({
     onChange(val);
     setOpen(false);
   };
+  useEffect(() => { if (!open) setQuery(''); }, [open]);
 
   // Compute trigger label: full breadcrumb path or placeholder
   const triggerLabel = useMemo(() => {
@@ -176,7 +193,7 @@ export default function TreeSelect({
   // ── Recursive node renderer ─────────────────────────────────────────────────
   const renderNode = (opt: TreeSelectOption, depth: number): React.ReactNode => {
     const hasKids = (opt.children?.length ?? 0) > 0;
-    const isExp = expanded.has(opt.value);
+    const isExp = !!q || expanded.has(opt.value);
     const canSelect = opt.selectable !== false && !!opt.value;
     const isSelected = !!value && opt.value === value;
 
@@ -297,8 +314,22 @@ export default function TreeSelect({
       borderRadius: BUTTON_RADIUS,
       boxShadow: '2px 2px 4px rgba(0,0,0,0.25)',
     }}>
-      {emptyRow}
-      {options.map(o => renderNode(o, 0))}
+      <div style={{ position: 'sticky', top: -2, background: '#fff', padding: '2px 4px 3px', zIndex: 1 }}>
+        <input
+          autoFocus
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          // Enter would otherwise submit the form the picker sits in.
+          onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }}
+          placeholder="Search..."
+          style={{ ...xpFontStyle, width: '100%', height: 20, padding: '0 4px', border: '1px solid #7f9db9', borderRadius: BUTTON_RADIUS, boxSizing: 'border-box', outline: 'none' }}
+        />
+      </div>
+      {!q && emptyRow}
+      {shown.map(o => renderNode(o, 0))}
+      {q && !shown.length && (
+        <div style={{ ...xpFontStyle, padding: '2px 8px', color: '#888', fontStyle: 'italic' }}>No match</div>
+      )}
     </div>,
     document.body
   ) : null;
@@ -357,6 +388,13 @@ export function buildLocationFilterTree(locations: any[]): TreeSelectOption[] {
       }),
     };
   });
+}
+
+/** Same tree, but only childless nodes pickable (a lot goes into a bin, not a warehouse). */
+export function leavesOnly(options: TreeSelectOption[]): TreeSelectOption[] {
+  return options.map(o => o.children?.length
+    ? { ...o, selectable: false, children: leavesOnly(o.children) }
+    : o);
 }
 
 /**

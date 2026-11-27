@@ -1,5 +1,6 @@
 'use client';
 
+import TreeSelect, { buildLocationPickerTree, leavesOnly } from '../shared/TreeSelect';
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import ModalWrapper from '../shared/ModalWrapper';
 
@@ -59,6 +60,27 @@ interface Props {
     apiBase: string;
 }
 
+// Module-level, not inside the modal: a component declared in the body is a new
+// type every render, so React remounted every input inside it on each keystroke —
+// the run editors lost focus after one character ("can't type manually").
+//
+// One card shell for the hero tiles and the small stats below them — three
+// separately hand-rolled copies of the same sunken-white box before.
+const CardBox = ({ children, pad = '4px 8px' }: { children: React.ReactNode; pad?: string }) => (
+    <div
+        style={{ ...xpPanel({ background: '#fff' }), padding: pad }}
+    >
+        {children}
+    </div>
+);
+
+const Stat = ({ label, value, unit, accent }: any) => <CardBox>
+        <div style={{ fontFamily: xpFont, fontSize: 9, color: '#666', textTransform: 'uppercase', letterSpacing: 0.3, whiteSpace: 'nowrap' }}>{label}</div>
+        <div style={{ fontFamily: xpFont, fontSize: 14, fontWeight: 'bold', color: accent || '#000', lineHeight: 1.15 }}>
+            {value}{unit && <span style={{ fontSize: 9, fontWeight: 'normal', color: '#888', marginLeft: 2 }}>{unit}</span>}
+        </div>
+    </CardBox>;
+
 export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, authFetch, apiBase }: Props) {
     const { t } = useLanguage();
     const { hasPermission } = useUser();
@@ -76,11 +98,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
 
     // Any childless location is a destination — a warehouse with no zones holds
     // stock directly (same leaf rule as the backend's putaway bins).
-    const leafLocations = useMemo(
-        () => (locations || []).filter((l: any) => !l.has_children),
-        [locations],
-    );
-    const locLabel = (l: any) => l.full_path || (l.parent_name ? `${l.parent_name} / ${l.name}` : l.name);
+    const locTree = useMemo(() => leavesOnly(buildLocationPickerTree(locations || [])), [locations]);
 
     const [tab, setTab] = useState<'performance' | 'calendar' | 'beams'>('performance');
     const [data, setData] = useState<any>(null);
@@ -545,7 +563,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
 
     const moOptions = moCands.map((mo: any) => ({
         value: mo.id,
-        label: `${mo.code}${mo.item_code ? ' — ' + mo.item_code : ''}`,
+        label: `${mo.code}${mo.combo_label ? ' · ' + mo.combo_label : ''}${mo.size_label ? ' · ' + mo.size_label : ''}${mo.item_code ? ' — ' + mo.item_code : ''}`,
         subLabel: mo.qty ? `${fmt(mo.qty, 2)}` : undefined,
     }));
 
@@ -557,7 +575,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
         .filter((wo: any) => !wo.already_running)
         .map((wo: any) => ({
             value: wo.id,
-            label: `${wo.code || wo.name}${wo.combo_label ? ' · ' + wo.combo_label : ''}${wo.item_code ? ' — ' + wo.item_code : ''}`,
+            label: `${wo.code || wo.name}${wo.combo_label ? ' · ' + wo.combo_label : ''}${wo.size_label ? ' · ' + wo.size_label : ''}${wo.item_code ? ' — ' + wo.item_code : ''}`,
             subLabel: [
                 wo.qty ? `${fmt(wo.qty, 2)} kg` : null,
                 wo.target_end_date ? `${t('wo_due')} ${fmtDate(wo.target_end_date)}` : null,
@@ -569,23 +587,6 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
 
     // ── Themed primitives ────────────────────────────────────────────────────
     const SecTitle = SectionTitle;
-
-    // One card shell for the hero tiles and the small stats below them — three
-    // separately hand-rolled copies of the same sunken-white box before.
-    const CardBox = ({ children, pad = '4px 8px' }: { children: React.ReactNode; pad?: string }) => (
-        <div
-            style={{ ...xpPanel({ background: '#fff' }), padding: pad }}
-        >
-            {children}
-        </div>
-    );
-
-    const Stat = ({ label, value, unit, accent }: any) => <CardBox>
-            <div style={{ fontFamily: xpFont, fontSize: 9, color: '#666', textTransform: 'uppercase', letterSpacing: 0.3, whiteSpace: 'nowrap' }}>{label}</div>
-            <div style={{ fontFamily: xpFont, fontSize: 14, fontWeight: 'bold', color: accent || '#000', lineHeight: 1.15 }}>
-                {value}{unit && <span style={{ fontSize: 9, fontWeight: 'normal', color: '#888', marginLeft: 2 }}>{unit}</span>}
-            </div>
-        </CardBox>;
 
     const grid = (min: number): React.CSSProperties => ({ display: 'grid', gridTemplateColumns: `repeat(auto-fill, minmax(${min}px, 1fr))`, gap: 6 });
 
@@ -853,7 +854,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                         )} />
                         <Stat label={t('rate_per_line')} value={editingRate ? (
                             <div className="d-flex gap-1 align-items-center">
-                                <input type="number" {...inputProps} style={{ ...(inputProps.style || {}), maxWidth: 65, height: 22, fontSize: 12 }} value={rateVal} onChange={e => setRateVal(e.target.value)} />
+                                <input type="number" step="0.01" min="0" {...inputProps} style={{ ...(inputProps.style || {}), maxWidth: 65, height: 22, fontSize: 12 }} value={rateVal} onChange={e => setRateVal(e.target.value)} />
                                 <XPActionButton tone="success" icon="bi-check" onClick={() => saveRate(run.id)} />
                                 <XPActionButton tone="neutral" icon="bi-x" onClick={() => setRateRunId(null)} />
                             </div>
@@ -1032,7 +1033,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                 </div>
                                 <div className="col-md-2 col-4">
                                     <FieldLabel>{t('rate_per_line')}</FieldLabel>
-                                    <input type="number" {...inputProps} value={rate} onChange={e => setRate(e.target.value)} />
+                                    <input type="number" step="0.01" min="0" {...inputProps} value={rate} onChange={e => setRate(e.target.value)} />
                                 </div>
                                 <div className="col-md-3 col-4">
                                     <FieldLabel>{t('target_efficiency')}</FieldLabel>
@@ -1071,7 +1072,9 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
 
                     {/* One panel per RUNNING run — a loom carries one per WO, ruled off
                         from the next so two concurrent orders never read as one. */}
-                    {runs.map((r: any, i: number) => <RunPanel key={r.id} run={r} index={i} total={runs.length} />)}
+                    {/* Called, not mounted: RunPanel lives in the modal body, so as <RunPanel/> it
+                        would be a new type each render and remount its edit inputs per keystroke. */}
+                    {runs.map((r: any, i: number) => <React.Fragment key={r.id}>{RunPanel({ run: r, index: i, total: runs.length })}</React.Fragment>)}
 
                     {/* History */}
                     {data?.history?.length > 0 && (
@@ -1376,17 +1379,8 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                                                             {' · '}
                                                                             <b>{fmt(m.remaining, 1)} kg</b> {t('unmount_remnant_to')}:
                                                                         </span>
-                                                                        <select
-                                                                            value={returnLoc}
-                                                                            onChange={e => setReturnLoc(e.target.value)}
-                                                                            className={undefined}
-                                                                            style={xpSelect()}
-                                                                        >
-                                                                            <option value="">{t('unmount_leave_at_loom')}</option>
-                                                                            {leafLocations.map((l: any) => (
-                                                                                <option key={l.id} value={l.id}>{locLabel(l)}</option>
-                                                                            ))}
-                                                                        </select>
+                                                                        <TreeSelect options={locTree} value={returnLoc} onChange={setReturnLoc}
+                                                                            allowEmpty emptyLabel={t('unmount_leave_at_loom')} size="sm" style={{ minWidth: 220 }} />
                                                                         <div style={{ display: 'flex', gap: 6, marginLeft: 'auto' }}>
                                                                             <XPActionButton
                                                                                 tone="warning"

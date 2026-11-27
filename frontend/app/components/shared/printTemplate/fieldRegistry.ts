@@ -27,6 +27,8 @@ export interface FieldDef {
     mono?: boolean;
     /** Grouping in the designer's field palette. */
     group?: string;
+    /** `barcode` fields: print a QR of the text instead of Code 128 (long codes). */
+    qr?: boolean;
 }
 
 

@@ -24,7 +24,9 @@ export const MO_SHEET_DOC = 'mo_sheet';
 
 export const MS_FIELDS: FieldDef[] = [
     { key: 'ms.code', label: 'No. SPK (MO code)', kind: 'text', mono: true, group: 'Order' },
-    { key: 'ms.barcode', label: 'Barcode (MO code, scan into search)', kind: 'barcode', group: 'Order' },
+    // QR, not Code 128: MO codes run to ~60 chars (item name in them), and a 1D bar
+    // of that is either too thin to read or wider than the scanner's window.
+    { key: 'ms.barcode', label: 'QR (MO code, scan into search)', kind: 'barcode', qr: true, group: 'Order' },
     { key: 'ms.article', label: 'Article (item)', kind: 'text', group: 'Order' },
     { key: 'ms.item_code', label: 'Item Code', kind: 'text', mono: true, group: 'Order' },
     { key: 'ms.size', label: 'Size / Ukuran', kind: 'text', group: 'Order' },

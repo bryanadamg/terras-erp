@@ -358,7 +358,9 @@ export default function SampleReportView() {
 
     return (
         <ShellWindow fill="page" className="fade-in">
-            <Filters />
+            {/* Called, not mounted: as <Filters/> it is a new type each render, so its
+                date inputs remounted and dropped focus mid-typing. */}
+            {Filters()}
             <KpiTiles />
             {/* Column counts match SummaryTable (7) and VariantTable (9) so the
                 report lands in the skeleton's columns instead of replacing it. */}
