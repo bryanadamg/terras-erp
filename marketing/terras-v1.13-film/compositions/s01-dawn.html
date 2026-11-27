@@ -1,0 +1,42 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; background: var(--color-ground); }
+    #s01-cam { position: absolute; inset: 0; transform-origin: 0 0; }
+    #s01-win { left: 460px; top: 190px; width: 1348px; }
+    #s01-tabs { height: 52px; display: flex; align-items: flex-end; gap: 4px; padding: 0 14px; background: var(--color-ground); border-bottom: 2px solid #919b9c; }
+    .s01-tab { height: 42px; padding: 0 22px; display: flex; align-items: center; gap: 10px; font-size: 26px; border: 2px solid #919b9c; border-bottom: none; border-radius: 4px 4px 0 0; background: linear-gradient(#fff, #ecebe5); color: #333; }
+    .s01-tab.on { height: 48px; background: #fff; font-weight: 700; color: #1a1a1a; border-top: 3px solid #f2a33a; }
+    #s01-canvas { display: block; width: 1344px; height: 521px; image-rendering: pixelated; }
+    #s01-hour { position: absolute; left: 96px; top: 300px; }
+    #s01-line { position: absolute; left: 100px; top: 440px; width: 330px; }
+  </style>
+  <div id="root" data-composition-id="s01" data-width="1920" data-height="1080">
+    <div id="s01-cam">
+      <div id="s01-win" class="xp-win">
+        <div class="xp-title"><img src="assets/terras-mark.svg" alt="" />Terras ERP — Dashboard</div>
+        <div id="s01-tabs"><div class="s01-tab">Overview</div><div class="s01-tab on">Floor</div></div>
+        <canvas id="s01-canvas"></canvas>
+      </div>
+      <div id="s01-hour" class="hour"><span class="w">0</span><span class="w">6</span><span class="w">:</span><span class="w">0</span><span class="w">0</span></div>
+      <div id="s01-line" class="hour-line"><span class="w">The</span> <span class="w">mill</span> <span class="w">wakes</span> <span class="w">up.</span></div>
+    </div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    // Machines switch on lane by lane: prep, then looms left to right, then finishing.
+    const LANE_AT = [0.7, 1.15, 1.9];
+    const floor = window.TerrasFloor.mount(document.querySelector("#s01-canvas"), 4.2, (r, i) =>
+      LANE_AT[r.lane] + (r.lane === 1 ? (i % 24) * 0.02 : i * 0.05));
+    const clock = { t: 0 };
+    tl.fromTo(clock, { t: 0 }, { t: 3.5, duration: 3.5, ease: "none", onUpdate: () => floor.draw(clock.t) }, 0);
+    floor.draw(0);
+    tl.fromTo("#s01-hour .w", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.13, stagger: 0.05 }, 0.1);
+    tl.fromTo("#s01-line .w", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.13, stagger: 0.07 }, 0.6);
+    // Push into the YARN STORE room (top-left of the rail), then zoom through it.
+    // Room at cells (4,4) 40x36 → canvas px x 460+2+16.8, y 190+56+52+16.8.
+    tl.to("#s01-cam", { scale: 2.6, x: -(479 * 2.6 - 300), y: -(315 * 2.6 - 260), duration: 0.6, ease: "power2.inOut" }, 2.55);
+    tl.to(["#s01-hour", "#s01-line"], { opacity: 0, filter: "blur(8px)", duration: 0.2, ease: "power3.in" }, 2.5);
+    tl.to("#s01-cam", { scale: 9, x: -(560 * 9 - 960), y: -(370 * 9 - 540), opacity: 0, duration: 0.35, ease: "power3.in" }, 3.15);
+    window.__timelines["s01"] = tl;
+  </script>
+</template>

@@ -1,0 +1,48 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; background: var(--color-ground); }
+    #s08-white { position: absolute; inset: 0; background: #fff; }
+    #s08-hour { position: absolute; left: 96px; top: 300px; }
+    #s08-line { position: absolute; left: 100px; top: 440px; width: 340px; }
+    #s08-sheet { position: absolute; left: 500px; top: 120px; width: 1320px; background: #fff; border: 2px solid #9a9a9a; box-shadow: 0 18px 40px rgba(0,0,40,0.22); transform-origin: 50% 50%; }
+    .s08-g { display: grid; grid-template-columns: 60px 210px 210px 300px 190px 140px 1fr; }
+    .s08-g > div { height: 66px; border-right: 1px solid #d4d4d4; border-bottom: 1px solid #d4d4d4; display: flex; align-items: center; padding: 0 10px; font-size: 27px; white-space: nowrap; overflow: hidden; }
+    .s08-letters > div { height: 44px; background: #efefef; color: #555; justify-content: center; font-size: 24px; }
+    .s08-g > div:first-child { background: #efefef; color: #555; justify-content: center; font-size: 24px; }
+    .s08-h > div { font-weight: 700; }
+    .s08-n { justify-content: flex-end; }
+    #s08-tabs { height: 50px; display: flex; align-items: flex-end; padding-left: 60px; background: #efefef; }
+    #s08-tabs span { height: 42px; padding: 0 24px; background: #fff; border: 1px solid #b4b4b4; border-top: none; font-size: 24px; display: flex; align-items: center; font-weight: 700; }
+  </style>
+  <div id="root" data-composition-id="s08" data-width="1920" data-height="1080">
+    <div id="s08-hour" class="hour"><span class="w">1</span><span class="w">8</span><span class="w">:</span><span class="w">0</span><span class="w">0</span></div>
+    <div id="s08-line" class="hour-line"><span class="w">The</span> <span class="w">day,</span> <span class="w">in</span> <span class="w">Excel.</span></div>
+    <div id="s08-sheet">
+      <div class="s08-g s08-letters"><div></div><div>A</div><div>B</div><div>C</div><div>D</div><div>E</div><div>F</div></div>
+      <div class="s08-g s08-h"><div>1</div><div>Document</div><div>Reference</div><div>Customer</div><div>Vehicle</div><div class="s08-n">Cartons</div><div>Status</div></div>
+      <div class="s08-g s08-r"><div>2</div><div>SHP-00118</div><div>SJ 000118</div><div>PT DEMO GARMEN</div><div>B 9123 KX</div><div class="s08-n">14</div><div>STAGED</div></div>
+      <div class="s08-g s08-r"><div>3</div><div>SHP-00117</div><div>SJ 000117</div><div>PT DEMO GARMEN</div><div>B 8810 KY</div><div class="s08-n">22</div><div>DISPATCHED</div></div>
+      <div class="s08-g s08-r"><div>4</div><div>SHP-00116</div><div>SJ 000116</div><div>PT DEMO GARMEN</div><div>B 8810 KY</div><div class="s08-n">18</div><div>DISPATCHED</div></div>
+      <div class="s08-g s08-r"><div>5</div><div>SHP-00115</div><div>SJ 000115</div><div>PT DEMO KONVEKSI</div><div>B 9041 KX</div><div class="s08-n">9</div><div>DISPATCHED</div></div>
+      <div class="s08-g s08-r"><div>6</div><div>SHP-00114</div><div>SJ 000114</div><div>PT DEMO KONVEKSI</div><div>B 9041 KX</div><div class="s08-n">16</div><div>DISPATCHED</div></div>
+      <div class="s08-g s08-r"><div>7</div><div>SHP-00113</div><div>SJ 000113</div><div>PT DEMO GARMEN</div><div>B 8810 KY</div><div class="s08-n">20</div><div>DISPATCHED</div></div>
+      <div class="s08-g"><div>8</div><div></div><div></div><div></div><div></div><div></div><div></div></div>
+      <div class="s08-g"><div>9</div><div></div><div></div><div></div><div></div><div></div><div></div></div>
+      <div class="s08-g"><div>10</div><div></div><div></div><div></div><div></div><div></div><div></div></div>
+      <div id="s08-tabs"><span>Sheet1</span></div>
+    </div>
+    <div id="s08-whitefg" style="position:absolute; inset:0; background:#fff;"></div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    // Out of the iris: white, then the sheet.
+    tl.fromTo("#s08-whitefg", { opacity: 1 }, { opacity: 0, duration: 0.3, ease: "power2.inOut" }, 0.05);
+    tl.fromTo(".s08-r", { opacity: 0 }, { opacity: 1, duration: 0.12, stagger: 0.07 }, 0.4);
+    tl.fromTo("#s08-hour .w", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.13, stagger: 0.05 }, 0.3);
+    tl.fromTo("#s08-line .w", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.13, stagger: 0.07 }, 0.55);
+    // Pull back: the sheet shrinks away toward the floor.
+    tl.to(["#s08-hour", "#s08-line"], { opacity: 0, filter: "blur(8px)", duration: 0.2, ease: "power3.in" }, 3.0);
+    tl.to("#s08-sheet", { scale: 0.35, opacity: 0, duration: 0.45, ease: "power3.in" }, 3.05);
+    window.__timelines["s08"] = tl;
+  </script>
+</template>

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import CalendarView from '../shared/CalendarView';
 import ManufacturingSearchBar from './ManufacturingSearchBar';
@@ -134,17 +134,6 @@ export default function ManufacturingOrdersTab({
         localStorage.setItem('mo_print_settings', JSON.stringify(printSettings));
     }, [printSettings]);
 
-    // Auto-expand the matching MO when arriving via a code deep-link
-    useEffect(() => {
-        if (!moCodeFilter || manufacturingOrders.length === 0) return;
-        // The server returns the ROOT for a child MO's code, so look down its tree too.
-        const q = moCodeFilter.trim().toLowerCase();
-        const hit = (mo: any): boolean =>
-            (mo.code || '').toLowerCase().includes(q) || (mo.child_mos || []).some(hit);
-        const match = manufacturingOrders.find(hit);
-        if (match) setExpandedRows(prev => ({ ...prev, [match.id]: true }));
-    }, [moCodeFilter, manufacturingOrders]);
-
     const findNodeById = (node: any, id: string): any => {
         if (node.id === id) return node;
         for (const child of (node.child_mos || [])) {
@@ -168,6 +157,44 @@ export default function ManufacturingOrdersTab({
         }
         return result;
     };
+
+    // A root's whole tree as its expanded panel draws it: nested child MOs plus the
+    // shared component MOs of its Production Run (linked via mo_dependencies).
+    const treeOf = (rootMO: any) => {
+        const moMap: Record<string, any> = {};
+        const pr = rootMO.production_run_id && productionRuns.find((p: any) => p.id === rootMO.production_run_id);
+        for (const mo of (pr?.manufacturing_orders || [])) moMap[mo.id] = mo;
+        return { moMap, nodes: flattenTree(rootMO, 0, moMap) };
+    };
+
+    // Root id -> the MO in its tree the search names. A scanned SPK Produksi of a
+    // child MO comes back from the server as its ROOT row, so the row is flagged
+    // and the scanned child is what its panel opens on — otherwise the list shows a
+    // `PR-…` row that looks unrelated to the `MO-BEAM-…` just scanned.
+    const searchHits = useMemo(() => {
+        const q = moCodeFilter?.trim().toLowerCase();
+        const hits: Record<string, string> = {};
+        if (!q) return hits;
+        for (const root of manufacturingOrders) {
+            const codes = treeOf(root).nodes.map(n => n.mo);
+            const node = codes.find(m => (m.code || '').toLowerCase() === q)
+                ?? codes.find(m => (m.code || '').toLowerCase().includes(q));
+            if (node) hits[root.id] = node.id;
+        }
+        return hits;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [moCodeFilter, manufacturingOrders, productionRuns]);
+
+    // Open every row the search lands in, on the MO it names — once per search, so a
+    // live refetch doesn't snap the panel back after the user clicks another node.
+    const appliedSearch = useRef('');
+    useEffect(() => {
+        const roots = Object.keys(searchHits);
+        if (roots.length === 0 || appliedSearch.current === moCodeFilter) return;
+        appliedSearch.current = moCodeFilter;
+        setExpandedRows(prev => ({ ...prev, ...Object.fromEntries(roots.map(id => [id, true])) }));
+        setSelectedTreeNodes(prev => ({ ...prev, ...searchHits }));
+    }, [searchHits, moCodeFilter]);
 
     const handlePrintMO = (mo: any, hideChildren = false) => {
         setPrintHideChildren(hideChildren);
@@ -365,18 +392,8 @@ export default function ManufacturingOrdersTab({
     const renderMOExpandedPanel = ({ rootMO, detailTab, setDetailTab }: { rootMO: any; detailTab: 'bom' | 'steps'; setDetailTab: (t: 'bom' | 'steps') => void }) => {
         const selectedNodeId = selectedTreeNodes[rootMO.id] ?? rootMO.id;
 
-        // Build a map of all MOs in the same PR so required component MOs appear in the tree
-        const moMap: Record<string, any> = {};
-        if (rootMO.production_run_id) {
-            const pr = productionRuns.find((p: any) => p.id === rootMO.production_run_id);
-            if (pr) {
-                for (const mo of (pr.manufacturing_orders || [])) {
-                    moMap[mo.id] = mo;
-                }
-            }
-        }
-
-        const treeNodes = flattenTree(rootMO, 0, moMap);
+        // Every MO in the same PR, so required component MOs appear in the tree
+        const { moMap, nodes: treeNodes } = treeOf(rootMO);
 
         // findNodeById must also search moMap for shared component MOs
         const findNodeInTree = (id: string): any => {
@@ -1152,7 +1169,7 @@ export default function ManufacturingOrdersTab({
                             {manufacturingOrders.map((mo: any, rowIdx: number) => {
                                 const warning = getDueDateWarning(mo);
                                 const isExpanded = expandedRows[mo.id];
-                                const isHighlighted = !!moCodeFilter && mo.code.toLowerCase().includes(moCodeFilter.toLowerCase());
+                                const isHighlighted = !!searchHits[mo.id];
                                 const rowBg = isHighlighted ? rowStateBg('highlighted')
                                     : isExpanded ? rowStateBg('expanded')
                                     : lvZebra(rowIdx);

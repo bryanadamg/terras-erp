@@ -15,6 +15,13 @@ on `main`:
 
 ## [Unreleased]
 
+## [1.14.1] - 2026-11-27
+
+### Fixed
+- The tablet scanner's work order log records everything the desktop log does, including cones and boxes
+- Scanning a child manufacturing order's code opens that child inside its root row and highlights it
+- The SPK Produksi barcode gets its own full-width row so a long manufacturing order code stays scannable
+
 ## [1.14.0] - 2026-11-26
 
 ### Added

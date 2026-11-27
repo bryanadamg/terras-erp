@@ -1,0 +1,35 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; background: var(--color-ground); }
+    #s09-title { position: absolute; left: 384px; top: 96px; }
+    #s09-title .g { color: var(--color-accent); }
+    #s09-win { left: 384px; top: 360px; width: 1156px; transform-origin: 50% 50%; }
+    #s09-tabs { height: 52px; display: flex; align-items: flex-end; gap: 4px; padding: 0 14px; background: var(--color-ground); border-bottom: 2px solid #919b9c; }
+    .s09-tab { height: 42px; padding: 0 22px; display: flex; align-items: center; font-size: 26px; border: 2px solid #919b9c; border-bottom: none; border-radius: 4px 4px 0 0; background: linear-gradient(#fff, #ecebe5); color: #333; }
+    .s09-tab.on { height: 48px; background: #fff; font-weight: 700; color: #1a1a1a; border-top: 3px solid #f2a33a; }
+    #s09-canvas { display: block; width: 1152px; height: 446px; image-rendering: pixelated; }
+  </style>
+  <div id="root" data-composition-id="s09" data-width="1920" data-height="1080">
+    <div id="s09-title" class="title-line"><div><span class="w">The</span> <span class="w">whole</span> <span class="w">mill.</span></div><div class="g"><span class="w">One</span> <span class="w">system.</span></div></div>
+    <div id="s09-win" class="xp-win">
+      <div class="xp-title"><img src="assets/terras-mark.svg" alt="" />Terras ERP — Dashboard</div>
+      <div id="s09-tabs"><div class="s09-tab">Overview</div><div class="s09-tab on">Floor</div></div>
+      <canvas id="s09-canvas"></canvas>
+    </div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    // Night shift: every loom still running, finishing winding down.
+    const floor = window.TerrasFloor.mount(document.querySelector("#s09-canvas"), 3.6, (r, i) =>
+      r.lane === 2 && i % 2 ? Infinity : -1);
+    const clock = { t: 0 };
+    tl.fromTo(clock, { t: 30 }, { t: 34, duration: 4, ease: "none", onUpdate: () => floor.draw(clock.t) }, 0);
+    floor.draw(30);
+    // Pull back into the whole floor.
+    tl.fromTo("#s09-win", { scale: 1.8, opacity: 0.35 }, { scale: 1, opacity: 1, duration: 0.6, ease: "power2.out" }, 0);
+    tl.fromTo("#s09-title .w", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.13, stagger: 0.07 }, 0.6);
+    // Blur swap to the end card.
+    tl.to(["#s09-win", "#s09-title"], { opacity: 0, filter: "blur(8px)", duration: 0.25, ease: "power3.in" }, 3.7);
+    window.__timelines["s09"] = tl;
+  </script>
+</template>
