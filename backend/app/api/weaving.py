@@ -120,7 +120,11 @@ async def work_center_candidate_mos(
     await _get_wc(db, wc_id)
     q = (
         select(ManufacturingOrder)
-        .options(selectinload(ManufacturingOrder.item))
+        .options(
+            selectinload(ManufacturingOrder.item),
+            # variant_labels reads these; lazy-loading them here raises MissingGreenlet.
+            selectinload(ManufacturingOrder.attribute_values).joinedload(AttributeValue.attribute),
+        )
         .where(ManufacturingOrder.status.notin_(CLOSED_MO_STATUSES))
     )
     if not include_all:
@@ -143,6 +147,8 @@ async def work_center_candidate_mos(
                 "item_name": mo.item_name,
                 "qty": float(mo.qty or 0),
                 "status": mo.status,
+                # Combo + size, so two same-item MOs can be told apart in the picker.
+                **mo_variant_service.variant_labels(mo),
             }
             for mo in mos
         ],

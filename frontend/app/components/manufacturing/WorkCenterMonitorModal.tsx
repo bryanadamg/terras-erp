@@ -563,7 +563,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
 
     const moOptions = moCands.map((mo: any) => ({
         value: mo.id,
-        label: `${mo.code}${mo.item_code ? ' — ' + mo.item_code : ''}`,
+        label: `${mo.code}${mo.combo_label ? ' · ' + mo.combo_label : ''}${mo.size_label ? ' · ' + mo.size_label : ''}${mo.item_code ? ' — ' + mo.item_code : ''}`,
         subLabel: mo.qty ? `${fmt(mo.qty, 2)}` : undefined,
     }));
 
