@@ -35,15 +35,9 @@ const BANDS: Band[] = [
                 f('ms.header_meta', { fontSize: 7, color: '#555', align: 'center', hideWhenEmpty: true }),
             ]),
             stack(9, 4, [
+                f('ms.barcode', { align: 'right', imageHeight: 72, hideWhenEmpty: true }),
                 f('ms.code', { bold: true, mono: true, align: 'right' }),
             ], { align: 'right' }),
-            // Own full-width row: an MO code runs ~40 chars (~440 Code 128 modules),
-            // and squeezed into the 4-column slot its bars fell to ~0.15 mm — too
-            // thin for a laser scanner, while the short PR code on the pull sheet
-            // still read. Full width leaves it at its natural ~0.26 mm/module.
-            stack(1, 12, [
-                f('ms.barcode', { align: 'right', imageHeight: 34, hideWhenEmpty: true }),
-            ], { row: 2, align: 'right' }),
         ],
     },
     {

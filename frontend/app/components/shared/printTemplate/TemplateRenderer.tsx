@@ -10,6 +10,24 @@ import { resolveField, fieldDef } from './fieldRegistry';
 import { rowSource } from './rowSources';
 import { PRINT_CODE_FONT as CODE_FONT, PRINT_SERIF_FONT } from '../xpTheme';
 import { makeLotBarcodeDataUrl } from './doctypes/outputLabel';
+import QRCode from 'qrcode';
+
+/** QR of `text` as vector SVG — built synchronously, crisp at any printer DPI. */
+function QrSvg({ text, size }: { text: string; size: number }) {
+    const { modules } = QRCode.create(text, { errorCorrectionLevel: 'M' });
+    const n = modules.size, quiet = 4; // spec quiet zone: 4 modules
+    let d = '';
+    for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
+        if (modules.get(r, c)) d += `M${c + quiet},${r + quiet}h1v1h-1z`;
+    }
+    const w = n + 2 * quiet;
+    return (
+        <svg viewBox={`0 0 ${w} ${w}`} width={size} height={size} shapeRendering="crispEdges" style={{ display: 'block' }}>
+            <rect width={w} height={w} fill="#fff" />
+            <path d={d} fill="#000" />
+        </svg>
+    );
+}
 
 /**
  * Renders a print layout to JSX.
@@ -119,8 +137,16 @@ function FieldValue({ item, ctx, docType }: {
     if (def?.kind === 'barcode') {
         if (resolved.empty) return null;
         const right = item.align === 'right';
+        const justify = right ? 'flex-end' : item.align === 'center' ? 'center' : 'flex-start';
+        // Height doubles as the QR's side; floored so a slot sized for a 34px-tall
+        // Code 128 (saved templates) still prints a QR big enough to read (~17 mm).
+        if (def.qr) return (
+            <div style={{ display: 'flex', justifyContent: justify }}>
+                <QrSvg text={resolved.text} size={Math.max(item.imageHeight ?? 0, 64)} />
+            </div>
+        );
         return (
-            <div style={{ display: 'flex', justifyContent: right ? 'flex-end' : item.align === 'center' ? 'center' : 'flex-start' }}>
+            <div style={{ display: 'flex', justifyContent: justify }}>
                 {/* Real Code 128 of the field's text, so a scanner gun typing it into a
                     list's search box lands on the document. */}
                 <img src={makeLotBarcodeDataUrl(resolved.text)} alt={resolved.text} style={{
