@@ -578,7 +578,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
         .filter((wo: any) => !wo.already_running)
         .map((wo: any) => ({
             value: wo.id,
-            label: `${wo.code || wo.name}${wo.combo_label ? ' · ' + wo.combo_label : ''}${wo.item_code ? ' — ' + wo.item_code : ''}`,
+            label: `${wo.code || wo.name}${wo.combo_label ? ' · ' + wo.combo_label : ''}${wo.size_label ? ' · ' + wo.size_label : ''}${wo.item_code ? ' — ' + wo.item_code : ''}`,
             subLabel: [
                 wo.qty ? `${fmt(wo.qty, 2)} kg` : null,
                 wo.target_end_date ? `${t('wo_due')} ${fmtDate(wo.target_end_date)}` : null,
