@@ -1,5 +1,6 @@
 'use client';
 
+import TreeSelect, { buildLocationPickerTree, leavesOnly } from '../shared/TreeSelect';
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import ModalWrapper from '../shared/ModalWrapper';
 
@@ -97,11 +98,7 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
 
     // Any childless location is a destination — a warehouse with no zones holds
     // stock directly (same leaf rule as the backend's putaway bins).
-    const leafLocations = useMemo(
-        () => (locations || []).filter((l: any) => !l.has_children),
-        [locations],
-    );
-    const locLabel = (l: any) => l.full_path || (l.parent_name ? `${l.parent_name} / ${l.name}` : l.name);
+    const locTree = useMemo(() => leavesOnly(buildLocationPickerTree(locations || [])), [locations]);
 
     const [tab, setTab] = useState<'performance' | 'calendar' | 'beams'>('performance');
     const [data, setData] = useState<any>(null);
@@ -1382,17 +1379,8 @@ export default function WorkCenterMonitorModal({ isOpen, onClose, workCenter, au
                                                                             {' · '}
                                                                             <b>{fmt(m.remaining, 1)} kg</b> {t('unmount_remnant_to')}:
                                                                         </span>
-                                                                        <select
-                                                                            value={returnLoc}
-                                                                            onChange={e => setReturnLoc(e.target.value)}
-                                                                            className={undefined}
-                                                                            style={xpSelect()}
-                                                                        >
-                                                                            <option value="">{t('unmount_leave_at_loom')}</option>
-                                                                            {leafLocations.map((l: any) => (
-                                                                                <option key={l.id} value={l.id}>{locLabel(l)}</option>
-                                                                            ))}
-                                                                        </select>
+                                                                        <TreeSelect options={locTree} value={returnLoc} onChange={setReturnLoc}
+                                                                            allowEmpty emptyLabel={t('unmount_leave_at_loom')} size="sm" style={{ minWidth: 220 }} />
                                                                         <div style={{ display: 'flex', gap: 6, marginLeft: 'auto' }}>
                                                                             <XPActionButton
                                                                                 tone="warning"

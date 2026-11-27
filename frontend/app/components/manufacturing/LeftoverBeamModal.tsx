@@ -1,5 +1,6 @@
 'use client';
 
+import TreeSelect, { buildLocationPickerTree, leavesOnly } from '../shared/TreeSelect';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useData } from '../../context/DataContext';
 import { useToast } from '../shared/Toast';
@@ -48,11 +49,7 @@ export default function LeftoverBeamModal({ wo, onClose, onDone }: Props) {
 
     // Any childless location is a destination — a warehouse with no zones holds
     // stock directly (same leaf rule as the backend's putaway bins).
-    const leafLocations = useMemo(
-        () => (locations || []).filter((l: any) => !l.has_children),
-        [locations],
-    );
-    const locLabel = (l: any) => l.full_path || (l.parent_name ? `${l.parent_name} / ${l.name}` : l.name);
+    const locTree = useMemo(() => leavesOnly(buildLocationPickerTree(locations || [])), [locations]);
 
     const selected = mounts.find((m: any) => String(m.id) === mountId) || null;
 
@@ -216,12 +213,8 @@ export default function LeftoverBeamModal({ wo, onClose, onDone }: Props) {
 
                         <div>
                             <FieldLabel>Leftover goes to</FieldLabel>
-                            <select style={xpSelect({ width: '100%' })} value={returnLoc} onChange={e => setReturnLoc(e.target.value)}>
-                                <option value="">— leave parked at the machine —</option>
-                                {leafLocations.map((l: any) => (
-                                    <option key={l.id} value={l.id}>{locLabel(l)}</option>
-                                ))}
-                            </select>
+                            <TreeSelect options={locTree} value={returnLoc} onChange={setReturnLoc}
+                                allowEmpty emptyLabel="— leave parked at the machine —" size="sm" style={{ width: '100%' }} />
                         </div>
 
                         <div>

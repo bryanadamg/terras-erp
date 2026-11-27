@@ -1056,7 +1056,7 @@ export default function WorkOrderPanel({
                         code: l.item_code,
                         ends: l.qty != null ? Number(l.qty) : null,
                     }))}
-                    locations={locationList.map((l: any) => ({ id: l.id, code: l.code, name: l.name }))}
+                    locations={locationList}
                     nextWorkCenters={allMachines.map((wc: any) => ({ id: wc.id, name: wc.name }))}
                     onClose={() => setBeamPlanOpen(false)}
                 />

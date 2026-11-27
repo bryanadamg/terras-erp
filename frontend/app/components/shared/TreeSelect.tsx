@@ -390,6 +390,13 @@ export function buildLocationFilterTree(locations: any[]): TreeSelectOption[] {
   });
 }
 
+/** Same tree, but only childless nodes pickable (a lot goes into a bin, not a warehouse). */
+export function leavesOnly(options: TreeSelectOption[]): TreeSelectOption[] {
+  return options.map(o => o.children?.length
+    ? { ...o, selectable: false, children: leavesOnly(o.children) }
+    : o);
+}
+
 /**
  * Build tree options for a PICKER dropdown (select any location, any level).
  * Warehouses, zones, and bins are all selectable.

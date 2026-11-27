@@ -1,4 +1,5 @@
 'use client';
+import TreeSelect, { buildLocationPickerTree } from '../shared/TreeSelect';
 import React, { useState, useMemo } from 'react';
 import { useData } from '../../context/DataContext';
 import ModalWrapper from '../shared/ModalWrapper';
@@ -38,7 +39,7 @@ interface Props {
     groupName?: string;
     components?: Array<{ name: string; code?: string; ends: number | null }>;
     centerLabel?: string;
-    locations?: Array<{ id: string; code?: string; name: string }>;
+    locations?: any[];   // full Location rows: the picker builds the warehouse tree off them
     nextWorkCenters?: Array<{ id: string; name: string }>;
     onClose: () => void;
 }
@@ -49,6 +50,7 @@ function makeRow(defaultWcId = '', defaultEnds = ''): BeamRow {
 }
 
 export default function BeamPlanningModal({ mo, machines, groupId, groupName, components = [], centerLabel = 'Beaming', locations = [], nextWorkCenters = [], onClose }: Props) {
+    const locTree = useMemo(() => buildLocationPickerTree(locations), [locations]);
     const { authFetch, fetchData } = useData();
 
     // Machine is optional, same as the WO row: leaving it blank pegs the WO to the
@@ -323,16 +325,9 @@ export default function BeamPlanningModal({ mo, machines, groupId, groupName, co
                                             />
                                         )}
                                         {locations.length > 0 && (
-                                            <select
-                                                style={{ ...xpInput, width: '100%', fontSize: 10 }}
-                                                value={row.next_destination_location_id}
-                                                onChange={e => update(row.localId, 'next_destination_location_id', e.target.value)}
-                                            >
-                                                <option value="">— Lokasi —</option>
-                                                {locations.map(l => (
-                                                    <option key={l.id} value={l.id}>{l.code || l.name}</option>
-                                                ))}
-                                            </select>
+                                            <TreeSelect options={locTree} value={row.next_destination_location_id}
+                                                onChange={v => update(row.localId, 'next_destination_location_id', v)}
+                                                allowEmpty emptyLabel="— Lokasi —" size="sm" style={{ width: '100%' }} />
                                         )}
                                     </div>
                                 ) : <span style={{ color: 'var(--terras-win-text-3, #aaa)', fontSize: 9 }}>—</span>}
