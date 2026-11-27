@@ -15,6 +15,18 @@ on `main`:
 
 ## [Unreleased]
 
+## [1.15.0] - 2026-11-27
+
+### Added
+- Tree pickers have a search box, so a location can be found without scrolling; the beam and leftover-beam location pickers now use it instead of a long dropdown
+- The weaving monitor's start-run picker shows each work order's size, and its manufacturing order fallback picker shows combo and size, so two orders for the same item can be told apart
+
+### Fixed
+- The SPK Produksi code prints as a QR code, so long manufacturing order codes scan
+- The weaving monitor's lines, rate and efficiency editors accept typed input, and the rate takes two decimals
+- The sample and lab dip report date filters keep focus while typing
+- Sales order and purchase order quantities, VAT and discount accept decimals without the browser blocking save
+
 ## [1.14.1] - 2026-11-27
 
 ### Fixed
