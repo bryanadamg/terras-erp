@@ -1,0 +1,103 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; background: var(--color-ground); }
+    #s02-hour { position: absolute; left: 96px; top: 300px; }
+    #s02-line { position: absolute; left: 100px; top: 440px; width: 340px; }
+    #s02-win { left: 500px; top: 120px; width: 1320px; overflow: visible; }
+    #s02-win .xp-title { border-radius: 10px 10px 0 0; }
+    #s02-body { padding: 22px 26px 26px; background: var(--color-ground); }
+    .s02-row { display: grid; gap: 18px; margin-bottom: 16px; }
+    .s02-row label { display: block; font-size: 26px; font-weight: 700; margin-bottom: 6px; color: #222; }
+    .s02-row label em { font-style: normal; font-weight: 400; color: #777; }
+    #s02-r1 { grid-template-columns: 300px 1fr 1fr; }
+    #s02-r2 { grid-template-columns: 1fr 300px; }
+    #s02-table { background: #fff; border: 2px solid #7f9db9; margin-top: 6px; }
+    #s02-head, .s02-line { display: grid; grid-template-columns: 470px 170px 240px 130px 1fr; align-items: center; }
+    #s02-head { height: 54px; }
+    #s02-head div, .s02-line > div { padding: 0 14px; }
+    .s02-line { height: 132px; font-size: 28px; border-top: 1px solid #e0dfd8; position: relative; }
+    .s02-line:nth-child(odd) { background: #f9f8f4; }
+    .s02-item b { display: block; }
+    .s02-item .code { font-size: 26px; color: #666; font-weight: 400; }
+    .s02-pick { margin-top: 6px; height: 48px; width: 420px; font-size: 28px; background: #fff; border: 2px solid #7f9db9; border-radius: 3px; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; position: relative; }
+    .s02-pick::after { content: ""; width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-top: 10px solid #1a1a1a; }
+    .s02-num { text-align: right; }
+    .s02-in { height: 54px; display: flex; align-items: center; gap: 10px; }
+    .s02-in .xp-field { height: 54px; width: 130px; justify-content: flex-end; font-weight: 700; }
+    .s02-uom { font-size: 24px; font-weight: 700; color: #fff; background: #1a3d6b; border-radius: 3px; padding: 2px 8px; }
+    .s02-lot .xp-field { height: 54px; font-size: 26px; }
+    #s02-menu { position: absolute; left: -2px; top: 46px; width: 420px; background: #fff; border: 2px solid #000; box-shadow: 3px 3px 0 rgba(0,0,0,0.25); z-index: 5; font-size: 26px; }
+    #s02-menu div { height: 48px; display: flex; align-items: center; padding: 0 12px; }
+    #s02-opt3 { position: relative; }
+    #s02-hl { position: absolute; inset: 0; background: #316ac5; }
+    #s02-opt3 span { position: relative; }
+    #s02-v2 { position: absolute; left: 10px; top: 5px; font-weight: 700; color: #1a1a1a; opacity: 0; }
+    #s02-menu, #s02-hl { opacity: 0; }
+    #s02-foot { display: flex; justify-content: flex-end; gap: 16px; margin-top: 20px; }
+    #s02-ok .ic { width: 28px; height: 28px; }
+  </style>
+  <div id="root" data-composition-id="s02" data-width="1920" data-height="1080">
+    <div id="s02-hour" class="hour"><span class="w">0</span><span class="w">6</span><span class="w">:</span><span class="w">0</span><span class="w">0</span></div>
+    <div id="s02-line" class="hour-line"><span class="w">Yarn</span> <span class="w">in.</span> <span class="w">Each</span> <span class="w">line</span> <span class="w">to</span> <span class="w">its</span> <span class="w">own</span> <span class="w">store.</span></div>
+
+    <div id="s02-win" class="xp-win">
+      <div class="xp-title"><span class="ic" style="--i:url(assets/icons/box-arrow-in-down.svg)"></span>Receive Goods — PO-2026-11-0118</div>
+      <div id="s02-body">
+        <div id="s02-r1" class="s02-row">
+          <div><label>Receipt Date</label><div class="xp-field">27/11/2026</div></div>
+          <div><label>Receiving Warehouse</label><div class="xp-field">YARN STORE</div></div>
+          <div><label>Notes</label><div class="xp-field">Weighed on arrival</div></div>
+        </div>
+        <div id="s02-r2" class="s02-row">
+          <div><label>Delivery Note No. <em>(Surat Jalan)</em></label><div class="xp-field code">SJ/KMT/1123</div></div>
+          <div><label>Delivery Note Date</label><div class="xp-field">27/11/2026</div></div>
+        </div>
+        <div id="s02-table">
+          <div id="s02-head" class="xp-th"><div>Item / Warehouse</div><div class="s02-num">Ordered</div><div>This Receipt</div><div>Cones</div><div>Lot No.</div></div>
+          <div class="s02-line">
+            <div class="s02-item"><b>POLYESTER 150D</b><div class="s02-pick"><span>Same as receipt</span></div></div>
+            <div class="s02-num">1,200 kg</div>
+            <div class="s02-in"><div class="xp-field">1,200</div><span class="s02-uom">KG</span></div>
+            <div class="s02-in"><div class="xp-field" style="width:100px;">240</div></div>
+            <div class="s02-lot"><div class="xp-field code">KMT-2311-A</div></div>
+          </div>
+          <div class="s02-line">
+            <div class="s02-item"><b>SPANDEX 40D</b><div class="s02-pick" id="s02-pick2"><span id="s02-v1">Same as receipt</span><span id="s02-v2">COVERING STORE</span>
+              <div id="s02-menu"><div>Same as receipt</div><div>YARN STORE</div><div id="s02-opt3"><div id="s02-hl"></div><span id="s02-opt3t">COVERING STORE</span></div><div>GREIGE STORE</div></div></div></div>
+            <div class="s02-num">300 kg</div>
+            <div class="s02-in"><div class="xp-field">300</div><span class="s02-uom">KG</span></div>
+            <div class="s02-in"><div class="xp-field" style="width:100px;">60</div></div>
+            <div class="s02-lot"><div class="xp-field code">KMT-2311-B</div></div>
+          </div>
+        </div>
+        <div id="s02-foot"><div class="xp-btn">Cancel</div><div class="xp-btn go" id="s02-ok"><span class="ic" style="--i:url(assets/icons/check-lg.svg)"></span>Confirm Receipt</div></div>
+      </div>
+    </div>
+    <svg id="s02-cursor" class="cursor" viewBox="0 0 24 24"><path d="M3 2 L3 20 L8 15.5 L11.5 22 L14.5 20.6 L11 14 L18 14 Z" fill="#fff" stroke="#000" stroke-width="1.4" stroke-linejoin="round"/></svg>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    // Lands out of the zoom through the store: slightly large, settles.
+    tl.fromTo("#s02-win", { scale: 1.12, opacity: 0.35, filter: "blur(10px)" }, { scale: 1, opacity: 1, filter: "blur(0px)", duration: 0.45, ease: "expo.out" }, 0);
+    tl.fromTo("#s02-hour .w", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.13, stagger: 0.05 }, 0.25);
+    tl.fromTo("#s02-line .w", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.13, stagger: 0.07 }, 0.55);
+    // Line 2 goes to its own store. (cursor tip sits at +9,+6 of its box)
+    tl.fromTo("#s02-cursor", { x: 1300, y: 1150 }, { x: 860 - 9, y: 707 - 6, duration: 0.6, ease: "power3.out" }, 0.7);
+    tl.fromTo("#s02-menu", { opacity: 0, scaleY: 0.6, transformOrigin: "50% 0%" }, { opacity: 1, scaleY: 1, duration: 0.15, ease: "power2.out", immediateRender: false }, 1.33);
+    tl.to("#s02-cursor", { x: 720 - 9, y: 850 - 6, duration: 0.4, ease: "power2.inOut" }, 1.5);
+    tl.set("#s02-hl", { opacity: 1 }, 1.8);
+    tl.set("#s02-opt3t", { color: "#ffffff" }, 1.8);
+    tl.set("#s02-menu", { opacity: 0 }, 2.15);
+    tl.set("#s02-v1", { opacity: 0 }, 2.15);
+    tl.set("#s02-v2", { opacity: 1 }, 2.15);
+    tl.fromTo("#s02-pick2", { backgroundColor: "#fff3cd" }, { backgroundColor: "#ffffff", duration: 0.7, ease: "power2.out", immediateRender: false }, 2.15);
+    // Confirm.
+    tl.to("#s02-cursor", { x: 1650 - 9, y: 806 - 6, duration: 0.55, ease: "power2.inOut" }, 2.45);
+    tl.to("#s02-ok", { scale: 0.94, duration: 0.06 }, 3.1);
+    tl.to("#s02-ok", { scale: 1, duration: 0.15, ease: "expo.out" }, 3.16);
+    // Whip out to the left; the beams come in from the right.
+    tl.to(["#s02-win", "#s02-cursor"], { x: "-=1500", filter: "blur(14px)", duration: 0.3, ease: "power3.in" }, 4.15);
+    tl.to(["#s02-hour", "#s02-line"], { opacity: 0, filter: "blur(8px)", duration: 0.2, ease: "power3.in" }, 4.1);
+    window.__timelines["s02"] = tl;
+  </script>
+</template>

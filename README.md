@@ -7,7 +7,7 @@
 **Current release: v1.13.0** (2026-11-25) — see [`CHANGELOG.md`](CHANGELOG.md).
 
 <p align="center">
-  <img src="marketing/terras-v1.gif" alt="Terras ERP v1.0: one sales order travels through planning, the loom, the dye bath and a carton label to a verified dispatch, then every lot traces back to its yarn" width="800" />
+  <img src="marketing/terras-v1.13.gif" alt="Terras ERP v1.13, one day at the mill: yarn received into two stores, beams drawn in by name, a loom tuned with its tuner, output logged from two beams with its label, cartons picked in shelf order, an unprinted Surat Jalan flagged, and the day exported to Excel" width="800" />
   <br />
   <sub>All data shown is demo data.</sub>
 </p>

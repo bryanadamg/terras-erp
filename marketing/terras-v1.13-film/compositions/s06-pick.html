@@ -1,0 +1,73 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; background: var(--color-ground); }
+    #s06-hour { position: absolute; left: 96px; top: 300px; }
+    #s06-line { position: absolute; left: 100px; top: 440px; width: 340px; }
+    #s06-paper { left: 520px; top: 70px; width: 1290px; height: 940px; padding: 26px 30px; overflow: hidden; transform-origin: 0 0; }
+    #s06-head { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #000; padding-bottom: 12px; }
+    #s06-head .co { font-size: 26px; font-weight: 700; }
+    #s06-head h1 { font-family: Georgia, "Times New Roman", serif; font-size: 50px; font-weight: 700; letter-spacing: 0.02em; }
+    #s06-head small { display: block; font-size: 24px; }
+    #s06-head img { width: 120px; height: 120px; }
+    #s06-facts { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid #000; margin-top: 16px; }
+    #s06-facts div { padding: 8px 12px; border-right: 1px solid #000; font-size: 26px; }
+    #s06-facts div:last-child { border-right: none; }
+    #s06-facts small { display: block; font-size: 22px; font-weight: 700; }
+    #s06-title { margin: 20px 0 8px; font-size: 28px; font-weight: 700; }
+    #s06-table { position: relative; border: 1px solid #000; }
+    .s06-grid { display: grid; grid-template-columns: 70px 330px 330px 1fr 90px 60px; }
+    .s06-grid > div { padding: 0 12px; border-right: 1px solid #000; display: flex; align-items: center; }
+    .s06-grid > div:last-child { border-right: none; }
+    #s06-th { height: 56px; background: #eee; font-weight: 700; font-size: 24px; border-bottom: 1px solid #000; }
+    #s06-lochead { position: relative; }
+    #s06-lochl { position: absolute; inset: 0; background: #fff3cd; opacity: 0; }
+    #s06-lochead span { position: relative; }
+    #s06-rows { position: relative; height: 380px; }
+    .s06-row { position: absolute; left: 0; right: 0; height: 76px; font-size: 26px; border-bottom: 1px solid #000; background: #fff; }
+    .s06-row .loc { font-weight: 700; }
+    #s06-nums { position: absolute; left: 0; top: 0; width: 70px; z-index: 2; pointer-events: none; }
+    #s06-nums div { height: 76px; display: flex; align-items: center; padding-left: 12px; font-size: 26px; }
+  </style>
+  <div id="root" data-composition-id="s06" data-width="1920" data-height="1080">
+    <div id="s06-hour" class="hour"><span class="w">1</span><span class="w">5</span><span class="w">:</span><span class="w">0</span><span class="w">0</span></div>
+    <div id="s06-line" class="hour-line"><span class="w">Picked</span> <span class="w">in</span> <span class="w">shelf</span> <span class="w">order.</span></div>
+    <div id="s06-paper" class="paper">
+      <div id="s06-head">
+        <div><div class="co">PT DEMO TEKSTIL</div><h1>KARTU PICKING</h1><small>Pick List Card</small></div>
+        <div style="text-align:center;"><img src="assets/qr-pick.svg" alt="" /><small class="code">PL-2026-11-0031</small></div>
+      </div>
+      <div id="s06-facts">
+        <div><small>No. SO</small><span class="code">SO-2026-11-0042</span></div>
+        <div><small>Pelanggan / Customer</small>PT DEMO GARMEN</div>
+        <div><small>Jml koli / Cartons</small>5</div>
+      </div>
+      <div id="s06-title">Daftar Koli / Carton Checklist:</div>
+      <div id="s06-table">
+        <div id="s06-th" class="s06-grid"><div>No</div><div>No. Koli / Carton</div><div id="s06-lochead"><div id="s06-lochl"></div><span>Lokasi / Location</span></div><div>Barang / Item</div><div>Qty</div><div>✓</div></div>
+        <div id="s06-rows">
+          <div id="s06-nums"><div>1</div><div>2</div><div>3</div><div>4</div><div>5</div></div>
+          <div class="s06-row s06-grid" id="s06-r1"><div></div><div class="code">PU-20261126-0014</div><div class="loc">FG › C-04</div><div>NAVY L-72</div><div>12</div><div></div></div>
+          <div class="s06-row s06-grid" id="s06-r2"><div></div><div class="code">PU-20261126-0009</div><div class="loc">FG › A-01</div><div>NAVY L-72</div><div>12</div><div></div></div>
+          <div class="s06-row s06-grid" id="s06-r3"><div></div><div class="code">PU-20261127-0002</div><div class="loc">FG › B-02</div><div>NAVY XL-76</div><div>10</div><div></div></div>
+          <div class="s06-row s06-grid" id="s06-r4"><div></div><div class="code">PU-20261126-0011</div><div class="loc">FG › A-01</div><div>NAVY L-72</div><div>12</div><div></div></div>
+          <div class="s06-row s06-grid" id="s06-r5"><div></div><div class="code">PU-20261127-0005</div><div class="loc">FG › A-03</div><div>NAVY XL-76</div><div>10</div><div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    // Rows: server order first, then by location (stable: the two A-01 cartons keep their order).
+    const before = { r1: 0, r2: 1, r3: 2, r4: 3, r5: 4 }, after = { r2: 0, r4: 1, r5: 2, r3: 3, r1: 4 };
+    Object.keys(before).forEach(k => tl.set("#s06-" + k, { y: before[k] * 76 }, 0));
+    // The label widens into the A4 card it now sits beside.
+    tl.fromTo("#s06-paper", { clipPath: "inset(0 66% 0 0)" }, { clipPath: "inset(0 0% 0 0)", duration: 0.45, ease: "power3.out" }, 0);
+    tl.fromTo("#s06-hour .w", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.13, stagger: 0.05 }, 0.25);
+    tl.fromTo("#s06-line .w", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.13, stagger: 0.07 }, 0.5);
+    tl.fromTo("#s06-lochl", { opacity: 0 }, { opacity: 1, duration: 0.15, immediateRender: false }, 1.0);
+    Object.keys(after).forEach((k, i) => tl.to("#s06-" + k, { y: after[k] * 76, duration: 0.5, ease: "power2.inOut" }, 1.2 + i * 0.05));
+    // Blur swap onto the loading deck.
+    tl.to(["#s06-paper", "#s06-hour", "#s06-line"], { opacity: 0, filter: "blur(8px)", duration: 0.2, ease: "power3.in" }, 3.25);
+    window.__timelines["s06"] = tl;
+  </script>
+</template>

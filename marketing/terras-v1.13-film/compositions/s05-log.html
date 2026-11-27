@@ -1,0 +1,104 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; background: var(--color-ground); }
+    #s05-hour { position: absolute; left: 96px; top: 300px; }
+    #s05-line { position: absolute; left: 100px; top: 440px; width: 340px; }
+    #s05-win { left: 470px; top: 70px; width: 900px; }
+    #s05-body { padding: 18px 22px 22px; background: var(--color-ground); }
+    #s05-item { background: #fff; border: 2px solid #7f9db9; padding: 12px 16px; font-size: 28px; }
+    #s05-item b { color: #000080; }
+    #s05-bar { height: 16px; margin-top: 8px; background: #e8e8e8; border: 1px solid #7a7a7a; }
+    #s05-barf { height: 100%; width: 100%; background: linear-gradient(#f0b040, #c07000); transform-origin: 0 50%; }
+    .s05-lbl { display: block; font-size: 26px; font-weight: 700; margin: 14px 0 6px; }
+    #s05-qty { display: flex; gap: 10px; align-items: center; }
+    #s05-qty .xp-field { width: 300px; font-weight: 700; font-size: 34px; justify-content: flex-end; }
+    .s05-uom { font-size: 26px; font-weight: 700; color: #fff; background: #1a3d6b; border-radius: 3px; padding: 4px 10px; }
+    #s05-lotno { color: #888; font-size: 24px; }
+    #s05-lots { background: #fff; border: 2px solid #7f9db9; }
+    #s05-lotsh { display: flex; justify-content: space-between; align-items: center; padding: 8px 14px; font-size: 26px; font-weight: 700; border-bottom: 1px solid #d2ccbe; background: #f4f2ec; }
+    #s05-lotsh span { font-weight: 400; color: #444; }
+    .s05-lot { display: flex; align-items: center; gap: 14px; height: 70px; padding: 0 14px; font-size: 27px; border-top: 1px solid #eee; }
+    .s05-box { width: 30px; height: 30px; border: 2px solid #1c5180; background: #fff; position: relative; flex: none; }
+    .s05-box i { position: absolute; left: 4px; top: -2px; font-style: normal; font-weight: 700; color: #21a121; font-size: 28px; }
+    #s05-c1, #s05-c2, #s05-k1, #s05-k2 { opacity: 0; }
+    .s05-take { background: #d0f0d0; color: #0a3e0a; border: 2px solid #7fbf7f; border-radius: 3px; padding: 0 8px; font-weight: 700; }
+    .s05-at { color: #0058e6; }
+    #s05-foot { display: flex; justify-content: flex-end; gap: 16px; margin-top: 18px; }
+    #s05-label { left: 1410px; top: 70px; width: 440px; height: 940px; padding: 18px 20px; font-size: 26px; }
+    #s05-lh { display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 10px; }
+    #s05-lh b { display: block; font-size: 27px; }
+    #s05-lh img { width: 120px; height: 120px; }
+    #s05-lh small { display: block; font-size: 22px; }
+    #s05-hero { border: 3px solid #000; margin-top: 14px; padding: 10px; text-align: center; }
+    #s05-hero small { display: block; font-size: 22px; font-weight: 700; }
+    #s05-hero .code { font-size: 32px; display: block; margin: 4px 0 8px; }
+    #s05-hero img { width: 100%; height: 90px; }
+    #s05-boxes { display: grid; grid-template-columns: 1fr 120px; gap: 10px; margin-top: 12px; }
+    #s05-boxes div { border: 2px solid #000; padding: 6px 10px; }
+    #s05-boxes small { display: block; font-size: 20px; font-weight: 700; }
+    #s05-boxes b { font-size: 40px; }
+    .s05-kv { display: grid; grid-template-columns: 170px 1fr; border-bottom: 1px solid #000; padding: 8px 0; font-size: 26px; }
+  </style>
+  <div id="root" data-composition-id="s05" data-width="1920" data-height="1080">
+    <div id="s05-hour" class="hour"><span class="w">1</span><span class="w">3</span><span class="w">:</span><span class="w">0</span><span class="w">0</span></div>
+    <div id="s05-line" class="hour-line"><span class="w">Two</span> <span class="w">beams</span> <span class="w">in.</span> <span class="w">Label</span> <span class="w">out.</span></div>
+    <div id="s05-win" class="xp-win">
+      <div class="xp-title">Log WO: WO-WV-0118-03 — MO-0118-02</div>
+      <div id="s05-body">
+        <div id="s05-item"><b>GREIGE 38 NS</b> · L 72 (70-74)<div id="s05-bar"><div id="s05-barf"></div></div></div>
+        <span class="s05-lbl">Actual Qty Produced</span>
+        <div id="s05-qty"><div class="xp-field"><span id="s05-n">0.0</span></div><span class="s05-uom">KG</span></div>
+        <span class="s05-lbl">Greige No.</span>
+        <div class="xp-field" id="s05-lotno">Leave empty to auto-generate (GRG-YYYYMMDD-NNNN)</div>
+        <span class="s05-lbl">Lots to Consume — WARP 38NS</span>
+        <div id="s05-lots">
+          <div id="s05-lotsh"><span>2 lots · 186.4 kg available · drawing <b id="s05-draw">0.0</b></span></div>
+          <div class="s05-lot"><div class="s05-box"><i id="s05-c1">✓</i></div><span class="chip c-blue code" style="font-size:26px;">BM-20261127-0003</span><span>93.2 kg</span><span class="s05-take" id="s05-k1">take 93.2</span><span class="s05-at">@ L1-07</span></div>
+          <div class="s05-lot"><div class="s05-box"><i id="s05-c2">✓</i></div><span class="chip c-blue code" style="font-size:26px;">BM-20261127-0004</span><span>93.2 kg</span><span class="s05-take" id="s05-k2">take 93.2</span><span class="s05-at">@ L1-07</span></div>
+        </div>
+        <div id="s05-foot"><div class="xp-btn">Cancel</div><div class="xp-btn go" id="s05-go">Log Completion</div></div>
+      </div>
+    </div>
+
+    <div id="s05-label" class="paper">
+      <div id="s05-lh"><div><b>PT DEMO TEKSTIL</b>LABEL KANTONG / BAG LABEL<small>27/11/2026</small></div><div style="text-align:center;"><img src="assets/qr-lot.svg" alt="" /><small>Scan = Lot</small></div></div>
+      <div id="s05-hero"><small>NO. LOT (KANTONG)</small><span class="code">GRG-20261127-0007</span><img src="assets/barcode-lot.svg" alt="" /></div>
+      <div id="s05-boxes"><div><small>BERAT / WEIGHT</small><b>186.4 kg</b></div><div><small>KANTONG</small><b>1</b></div></div>
+      <div class="s05-kv"><b>Artikel</b><span>GREIGE 38 NS</span></div>
+      <div class="s05-kv"><b>Size</b><span>L 72 (70-74)</span></div>
+      <div class="s05-kv"><b>No. Mesin</b><span>L1-07</span></div>
+      <div class="s05-kv"><b>SPK / WO</b><span class="code" style="font-size:24px;">WO-WV-0118-03</span></div>
+      <div class="s05-kv"><b>Operator</b><span>Budi</span></div>
+    </div>
+    <div id="s05-dip" style="position:absolute; inset:0; background:#000; opacity:0; z-index:30;"></div>
+    <svg id="s05-cursor" class="cursor" viewBox="0 0 24 24"><path d="M3 2 L3 20 L8 15.5 L11.5 22 L14.5 20.6 L11 14 L18 14 Z" fill="#fff" stroke="#000" stroke-width="1.4" stroke-linejoin="round"/></svg>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const count = (sel, to, at, dur) => { const o = { v: 0 }; tl.fromTo(o, { v: 0 }, { v: to, duration: dur, ease: "power2.out", onUpdate: () => {
+      const el = document.querySelector(sel); if (el) el.textContent = o.v.toFixed(1); } }, at); };
+    // Opens out of the dip cut: the frame comes back up from dark.
+    tl.fromTo("#s05-dip", { opacity: 0.4 }, { opacity: 0, duration: 0.15, ease: "none" }, 0);
+    tl.fromTo("#s05-win", { scale: 1.06, opacity: 1 }, { scale: 1, opacity: 1, duration: 0.4, ease: "expo.out" }, 0);
+    tl.fromTo("#s05-barf", { scaleX: 0.55 }, { scaleX: 0.7, duration: 1.2, ease: "power2.out" }, 1.6);
+    tl.fromTo("#s05-hour .w", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.13, stagger: 0.05 }, 0.2);
+    tl.fromTo("#s05-line .w", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.13, stagger: 0.07 }, 0.45);
+    count("#s05-n", 186.4, 0.4, 0.7);
+    // Tick both beams: the draw fills up to the logged qty.
+    tl.fromTo("#s05-cursor", { x: 900, y: 1150 }, { x: 505, y: 732, duration: 0.5, ease: "power3.out" }, 0.6);
+    tl.set(["#s05-c1", "#s05-k1"], { opacity: 1 }, 1.15);
+    tl.to("#s05-cursor", { y: 802, duration: 0.25, ease: "power2.inOut" }, 1.25);
+    tl.set(["#s05-c2", "#s05-k2"], { opacity: 1 }, 1.55);
+    count("#s05-draw", 186.4, 1.15, 0.6);
+    // Log it; the bag label opens straight away.
+    tl.to("#s05-cursor", { x: 1235, y: 905, duration: 0.45, ease: "power2.inOut" }, 1.85);
+    tl.to("#s05-go", { scale: 0.94, duration: 0.06 }, 2.35);
+    tl.to("#s05-go", { scale: 1, duration: 0.15, ease: "expo.out" }, 2.41);
+    tl.fromTo("#s05-label", { y: 1100 }, { y: 0, duration: 0.5, ease: "expo.out" }, 2.45);
+    tl.to("#s05-cursor", { x: 1950, y: 1150, duration: 0.4, ease: "power3.in" }, 2.6);
+    // The label paper becomes the paper world: it slides left and widens into the Kartu Picking.
+    tl.to(["#s05-win", "#s05-hour", "#s05-line"], { opacity: 0, filter: "blur(8px)", duration: 0.2, ease: "power3.in" }, 4.05);
+    tl.to("#s05-label", { x: 520 - 1410, duration: 0.45, ease: "power2.inOut" }, 4.05);
+    window.__timelines["s05"] = tl;
+  </script>
+</template>

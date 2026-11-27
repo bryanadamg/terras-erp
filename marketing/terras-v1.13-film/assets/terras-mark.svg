@@ -1,0 +1,36 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="256" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0058e6"/>
+      <stop offset="1" stop-color="#08a5ff"/>
+    </linearGradient>
+    <!-- Carves the T's crossbar free of the cube outline; each end tapers downward independently, mirroring the old upward taper without reaching into the stem -->
+    <mask id="slice" maskUnits="userSpaceOnUse" x="0" y="0" width="256" height="256">
+      <rect width="256" height="256" fill="white"/>
+      <path d="M46 55V100L95 126.89M210 55V100L161 126.89" fill="none" stroke="black" stroke-width="30" stroke-linejoin="round" stroke-linecap="round"/>
+    </mask>
+    <!-- Blurs then re-thresholds the masked T so every corner the carve produces comes out filleted -->
+    <filter id="roundT" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 25 -12" result="round"/>
+    </filter>
+  </defs>
+
+  <!-- Rounded square background -->
+  <rect width="256" height="256" rx="60" fill="url(#bg)" stroke="#003080" stroke-width="4"/>
+
+  <!-- Cube depth: top facet rests on the T's roof (cube's top face meeting the glyph), right facet is a parallelogram whose top slant mirrors the T's taper angle, echoing the cube edge; both stay clear of the outline -->
+  <path d="M78.26 87.2L119.23 64.8Q128 60 136.77 64.8L177.74 87.2Q186.51 92 176.51 92L79.49 92Q69.49 92 78.26 87.2Z" fill="white" fill-opacity="0.16"/>
+  <path d="M150 175.4L150 137.06Q150 125.06 160.52 119.28L181.48 107.78Q192 102 192 114L192 152.34Q192 164.34 181.48 170.12L160.52 181.62Q150 187.4 150 175.4Z" fill="white" fill-opacity="0.16"/>
+
+  <!-- Outer cube outline (hexagon), corners drawn as curves rather than sharp vertex joins -->
+  <path d="M113.97 47.7Q128 40 142.03 47.7L195.97 77.3Q210 85 210 101L210 159Q210 175 195.97 182.7L142.03 212.3Q128 220 113.97 212.3L60.03 182.7Q46 175 46 159L46 101Q46 85 60.03 77.3Z" stroke="white" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- The "T" inside, sliced free of the cube outline, corners rounded off after the carve -->
+  <g filter="url(#roundT)">
+    <g mask="url(#slice)">
+      <path d="M54 100H202" stroke="white" stroke-width="16" stroke-linecap="round"/>
+      <path d="M128 104V212" stroke="white" stroke-width="20" stroke-linecap="round"/>
+    </g>
+  </g>
+</svg>

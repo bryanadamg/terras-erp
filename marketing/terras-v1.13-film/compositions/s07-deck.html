@@ -1,0 +1,92 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; background: var(--color-ground); }
+    #s07-band { position: absolute; left: 110px; top: 96px; display: flex; align-items: baseline; gap: 40px; }
+    #s07-win { left: 110px; top: 290px; width: 1700px; overflow: visible; }
+    #s07-win .xp-title { border-radius: 10px 10px 0 0; }
+    #s07-tool { display: flex; align-items: center; gap: 18px; padding: 14px 18px; background: linear-gradient(#fbfaf6, #e6e2d6); border-bottom: 1px solid #c8c3b4; font-size: 28px; }
+    #s07-search { width: 520px; color: #888; }
+    #s07-count { color: #444; }
+    #s07-xl { margin-left: auto; height: 60px; padding: 0 20px; display: flex; align-items: center; gap: 10px; border-radius: 3px; border: 2px solid; border-color: #dfdfdf #808080 #808080 #dfdfdf; background: linear-gradient(#ffffff, #d4d0c8); font-size: 28px; }
+    #s07-xl .ic { color: #1d6f42; }
+    #s07-th, .s07-row { display: grid; grid-template-columns: 220px 350px 330px 200px 150px 200px 1fr; align-items: center; }
+    #s07-th { height: 56px; background: #f4f2ec; border-bottom: 1px solid #d2ccbe; color: #2a2620; font-weight: 700; font-size: 27px; }
+    #s07-th div, .s07-row > div { padding: 0 14px; }
+    .s07-row { height: 104px; font-size: 28px; background: #fff; border-bottom: 1px solid #e6e2d6; }
+    .s07-row:nth-child(even) { background: #f9f8f4; }
+    .s07-ref { display: flex; align-items: center; gap: 10px; position: relative; }
+    .s07-sj { position: relative; display: inline-flex; align-items: center; gap: 4px; height: 40px; padding: 0 8px; border: 2px solid; border-radius: 3px; font-weight: 700; font-size: 24px; }
+    .s07-sj .ic { width: 22px; height: 22px; }
+    .s07-sj.no { background: #eae8e2; color: #777; border-color: #c8c6be; }
+    .s07-sj.yes { background: #d4f0d4; color: #005500; border-color: #99cc99; }
+    #s07-sjyes { position: absolute; left: -2px; top: -2px; }
+    .s07-st { display: inline-flex; padding: 2px 12px; border: 2px solid; border-radius: 3px; font-weight: 700; font-size: 26px; color: #fff; }
+    .s07-staged { background: #0058e6; border-color: #003080; }
+    .s07-disp { background: #2d7a2d; border-color: #1a5e1a; }
+    .s07-print { height: 56px; padding: 0 14px; display: inline-flex; align-items: center; gap: 8px; border-radius: 3px; border: 2px solid #8a8a80; background: linear-gradient(#f0efe6, #dddbd0); font-size: 26px; white-space: nowrap; }
+    .s07-tip { position: absolute; left: 150px; top: 62px; z-index: 8; white-space: nowrap; background: #ffffe1; border: 1px solid #000; padding: 6px 10px; font-size: 26px; color: #000; box-shadow: 2px 2px 0 rgba(0,0,0,0.2); }
+    #s07-sjyes, #s07-tip1, #s07-tip2 { opacity: 0; }
+    #s07-iris { position: absolute; inset: 0; background: #fff; z-index: 40; }
+  </style>
+  <div id="root" data-composition-id="s07" data-width="1920" data-height="1080">
+    <div id="s07-band">
+      <div id="s07-hour" class="hour"><span class="w">1</span><span class="w">7</span><span class="w">:</span><span class="w">0</span><span class="w">0</span></div>
+      <div id="s07-line" class="hour-line"><span class="w">Unprinted</span> <span class="w">Surat</span> <span class="w">Jalan?</span> <span class="w">Flagged.</span></div>
+    </div>
+    <div id="s07-win" class="xp-win">
+      <div class="xp-title"><span class="ic" style="--i:url(assets/icons/truck.svg)"></span>Loading deck</div>
+      <div id="s07-tool"><div class="xp-field" id="s07-search">Search SJ no, code, vehicle...</div><span id="s07-count">6 shipment(s)</span>
+        <div id="s07-xl"><span class="ic" style="--i:url(assets/icons/file-earmark-excel.svg)"></span>Export Excel</div></div>
+      <div id="s07-th"><div>Document</div><div>Reference</div><div>Customer</div><div>Vehicle</div><div>Cartons</div><div>Status</div><div></div></div>
+      <div class="s07-row">
+        <div class="code">SHP-00118</div>
+        <div class="s07-ref"><span class="chip c-gray code" style="font-size:24px;">SJ 000118</span>
+          <span class="s07-sj no" id="s07-sjno"><span class="ic" style="--i:url(assets/icons/printer.svg)"></span>SJ<span class="s07-sj yes" id="s07-sjyes"><span class="ic" style="--i:url(assets/icons/printer.svg)"></span>SJ</span></span>
+          <span class="s07-tip" id="s07-tip1">Surat Jalan not printed yet</span>
+          <span class="s07-tip" id="s07-tip2">Surat Jalan printed 27/11/2026 17:04</span></div>
+        <div>PT DEMO GARMEN</div><div class="code">B 9123 KX</div><div>14</div>
+        <div><span class="s07-st s07-staged">STAGED</span></div>
+        <div><span class="s07-print" id="s07-print"><span class="ic" style="--i:url(assets/icons/printer.svg); width:24px; height:24px;"></span>Print Surat Jalan</span></div>
+      </div>
+      <div class="s07-row">
+        <div class="code">SHP-00117</div>
+        <div class="s07-ref"><span class="chip c-gray code" style="font-size:24px;">SJ 000117</span><span class="s07-sj yes"><span class="ic" style="--i:url(assets/icons/printer.svg)"></span>SJ</span></div>
+        <div>PT DEMO GARMEN</div><div class="code">B 8810 KY</div><div>22</div>
+        <div><span class="s07-st s07-disp">DISPATCHED</span></div><div></div>
+      </div>
+      <div class="s07-row">
+        <div class="code">SHP-00116</div>
+        <div class="s07-ref"><span class="chip c-gray code" style="font-size:24px;">SJ 000116</span><span class="s07-sj yes"><span class="ic" style="--i:url(assets/icons/printer.svg)"></span>SJ</span></div>
+        <div>PT DEMO GARMEN</div><div class="code">B 8810 KY</div><div>18</div>
+        <div><span class="s07-st s07-disp">DISPATCHED</span></div><div></div>
+      </div>
+    </div>
+    <div id="s07-iris"></div>
+    <svg id="s07-cursor" class="cursor" viewBox="0 0 24 24"><path d="M3 2 L3 20 L8 15.5 L11.5 22 L14.5 20.6 L11 14 L18 14 Z" fill="#fff" stroke="#000" stroke-width="1.4" stroke-linejoin="round"/></svg>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    tl.set("#s07-iris", { clipPath: "circle(0px at 1690px 405px)" }, 0);
+    // Blur swap: the deck sharpens in on the same ground.
+    tl.fromTo("#s07-win", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power2.out" }, 0);
+    tl.fromTo("#s07-hour .w", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.13, stagger: 0.05 }, 0.15);
+    tl.fromTo("#s07-line .w", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.13, stagger: 0.07 }, 0.4);
+    // Hover the grey printer chip: not printed yet.
+    tl.fromTo("#s07-cursor", { x: 900, y: 1150 }, { x: 562, y: 524, duration: 0.5, ease: "power3.out" }, 0.4);
+    tl.set("#s07-tip1", { opacity: 1 }, 0.95);
+    tl.set("#s07-tip1", { opacity: 0 }, 2.35);
+    // Print it.
+    tl.to("#s07-cursor", { x: 1590, y: 524, duration: 0.45, ease: "power2.inOut" }, 2.35);
+    tl.to("#s07-print", { scale: 0.94, duration: 0.06 }, 2.85);
+    tl.to("#s07-print", { scale: 1, duration: 0.15, ease: "expo.out" }, 2.91);
+    tl.fromTo("#s07-sjyes", { opacity: 0, scale: 1.4 }, { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(1.6)", immediateRender: false }, 2.9);
+    tl.set("#s07-tip2", { opacity: 1 }, 3.0);
+    tl.set("#s07-tip2", { opacity: 0 }, 3.95);
+    // Then the day goes out: Export Excel, iris from the click.
+    tl.to("#s07-cursor", { x: 1680, y: 400, duration: 0.4, ease: "power2.inOut" }, 3.8);
+    tl.to("#s07-xl", { scale: 0.94, duration: 0.06 }, 4.2);
+    tl.to("#s07-xl", { scale: 1, duration: 0.15, ease: "expo.out" }, 4.26);
+    tl.to("#s07-iris", { clipPath: "circle(2300px at 1690px 405px)", duration: 0.4, ease: "power3.in" }, 4.28);
+    window.__timelines["s07"] = tl;
+  </script>
+</template>

@@ -1,0 +1,96 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; background: var(--color-ground); }
+    #s03-band { position: absolute; left: 110px; top: 96px; display: flex; align-items: baseline; gap: 40px; }
+    #s03-win { left: 110px; top: 290px; width: 1700px; overflow: visible; }
+    #s03-win .xp-title { border-radius: 10px 10px 0 0; }
+    #s03-body { padding: 20px 24px 24px; background: var(--color-ground); }
+    #s03-hint { font-size: 28px; color: #555; margin-bottom: 16px; }
+    #s03-table { background: #fff; border: 2px solid #7f9db9; }
+    #s03-head, .s03-row { display: grid; grid-template-columns: 330px 420px 1fr 170px; align-items: center; }
+    #s03-head { height: 54px; background: #d4d0c8; font-weight: 700; font-size: 28px; border-bottom: 2px solid #aca899; }
+    #s03-head div, .s03-row > div { padding: 0 14px; }
+    .s03-row { height: 116px; font-size: 28px; border-top: 1px solid #e0dfd8; }
+    .s03-beam { font-weight: 700; }
+    .s03-op { position: relative; }
+    .s03-op .xp-field { height: 58px; font-size: 28px; color: #888; }
+    .s03-op .xp-field b { color: #1a1a1a; }
+    .s03-sub { position: absolute; left: 14px; top: 62px; font-size: 22px; color: #666; white-space: nowrap; }
+    .s03-tg { display: flex; gap: 10px; }
+    .s03-tg > div { position: relative; height: 58px; padding: 0; justify-content: center; border-radius: 3px; font-size: 27px; display: flex; align-items: center; white-space: nowrap; border: 2px solid #7a7a7a; background: linear-gradient(to bottom, #ffffff, #d4d0c8); color: #1a1a1a; }
+    .s03-tg .on { position: absolute; inset: -2px; border-radius: 3px; display: flex; align-items: center; justify-content: center; padding: 0; font-weight: 700; color: #fff; border: 2px solid #10276b; background: linear-gradient(to bottom, #2f5fdb, #173a99); opacity: 0; }
+    .s03-ends .xp-field { height: 58px; justify-content: flex-end; font-weight: 700; }
+    #s03-foot { display: flex; justify-content: flex-end; gap: 16px; margin-top: 20px; }
+    #s03-menu { position: absolute; left: 12px; top: 60px; width: 400px; background: #fff; border: 2px solid #000; box-shadow: 3px 3px 0 rgba(0,0,0,0.25); z-index: 5; }
+    #s03-op1v, #s03-op2v, #s03-op2s, #s03-menu, #s03-t1a, #s03-t2b { opacity: 0; }
+    #s03-menu div { height: 72px; padding: 6px 12px; font-size: 27px; line-height: 1.1; }
+    #s03-menu small { display: block; font-size: 22px; color: #666; }
+    #s03-menu .hl { background: #316ac5; color: #fff; }
+    #s03-menu .hl small { color: #dce4f5; }
+  </style>
+  <div id="root" data-composition-id="s03" data-width="1920" data-height="1080">
+    <div id="s03-band">
+      <div id="s03-hour" class="hour"><span class="w">0</span><span class="w">8</span><span class="w">:</span><span class="w">0</span><span class="w">0</span></div>
+      <div id="s03-line" class="hour-line"><span class="w">Every</span> <span class="w">beam,</span> <span class="w">with</span> <span class="w">who</span> <span class="w">drew</span> <span class="w">it</span> <span class="w">in.</span></div>
+    </div>
+    <div id="s03-win" class="xp-win">
+      <div class="xp-title">Drawing-in / Tying-in</div>
+      <div id="s03-body">
+        <div id="s03-hint">Who prepared each beam before it goes up, and over how many ends.</div>
+        <div id="s03-table">
+          <div id="s03-head"><div>Beam</div><div>Operator</div><div>Type</div><div>Ends</div></div>
+          <div class="s03-row">
+            <div class="s03-beam code">BM-20261127-0003</div>
+            <div class="s03-op"><div class="xp-field" id="s03-op1"><span id="s03-op1p">Pick a user or type a name</span><b id="s03-op1v" style="position:absolute;">Sari Wulandari</b></div>
+              <div id="s03-menu"><div class="hl" id="s03-m1">Sari Wulandari<small>sari</small></div><div>Budi Santoso<small>budi</small></div></div></div>
+            <div class="s03-tg"><div style="width:300px;">Drawing-in (Rumus)<span class="on" id="s03-t1a">Drawing-in (Rumus)</span></div><div style="width:350px;">Tying-in (Sambungan)</div></div>
+            <div class="s03-ends"><div class="xp-field"><span id="s03-e1">0</span></div></div>
+          </div>
+          <div class="s03-row">
+            <div class="s03-beam code">BM-20261127-0004</div>
+            <div class="s03-op"><div class="xp-field"><span id="s03-op2p">Pick a user or type a name</span><b id="s03-op2v" style="position:absolute;">Pak Darto</b></div>
+              <span class="s03-sub" id="s03-op2s">Typed name — no user account</span></div>
+            <div class="s03-tg"><div style="width:300px;">Drawing-in (Rumus)</div><div style="width:350px;">Tying-in (Sambungan)<span class="on" id="s03-t2b">Tying-in (Sambungan)</span></div></div>
+            <div class="s03-ends"><div class="xp-field"><span id="s03-e2">0</span></div></div>
+          </div>
+        </div>
+        <div id="s03-foot"><div class="xp-btn">Cancel</div><div class="xp-btn go" id="s03-mount">Mount</div></div>
+      </div>
+    </div>
+    <svg id="s03-cursor" class="cursor" viewBox="0 0 24 24"><path d="M3 2 L3 20 L8 15.5 L11.5 22 L14.5 20.6 L11 14 L18 14 Z" fill="#fff" stroke="#000" stroke-width="1.4" stroke-linejoin="round"/></svg>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const num = (sel, to, at, dur) => { const o = { v: 0 }; tl.fromTo(o, { v: 0 }, { v: to, duration: dur, ease: "power2.out", onUpdate: () => {
+      const el = document.querySelector(sel); if (el) el.textContent = Math.round(o.v).toLocaleString("en-US"); } }, at); };
+    // Arrives on the whip from the right, lands blurred and sharpens.
+    tl.fromTo("#s03-win", { x: 1500, filter: "blur(14px)" }, { x: 0, filter: "blur(0px)", duration: 0.4, ease: "expo.out" }, 0);
+    tl.fromTo("#s03-hour .w", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.13, stagger: 0.05 }, 0.2);
+    tl.fromTo("#s03-line .w", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.13, stagger: 0.07 }, 0.45);
+    // Row 1: an account, drawing-in.
+    tl.fromTo("#s03-cursor", { x: 900, y: 1150 }, { x: 640, y: 512, duration: 0.5, ease: "power3.out" }, 0.4);
+    tl.set("#s03-menu", { opacity: 1 }, 0.95);
+    tl.to("#s03-cursor", { y: 590, duration: 0.25, ease: "power2.inOut" }, 1.0);
+    tl.set("#s03-menu", { opacity: 0 }, 1.3);
+    tl.set("#s03-op1p", { opacity: 0 }, 1.3);
+    tl.set("#s03-op1v", { opacity: 1 }, 1.3);
+    tl.to("#s03-cursor", { x: 1010, y: 500, duration: 0.3, ease: "power2.inOut" }, 1.35);
+    tl.set("#s03-t1a", { opacity: 1 }, 1.68);
+    num("#s03-e1", 4800, 1.7, 0.45);
+    // Row 2: a floor worker with no login, typed in.
+    tl.set("#s03-op2p", { opacity: 0 }, 1.95);
+    tl.fromTo("#s03-op2v", { opacity: 0, clipPath: "inset(0 100% 0 0)" }, { opacity: 1, clipPath: "inset(0 0% 0 0)", duration: 0.35, ease: "none", immediateRender: false }, 1.95);
+    tl.fromTo("#s03-op2s", { opacity: 0 }, { opacity: 1, duration: 0.15, immediateRender: false }, 2.3);
+    tl.to("#s03-cursor", { x: 1330, y: 620, duration: 0.3, ease: "power2.inOut" }, 2.1);
+    tl.set("#s03-t2b", { opacity: 1 }, 2.45);
+    num("#s03-e2", 4800, 2.47, 0.45);
+    // Mount.
+    tl.to("#s03-cursor", { x: 1700, y: 790, duration: 0.4, ease: "power2.inOut" }, 2.8);
+    tl.to("#s03-mount", { scale: 0.94, duration: 0.06 }, 3.25);
+    tl.to("#s03-mount", { scale: 1, duration: 0.15, ease: "expo.out" }, 3.31);
+    // Morph: the dialog folds down into the loom card's warp footer.
+    tl.to("#s03-win", { scaleX: 0.7, scaleY: 0.25, y: 420, opacity: 0, transformOrigin: "50% 100%", duration: 0.35, ease: "power3.in" }, 3.6);
+    tl.to(["#s03-band", "#s03-cursor"], { opacity: 0, filter: "blur(8px)", duration: 0.2, ease: "power3.in" }, 3.6);
+    window.__timelines["s03"] = tl;
+  </script>
+</template>
