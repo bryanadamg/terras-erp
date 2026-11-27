@@ -1637,15 +1637,15 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                        <div style={{ paddingTop: 4, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 5}}>
                                            <div>
                                                <FieldLabel>Yard</FieldLabel>
-                                               <input type="number" className="form-control" style={xpInput({width:'100%'})} placeholder="0" value={newLine.qty || ''} onChange={e => handleQtyYardChange(e.target.value)} />
+                                               <input type="number" step="any" className="form-control" style={xpInput({width:'100%'})} placeholder="0" value={newLine.qty || ''} onChange={e => handleQtyYardChange(e.target.value)} />
                                            </div>
                                            <div>
                                                <FieldLabel>Meter</FieldLabel>
-                                               <input type="number" className="form-control" style={xpInput({width:'100%'})} placeholder="0" value={qtyMeter} onChange={e => handleQtyMeterChange(e.target.value)} />
+                                               <input type="number" step="any" className="form-control" style={xpInput({width:'100%'})} placeholder="0" value={qtyMeter} onChange={e => handleQtyMeterChange(e.target.value)} />
                                            </div>
                                            <div>
                                                <FieldLabel><span style={{ whiteSpace: 'nowrap' }}>Gross Yd <span style={{ fontWeight: 'normal', fontSize: '10px', color: 'var(--terras-win-text-3, #888)' }}>(144 yd)</span></span></FieldLabel>
-                                               <input type="number" className="form-control" style={xpInput({width:'100%'})} placeholder="0" value={qtyGrossYd} onChange={e => handleQtyGrossYdChange(e.target.value)} />
+                                               <input type="number" step="any" className="form-control" style={xpInput({width:'100%'})} placeholder="0" value={qtyGrossYd} onChange={e => handleQtyGrossYdChange(e.target.value)} />
                                            </div>
                                        </div>
                                    </TintCard>
@@ -1656,7 +1656,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4 }}>
                                                <div style={{ flex: 1 }}>
                                                    <FieldLabel>Kilogram</FieldLabel>
-                                                   <input type="number" className="form-control"
+                                                   <input type="number" step="any" className="form-control"
                                                        style={xpInput({width:'100%'})}
                                                        placeholder="0"
                                                        value={newLine.qty_kg}
@@ -1695,7 +1695,7 @@ In stock ${fmtQty(f.baseAvailable)}${bu} · Shipped ${fmtQty(f.baseShipped)}${bu
                                            const qty2Val = parseFloat(newLine.qty2 as string) || 0;
                                            return <div>
                                                    <div style={{ display: 'flex' }}>
-                                                       <input type="number" className="form-control"
+                                                       <input type="number" step="any" className="form-control"
                                                            style={xpInput({ flex: 1, borderRight: 'none', minWidth: 0 })}
                                                            placeholder="0" value={newLine.qty2} onChange={e => handleQty2Change(e.target.value)} />
                                                        <select

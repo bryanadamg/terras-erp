@@ -606,7 +606,7 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                                    Apply
                                </label>
                            }>VAT %</FieldLabel>
-                           <input type="number" className="form-control" disabled={!vatEnabled} style={xpInput({opacity:vatEnabled?1:0.5})} value={newPO.vat_percent} onChange={e => setNewPO({...newPO, vat_percent: parseFloat(e.target.value) || 0})} />
+                           <input type="number" step="any" className="form-control" disabled={!vatEnabled} style={xpInput({opacity:vatEnabled?1:0.5})} value={newPO.vat_percent} onChange={e => setNewPO({...newPO, vat_percent: parseFloat(e.target.value) || 0})} />
                        </div>
                        <div className="col-md-3">
                            <FieldLabel>Price Entry</FieldLabel>
@@ -620,7 +620,7 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                        </div>
                        <div className="col-md-3">
                            <FieldLabel>Discount (Rp)</FieldLabel>
-                           <input type="number" className="form-control" style={xpInput()} value={newPO.discount} onChange={e => setNewPO({...newPO, discount: parseFloat(e.target.value) || 0})} />
+                           <input type="number" step="any" className="form-control" style={xpInput()} value={newPO.discount} onChange={e => setNewPO({...newPO, discount: parseFloat(e.target.value) || 0})} />
                        </div>
                        <div className="col-md-3">
                            <FieldLabel>Notes</FieldLabel>
@@ -637,7 +637,7 @@ export default function PurchaseOrderView({ items, itemResults, onSearchItems, a
                        </div>
                        <div className="col-2">
                            <FieldLabel>Qty</FieldLabel>
-                           <input type="number" className="form-control" style={xpInput()} placeholder="0" value={newLine.qty || ''} onChange={e => setNewLine({...newLine, qty: parseFloat(e.target.value)})} />
+                           <input type="number" step="any" className="form-control" style={xpInput()} placeholder="0" value={newLine.qty || ''} onChange={e => setNewLine({...newLine, qty: parseFloat(e.target.value)})} />
                        </div>
                        <div className="col-2">
                            <FieldLabel>Price (Rp)</FieldLabel>
