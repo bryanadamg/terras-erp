@@ -61,6 +61,8 @@ export default function MobileScannerView({
     const [logQty, setLogQty]                   = useState('');
     const [logOperator, setLogOperator]         = useState('');
     const [logNotes, setLogNotes]               = useState('');
+    const [logCones, setLogCones]               = useState('');
+    const [logBoxes, setLogBoxes]               = useState('');
     const [logWorkCenterId, setLogWorkCenterId] = useState('');
     const [materialRows, setMaterialRows]       = useState<MaterialRow[]>([]);
     const [submittingLog, setSubmittingLog]     = useState(false);
@@ -351,6 +353,8 @@ export default function MobileScannerView({
                     qty_completed: qty,
                     operator_name: logOperator || null,
                     notes: logNotes || null,
+                    qty_cones: logCones.trim() ? parseInt(logCones, 10) : null,
+                    qty_boxes: logBoxes.trim() ? parseInt(logBoxes, 10) : null,
                     work_center_id: logWorkCenterId || null,
                     work_order_id: scannedWO.id,
                     actual_items: actualItems,
@@ -367,6 +371,8 @@ export default function MobileScannerView({
             setLogSuccess(`Logged ${qty} — MO total: ${newTotal} / ${scannedWOParentMO.qty}`);
             setLogQty('');
             setLogNotes('');
+            setLogCones('');
+            setLogBoxes('');
             setBeamNumber('');
             setConsumedBatches({});
             setMaterialRows(prev => prev.map(r => ({ ...r, actual_qty: '', is_custom: false })));
@@ -546,6 +552,20 @@ export default function MobileScannerView({
                                 )}
                             </div>
                         ))}
+
+                        {/* Cones + Boxes — optional output packaging tally, same as the desktop log */}
+                        <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                            <div style={{ flex: 1 }}>
+                                <div style={{ fontFamily: XP_FONT, fontSize: 10, marginBottom: 3 }}>Cones</div>
+                                <input type="number" inputMode="numeric" min="0" step="1" value={logCones}
+                                    onChange={e => setLogCones(e.target.value)} placeholder="Opsional" style={xpInput} />
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <div style={{ fontFamily: XP_FONT, fontSize: 10, marginBottom: 3 }}>Boxes</div>
+                                <input type="number" inputMode="numeric" min="0" step="1" value={logBoxes}
+                                    onChange={e => setLogBoxes(e.target.value)} placeholder="Opsional" style={xpInput} />
+                            </div>
+                        </div>
 
                         {/* Operator + Notes */}
                         <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
